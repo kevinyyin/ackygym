@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { displayName } from './displayName'
 import Card from './Card'
 
 function formatDate(dateStr) {
@@ -62,7 +63,7 @@ function LiftsPage({ profiles, userId, onError }) {
   const rows = [...profiles].sort((a, b) => {
     if (a.id === userId) return -1
     if (b.id === userId) return 1
-    return a.email.localeCompare(b.email)
+    return displayName(a).localeCompare(displayName(b))
   })
 
   return exercises.length === 0 ? (
@@ -80,7 +81,7 @@ function LiftsPage({ profiles, userId, onError }) {
               return (
                 <div key={profile.id}>
                   <p className="truncate text-[11px] text-neutral-600">
-                    {profile.email.split('@')[0]}
+                    {displayName(profile)}
                   </p>
                   {entry ? (
                     <>

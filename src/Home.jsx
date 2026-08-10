@@ -4,6 +4,7 @@ import WorkoutForm from './WorkoutForm'
 import WeekSchedule from './WeekSchedule'
 import AddExerciseForm from './AddExerciseForm'
 import Card from './Card'
+import { displayName } from './displayName'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
@@ -45,7 +46,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
     fetchTodaysSets()
   }, [refreshKey, onError])
 
-  const emailByUserId = Object.fromEntries(profiles.map((p) => [p.id, p.email]))
+  const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
 
   const setsByUserId = new Map()
   for (const set of todaysSets) {
@@ -56,13 +57,13 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
   const groupedSets = [...setsByUserId.entries()]
     .map(([userId, sets]) => ({
       userId,
-      email: emailByUserId[userId] ?? userId,
+      name: profileByUserId[userId] ? displayName(profileByUserId[userId]) : userId,
       sets,
     }))
     .sort((a, b) => {
       if (a.userId === session.user.id) return -1
       if (b.userId === session.user.id) return 1
-      return a.email.localeCompare(b.email)
+      return a.name.localeCompare(b.name)
     })
 
   const todayDayOfWeek = new Date().getDay()
@@ -143,7 +144,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
         ) : (
           groupedSets.map((group) => (
             <Card key={group.userId} className="overflow-hidden">
-              <h3 className="px-5 pt-4 text-xs text-neutral-500">{group.email}</h3>
+              <h3 className="px-5 pt-4 text-xs text-neutral-500">{group.name}</h3>
               <ul className="mt-2 divide-y divide-neutral-800">
                 {group.sets.map((set) => (
                   <li

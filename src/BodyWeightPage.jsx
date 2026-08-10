@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Card from './Card'
+import { displayName } from './displayName'
 import { getTodayDateString } from './dateUtils'
 import { convertWeight, roundWeight } from './weightUnits'
 
@@ -86,7 +87,7 @@ function BodyWeightPage({ profiles, userId, onError }) {
     setRefreshKey((k) => k + 1)
   }
 
-  const emailByUserId = Object.fromEntries(profiles.map((p) => [p.id, p.email]))
+  const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
 
   const entriesByUserId = new Map()
   for (const entry of entries) {
@@ -97,13 +98,13 @@ function BodyWeightPage({ profiles, userId, onError }) {
   const groupedEntries = [...entriesByUserId.entries()]
     .map(([entryUserId, userEntries]) => ({
       userId: entryUserId,
-      email: emailByUserId[entryUserId] ?? entryUserId,
+      name: profileByUserId[entryUserId] ? displayName(profileByUserId[entryUserId]) : entryUserId,
       entries: userEntries,
     }))
     .sort((a, b) => {
       if (a.userId === userId) return -1
       if (b.userId === userId) return 1
-      return a.email.localeCompare(b.email)
+      return a.name.localeCompare(b.name)
     })
 
   const latestOwnEntry = entries.find((entry) => entry.user_id === userId)
@@ -175,7 +176,7 @@ function BodyWeightPage({ profiles, userId, onError }) {
         ) : (
           groupedEntries.map((group) => (
             <Card key={group.userId} className="overflow-hidden">
-              <h3 className="px-5 pt-4 text-xs text-neutral-500">{group.email}</h3>
+              <h3 className="px-5 pt-4 text-xs text-neutral-500">{group.name}</h3>
               <ul className="mt-2 divide-y divide-neutral-800">
                 {group.entries.map((entry) => (
                   <li

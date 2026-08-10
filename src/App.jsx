@@ -6,6 +6,7 @@ import Home from './Home'
 import CalendarPage from './CalendarPage'
 import LiftsPage from './LiftsPage'
 import BodyWeightPage from './BodyWeightPage'
+import UsernameField from './UsernameField'
 import { GridIcon, CalendarIcon, ChartIcon, ScaleIcon, LogOutIcon } from './icons'
 
 const PAGE_TITLES = {
@@ -28,6 +29,7 @@ function App() {
   const [schedule, setSchedule] = useState([])
   const [error, setError] = useState('')
   const [scheduleVersion, setScheduleVersion] = useState(0)
+  const [profilesVersion, setProfilesVersion] = useState(0)
   const location = useLocation()
 
   useEffect(() => {
@@ -44,7 +46,7 @@ function App() {
     if (!session) return
 
     async function fetchProfiles() {
-      const { data, error } = await supabase.from('profiles').select('id, email')
+      const { data, error } = await supabase.from('profiles').select('id, email, username')
       if (error) {
         setError(error.message)
         return
@@ -53,7 +55,7 @@ function App() {
     }
 
     fetchProfiles()
-  }, [session])
+  }, [session, profilesVersion])
 
   useEffect(() => {
     if (!session) return
@@ -85,7 +87,12 @@ function App() {
         <header className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-white">{pageTitle}</h1>
-            <p className="truncate text-xs text-neutral-500">{session.user.email}</p>
+            <UsernameField
+              profile={profiles.find((p) => p.id === session.user.id)}
+              userId={session.user.id}
+              onSaved={() => setProfilesVersion((v) => v + 1)}
+              onError={setError}
+            />
           </div>
           <button
             onClick={() => supabase.auth.signOut()}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
 import { toDateString } from './dateUtils'
+import { displayName } from './displayName'
 import Card from './Card'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons'
 
@@ -69,7 +70,7 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
   const rows = [...profiles].sort((a, b) => {
     if (a.id === userId) return -1
     if (b.id === userId) return 1
-    return a.email.localeCompare(b.email)
+    return displayName(a).localeCompare(displayName(b))
   })
 
   const weeks = getMonthWeeks(year, month)
@@ -106,7 +107,7 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
             className="flex items-center gap-1.5 text-xs text-neutral-400"
           >
             <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]}`} />
-            {profile.email.split('@')[0]}
+            {displayName(profile)}
           </div>
         ))}
       </div>

@@ -1,6 +1,7 @@
 import { Fragment, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
+import { displayName } from './displayName'
 
 function ScheduleCell({ initialValue, onSave }) {
   const [value, setValue] = useState(initialValue)
@@ -43,7 +44,7 @@ function WeekSchedule({ schedule, profiles, userId, onSaved, onError }) {
   const rows = [...profiles].sort((a, b) => {
     if (a.id === userId) return -1
     if (b.id === userId) return 1
-    return a.email.localeCompare(b.email)
+    return displayName(a).localeCompare(displayName(b))
   })
 
   return (
@@ -63,9 +64,9 @@ function WeekSchedule({ schedule, profiles, userId, onSaved, onError }) {
           <Fragment key={profile.id}>
             <div
               className="truncate text-xs text-neutral-400"
-              title={profile.email}
+              title={displayName(profile)}
             >
-              {profile.email.split('@')[0]}
+              {displayName(profile)}
             </div>
             {WEEKDAY_ORDER.map((day) => {
               const label = labelFor(profile.id, day)
