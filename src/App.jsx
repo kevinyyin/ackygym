@@ -15,6 +15,7 @@ function App() {
   const [session, setSession] = useState(null)
   const [exercises, setExercises] = useState([])
   const [todaysSets, setTodaysSets] = useState([])
+  const [profiles, setProfiles] = useState([])
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -46,10 +47,25 @@ function App() {
   useEffect(() => {
     if (!session) return
 
+    async function fetchProfiles() {
+      const { data, error } = await supabase.from('profiles').select('id, email')
+      if (error) {
+        setError(error.message)
+        return
+      }
+      setProfiles(data)
+    }
+
+    fetchProfiles()
+  }, [session])
+
+  useEffect(() => {
+    if (!session) return
+
     async function fetchTodaysSets() {
       const { data, error } = await supabase
         .from('sets')
-        .select('id, weight, reps, exercises (name), workouts!inner (date)')
+        .select('id, weight, reps, user_id, exercises (name), workouts!inner (date)')
         .eq('workouts.date', getTodayDateString())
         .order('id')
 
@@ -67,36 +83,108 @@ function App() {
     return <Auth />
   }
 
+  const emailByUserId = Object.fromEntries(profiles.map((p) => [p.id, p.email]))
+
+  const setsByUserId = new Map()
+  for (const set of todaysSets) {
+    if (!setsByUserId.has(set.user_id)) setsByUserId.set(set.user_id, [])
+    setsByUserId.get(set.user_id).push(set)
+  }
+
+  const groupedSets = [...setsByUserId.entries()]
+    .map(([userId, sets]) => ({
+      userId,
+      email: emailByUserId[userId] ?? userId,
+      sets,
+    }))
+    .sort((a, b) => {
+      if (a.userId === session.user.id) return -1
+      if (b.userId === session.user.id) return 1
+      return a.email.localeCompare(b.email)
+    })
+
   return (
-    <>
-      <p>{session.user.email}</p>
-      <button onClick={() => supabase.auth.signOut()}>Sign out</button>
+    <div className="mx-auto flex min-h-svh max-w-md flex-col gap-6 p-4 pb-12">
+      <header className="flex items-center justify-between gap-3 pt-2">
+        <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">
+          {session.user.email}
+        </p>
+        <button
+          onClick={() => supabase.auth.signOut()}
+          className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+        >
+          Sign out
+        </button>
+      </header>
 
-      {error && <p>{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+          {error}
+        </p>
+      )}
 
-      <WorkoutForm
-        exercises={exercises}
-        userId={session.user.id}
-        onLogged={() => setRefreshKey((key) => key + 1)}
-        onError={setError}
-      />
+      <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+        <h2 className="mb-3 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          Log a set
+        </h2>
+        <WorkoutForm
+          exercises={exercises}
+          userId={session.user.id}
+          onLogged={() => setRefreshKey((key) => key + 1)}
+          onError={setError}
+        />
+      </section>
 
-      <h2>Today&apos;s sets</h2>
-      <ul>
-        {todaysSets.map((set) => (
-          <li key={set.id}>
-            {set.exercises.name}: {set.weight} x {set.reps}
-          </li>
-        ))}
-      </ul>
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          Today&apos;s sets
+        </h2>
+        {groupedSets.length === 0 ? (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            No sets logged yet today.
+          </p>
+        ) : (
+          groupedSets.map((group) => (
+            <div key={group.userId}>
+              <h3 className="mb-1 truncate text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                {group.email}
+              </h3>
+              <ul className="divide-y divide-neutral-200 overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
+                {group.sets.map((set) => (
+                  <li
+                    key={set.id}
+                    className="flex items-center justify-between px-4 py-3"
+                  >
+                    <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                      {set.exercises.name}
+                    </span>
+                    <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                      {set.weight} x {set.reps}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        )}
+      </section>
 
-      <h2>Exercises</h2>
-      <ul>
-        {exercises.map((exercise) => (
-          <li key={exercise.id}>{exercise.name}</li>
-        ))}
-      </ul>
-    </>
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-neutral-500 dark:text-neutral-400">
+          Exercises
+        </h2>
+        <ul className="flex flex-wrap gap-2">
+          {exercises.map((exercise) => (
+            <li
+              key={exercise.id}
+              className="rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+            >
+              {exercise.name}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
   )
 }
 

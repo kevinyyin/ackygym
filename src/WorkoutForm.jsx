@@ -68,30 +68,46 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
     onLogged()
   }
 
+  const inputClasses =
+    'w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500'
+
   return (
-    <form onSubmit={handleSubmit}>
-      <select value={selectedExerciseId} onChange={(e) => setExerciseId(e.target.value)}>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <select
+        value={selectedExerciseId}
+        onChange={(e) => setExerciseId(e.target.value)}
+        className={inputClasses}
+      >
         {exercises.map((exercise) => (
           <option key={exercise.id} value={exercise.id}>
             {exercise.name}
           </option>
         ))}
       </select>
-      <input
-        type="number"
-        value={weight}
-        onChange={(e) => setWeight(e.target.value)}
-        placeholder="Weight"
-        required
-      />
-      <input
-        type="number"
-        value={reps}
-        onChange={(e) => setReps(e.target.value)}
-        placeholder="Reps"
-        required
-      />
-      <button type="submit">Log set</button>
+      <div className="flex gap-3">
+        <input
+          type="number"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          placeholder="Weight"
+          required
+          className={inputClasses}
+        />
+        <input
+          type="number"
+          value={reps}
+          onChange={(e) => setReps(e.target.value)}
+          placeholder="Reps"
+          required
+          className={inputClasses}
+        />
+      </div>
+      <button
+        type="submit"
+        className="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-semibold text-white active:bg-blue-700 dark:bg-blue-500 dark:active:bg-blue-600"
+      >
+        Log set
+      </button>
     </form>
   )
 }
