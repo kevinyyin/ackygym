@@ -67,34 +67,38 @@ function LiftsPage({ profiles, userId, onError }) {
   })
 
   return exercises.length === 0 ? (
-    <Card className="p-5">
-      <p className="text-sm text-neutral-500">No exercises yet.</p>
+    <Card className="p-4">
+      <p className="text-sm text-chalk-dim">No exercises yet.</p>
     </Card>
   ) : (
     <div className="grid grid-cols-2 gap-3">
       {exercises.map((exercise) => (
         <Card key={exercise.id} className="flex flex-col gap-3 p-4">
-          <p className="truncate text-xs text-neutral-500">{exercise.name}</p>
-          <div className="flex flex-col gap-2.5">
+          <p className="truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+            {exercise.name}
+          </p>
+          <div className="flex flex-col gap-3">
             {rows.map((profile) => {
               const entry = latestSets.get(`${exercise.id}:${profile.id}`)
               return (
-                <div key={profile.id}>
-                  <p className="truncate text-[11px] text-neutral-600">
+                <div key={profile.id} className="border-l-2 border-line pl-2">
+                  <p className="truncate text-[11px] text-chalk-dim">
                     {displayName(profile)}
                   </p>
                   {entry ? (
                     <>
-                      <p className="text-xl font-bold text-white">
+                      <p className="font-mono text-xl font-bold text-blue-400">
                         {entry.weight}
-                        <span className="ml-1 text-sm font-normal text-neutral-500">
-                          x{entry.reps}
+                        <span className="ml-1 text-sm font-normal text-chalk-dim">
+                          ×{entry.reps}
                         </span>
                       </p>
-                      <p className="text-[11px] text-neutral-600">{formatDate(entry.date)}</p>
+                      <p className="font-mono text-[11px] text-chalk-dim/70">
+                        {formatDate(entry.date)}
+                      </p>
                     </>
                   ) : (
-                    <p className="text-xl font-bold text-neutral-700">—</p>
+                    <p className="font-mono text-xl font-bold text-chalk-dim/40">—</p>
                   )}
                 </div>
               )

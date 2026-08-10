@@ -7,6 +7,7 @@ import Card from './Card'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons'
 
 const DOT_COLORS = ['bg-blue-400', 'bg-emerald-400', 'bg-amber-400', 'bg-purple-400']
+const STREAK_WINDOW_DAYS = 90
 
 function getMonthWeeks(year, month) {
   const startWeekday = (new Date(year, month, 1).getDay() + 6) % 7 // Mon = 0 .. Sun = 6
@@ -22,11 +23,39 @@ function getMonthWeeks(year, month) {
   return weeks
 }
 
+function computeStreak(userId, schedule, workoutDates) {
+  let streak = 0
+  const cursor = new Date()
+
+  for (let daysAgo = 0; daysAgo < STREAK_WINDOW_DAYS; daysAgo++) {
+    const dateStr = toDateString(cursor)
+    const dayOfWeek = cursor.getDay()
+    const isScheduled = schedule.some(
+      (s) => s.user_id === userId && s.day_of_week === dayOfWeek && s.label
+    )
+
+    if (isScheduled) {
+      if (workoutDates.has(dateStr)) {
+        streak++
+      } else if (daysAgo > 0) {
+        break
+      }
+      // daysAgo === 0 (today) and not logged yet: the day isn't over,
+      // so it neither extends nor breaks the streak.
+    }
+
+    cursor.setDate(cursor.getDate() - 1)
+  }
+
+  return streak
+}
+
 function CalendarPage({ profiles, schedule, userId, onError }) {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
   const [workouts, setWorkouts] = useState([])
+  const [streakWorkouts, setStreakWorkouts] = useState([])
 
   useEffect(() => {
     async function fetchWorkouts() {
@@ -48,6 +77,27 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
 
     fetchWorkouts()
   }, [year, month, onError])
+
+  useEffect(() => {
+    async function fetchStreakWorkouts() {
+      const windowStart = new Date()
+      windowStart.setDate(windowStart.getDate() - (STREAK_WINDOW_DAYS - 1))
+
+      const { data, error } = await supabase
+        .from('workouts')
+        .select('id, user_id, date')
+        .gte('date', toDateString(windowStart))
+        .lte('date', toDateString(new Date()))
+
+      if (error) {
+        onError(error.message)
+        return
+      }
+      setStreakWorkouts(data)
+    }
+
+    fetchStreakWorkouts()
+  }, [onError])
 
   function goToPrevMonth() {
     if (month === 0) {
@@ -80,36 +130,71 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
   })
   const todayStr = toDateString(today)
 
+  const workoutDatesByUser = new Map()
+  for (const w of streakWorkouts) {
+    if (!workoutDatesByUser.has(w.user_id)) workoutDatesByUser.set(w.user_id, new Set())
+    workoutDatesByUser.get(w.user_id).add(w.date)
+  }
+
+  const streaksByUserId = Object.fromEntries(
+    rows.map((profile) => [
+      profile.id,
+      computeStreak(profile.id, schedule, workoutDatesByUser.get(profile.id) ?? new Set()),
+    ])
+  )
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <button
           onClick={goToPrevMonth}
           aria-label="Previous month"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-neutral-400 active:bg-neutral-800"
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
         >
-          <ChevronLeftIcon className="h-5 w-5" />
+          <ChevronLeftIcon className="h-4 w-4" />
         </button>
-        <h2 className="text-xl font-bold text-white">{monthLabel}</h2>
+        <h2 className="font-display text-2xl tracking-tight text-chalk uppercase">
+          {monthLabel}
+        </h2>
         <button
           onClick={goToNextMonth}
           aria-label="Next month"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-neutral-400 active:bg-neutral-800"
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
         >
-          <ChevronRightIcon className="h-5 w-5" />
+          <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 px-1">
-        {rows.map((profile, i) => (
-          <div
-            key={profile.id}
-            className="flex items-center gap-1.5 text-xs text-neutral-400"
-          >
-            <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]}`} />
-            {displayName(profile)}
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-3">
+        {rows.map((profile, i) => {
+          const streak = streaksByUserId[profile.id]
+          return (
+            <Card key={profile.id} className="flex flex-col gap-2 p-4">
+              <div className="flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]}`} />
+                <p className="truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+                  {displayName(profile)}
+                </p>
+              </div>
+              <p className="font-mono text-3xl font-bold text-blue-400">
+                {streak}
+                <span className="ml-1.5 font-body text-xs font-normal text-chalk-dim">
+                  day{streak === 1 ? '' : 's'}
+                </span>
+              </p>
+              <div className="flex gap-1">
+                {Array.from({ length: 7 }, (_, tick) => (
+                  <span
+                    key={tick}
+                    className={`h-2.5 w-1.5 rounded-[1px] ${
+                      tick < Math.min(streak, 7) ? 'bg-blue-500' : 'bg-surface-2'
+                    }`}
+                  />
+                ))}
+              </div>
+            </Card>
+          )
+        })}
       </div>
 
       <Card className="p-3">
@@ -117,7 +202,7 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
           {WEEKDAY_ORDER.map((day) => (
             <div
               key={day}
-              className="text-center text-xs font-medium text-neutral-500"
+              className="text-center font-mono text-[10px] font-medium tracking-wide text-chalk-dim uppercase"
             >
               {WEEKDAY_SHORT[day].slice(0, 2)}
             </div>
@@ -134,11 +219,11 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
               return (
                 <div
                   key={dateStr}
-                  className={`flex min-h-16 min-w-0 flex-col gap-1 rounded-xl p-1 ${
-                    isToday ? 'bg-blue-500/15 ring-1 ring-blue-500' : ''
+                  className={`flex min-h-16 min-w-0 flex-col gap-1 rounded p-1 ${
+                    isToday ? 'bg-blue-500/10 ring-1 ring-blue-500' : ''
                   }`}
                 >
-                  <span className="text-xs text-neutral-500">
+                  <span className="font-mono text-xs text-chalk-dim">
                     {date.getDate()}
                   </span>
                   <div className="flex flex-col gap-0.5">
@@ -163,7 +248,7 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
                               hasWorkout ? '' : 'opacity-30'
                             }`}
                           />
-                          <span className="truncate text-[10px] text-neutral-400">
+                          <span className="truncate text-[10px] text-chalk-dim">
                             {label || '—'}
                           </span>
                         </div>

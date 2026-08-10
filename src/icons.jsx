@@ -4,7 +4,7 @@ function BaseIcon(props) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.75"
+      strokeWidth="2.25"
       strokeLinecap="round"
       strokeLinejoin="round"
       {...props}
@@ -15,10 +15,10 @@ function BaseIcon(props) {
 export function GridIcon(props) {
   return (
     <BaseIcon {...props}>
-      <rect x="3" y="3" width="8" height="8" rx="2" />
-      <rect x="13" y="3" width="8" height="8" rx="2" />
-      <rect x="3" y="13" width="8" height="8" rx="2" />
-      <rect x="13" y="13" width="8" height="8" rx="2" />
+      <rect x="3" y="3" width="8" height="8" rx="1.5" />
+      <rect x="13" y="3" width="8" height="8" rx="1.5" />
+      <rect x="3" y="13" width="8" height="8" rx="1.5" />
+      <rect x="13" y="13" width="8" height="8" rx="1.5" />
     </BaseIcon>
   )
 }
@@ -26,16 +26,17 @@ export function GridIcon(props) {
 export function CalendarIcon(props) {
   return (
     <BaseIcon {...props}>
-      <rect x="3" y="5" width="18" height="16" rx="3" />
+      <rect x="3" y="5" width="18" height="16" rx="1.5" />
       <path d="M8 3v4M16 3v4M3 10h18" />
     </BaseIcon>
   )
 }
 
-export function ChartIcon(props) {
+export function BarbellIcon(props) {
   return (
     <BaseIcon {...props}>
-      <path d="M4 20V10M12 20V4M20 20v-7" />
+      <path d="M3 9v6M6 7v10M18 7v10M21 9v6" strokeWidth="2.5" />
+      <path d="M6 12h12" strokeWidth="3.5" />
     </BaseIcon>
   )
 }
@@ -44,7 +45,7 @@ export function ScaleIcon(props) {
   return (
     <BaseIcon {...props}>
       <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="3.5" />
+      <circle cx="12" cy="12" r="3.25" fill="currentColor" stroke="none" />
     </BaseIcon>
   )
 }
@@ -71,7 +72,7 @@ export function LogOutIcon(props) {
 
 export function ChevronLeftIcon(props) {
   return (
-    <BaseIcon strokeWidth="2" {...props}>
+    <BaseIcon strokeWidth="2.5" {...props}>
       <path d="M15 18l-6-6 6-6" />
     </BaseIcon>
   )
@@ -79,7 +80,7 @@ export function ChevronLeftIcon(props) {
 
 export function ChevronRightIcon(props) {
   return (
-    <BaseIcon strokeWidth="2" {...props}>
+    <BaseIcon strokeWidth="2.5" {...props}>
       <path d="M9 18l6-6-6-6" />
     </BaseIcon>
   )

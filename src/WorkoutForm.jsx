@@ -57,7 +57,7 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
   }
 
   const inputClasses =
-    'w-full rounded-2xl border border-neutral-800 bg-neutral-800/60 px-4 py-3 text-base text-white placeholder:text-neutral-500 focus:border-blue-500 focus:outline-none'
+    'w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none'
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -92,7 +92,7 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
       </div>
       <button
         type="submit"
-        className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-base font-semibold text-white active:bg-blue-600"
+        className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-chalk active:bg-blue-600"
       >
         Log set
       </button>

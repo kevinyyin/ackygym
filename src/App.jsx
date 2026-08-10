@@ -8,7 +8,7 @@ import LiftsPage from './LiftsPage'
 import BodyWeightPage from './BodyWeightPage'
 import TimerPage from './TimerPage'
 import UsernameField from './UsernameField'
-import { GridIcon, CalendarIcon, ChartIcon, ScaleIcon, TimerIcon, LogOutIcon } from './icons'
+import { GridIcon, CalendarIcon, BarbellIcon, ScaleIcon, TimerIcon, LogOutIcon } from './icons'
 
 const PAGE_TITLES = {
   '/': 'Home',
@@ -21,7 +21,7 @@ const PAGE_TITLES = {
 const TABS = [
   { to: '/', label: 'Home', icon: GridIcon, end: true },
   { to: '/calendar', label: 'Calendar', icon: CalendarIcon },
-  { to: '/lifts', label: 'Lifts', icon: ChartIcon },
+  { to: '/lifts', label: 'Lifts', icon: BarbellIcon },
   { to: '/weight', label: 'Weight', icon: ScaleIcon },
   { to: '/timer', label: 'Timer', icon: TimerIcon },
 ]
@@ -85,11 +85,16 @@ function App() {
   const pageTitle = PAGE_TITLES[location.pathname] ?? 'Gym Tracker'
 
   return (
-    <div className="min-h-svh bg-neutral-950 text-neutral-100">
+    <div className="min-h-svh bg-ink text-chalk">
       <div className="mx-auto flex min-h-svh max-w-md flex-col gap-5 px-4 pb-28 pt-6">
         <header className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-white">{pageTitle}</h1>
+            <p className="text-[11px] font-semibold tracking-[0.25em] text-blue-400 uppercase">
+              Ackygym
+            </p>
+            <h1 className="font-display text-3xl leading-none tracking-tight text-chalk uppercase">
+              {pageTitle}
+            </h1>
             <UsernameField
               profile={profiles.find((p) => p.id === session.user.id)}
               userId={session.user.id}
@@ -100,14 +105,14 @@ function App() {
           <button
             onClick={() => supabase.auth.signOut()}
             aria-label="Sign out"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-neutral-400 active:bg-neutral-800"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
           >
             <LogOutIcon className="h-5 w-5" />
           </button>
         </header>
 
         {error && (
-          <p className="rounded-2xl bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <p className="rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
           </p>
         )}
@@ -160,19 +165,19 @@ function App() {
         </Routes>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 border-t border-neutral-800 bg-neutral-950/95 backdrop-blur">
-        <div className="mx-auto flex max-w-md items-center justify-around px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2">
+      <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 backdrop-blur">
+        <div className="mx-auto flex max-w-md items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
           {TABS.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} aria-label={label} className="px-3 py-1.5">
+            <NavLink key={to} to={to} end={end} aria-label={label} className="px-3 pt-2.5 pb-2">
               {({ isActive }) => (
                 <span
-                  className={`flex flex-col items-center gap-1.5 ${
-                    isActive ? 'text-blue-400' : 'text-neutral-500'
+                  className={`flex flex-col items-center gap-2 ${
+                    isActive ? 'text-blue-400' : 'text-chalk-dim'
                   }`}
                 >
-                  <Icon className="h-6 w-6" />
+                  <Icon className="h-5 w-5" />
                   <span
-                    className={`h-1 w-1 rounded-full ${isActive ? 'bg-blue-400' : 'bg-transparent'}`}
+                    className={`h-[2px] w-4 rounded-full ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}
                   />
                 </span>
               )}

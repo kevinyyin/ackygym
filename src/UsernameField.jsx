@@ -32,7 +32,7 @@ function UsernameField({ profile, userId, onSaved, onError }) {
       onChange={(e) => setValue(e.target.value)}
       onBlur={handleBlur}
       placeholder={profile ? displayName(profile) : 'Set a username'}
-      className="w-full truncate bg-transparent text-xs text-neutral-500 placeholder:text-neutral-500 focus:text-neutral-300 focus:outline-none"
+      className="w-full truncate bg-transparent font-mono text-xs text-chalk-dim placeholder:text-chalk-dim focus:text-blue-400 focus:outline-none"
     />
   )
 }
