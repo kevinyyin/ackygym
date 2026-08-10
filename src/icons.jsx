@@ -49,6 +49,16 @@ export function ScaleIcon(props) {
   )
 }
 
+export function TimerIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l3 2" />
+      <path d="M9 2h6" />
+    </BaseIcon>
+  )
+}
+
 export function LogOutIcon(props) {
   return (
     <BaseIcon {...props}>

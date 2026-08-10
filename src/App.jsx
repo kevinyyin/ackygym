@@ -6,14 +6,16 @@ import Home from './Home'
 import CalendarPage from './CalendarPage'
 import LiftsPage from './LiftsPage'
 import BodyWeightPage from './BodyWeightPage'
+import TimerPage from './TimerPage'
 import UsernameField from './UsernameField'
-import { GridIcon, CalendarIcon, ChartIcon, ScaleIcon, LogOutIcon } from './icons'
+import { GridIcon, CalendarIcon, ChartIcon, ScaleIcon, TimerIcon, LogOutIcon } from './icons'
 
 const PAGE_TITLES = {
   '/': 'Home',
   '/calendar': 'Calendar',
   '/lifts': 'Lifts',
   '/weight': 'Weight',
+  '/timer': 'Timer',
 }
 
 const TABS = [
@@ -21,6 +23,7 @@ const TABS = [
   { to: '/calendar', label: 'Calendar', icon: CalendarIcon },
   { to: '/lifts', label: 'Lifts', icon: ChartIcon },
   { to: '/weight', label: 'Weight', icon: ScaleIcon },
+  { to: '/timer', label: 'Timer', icon: TimerIcon },
 ]
 
 function App() {
@@ -153,13 +156,14 @@ function App() {
               />
             }
           />
+          <Route path="/timer" element={<TimerPage />} />
         </Routes>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 border-t border-neutral-800 bg-neutral-950/95 backdrop-blur">
         <div className="mx-auto flex max-w-md items-center justify-around px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2">
           {TABS.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} aria-label={label} className="px-4 py-1.5">
+            <NavLink key={to} to={to} end={end} aria-label={label} className="px-3 py-1.5">
               {({ isActive }) => (
                 <span
                   className={`flex flex-col items-center gap-1.5 ${
