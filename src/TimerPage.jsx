@@ -10,10 +10,25 @@ const PRESETS = [
 
 const STATUS_LABEL = {
   idle: 'Ready',
-  running: 'Resting…',
+  running: 'Resting',
   paused: 'Paused',
-  finished: 'Time’s up!',
+  finished: 'Time’s up',
 }
+
+const DIAL_RADIUS = 82
+const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_RADIUS
+const DIAL_TICKS = Array.from({ length: 12 }, (_, i) => {
+  const angle = (i * 30 * Math.PI) / 180
+  const outer = 94
+  const inner = i % 3 === 0 ? 80 : 87
+  return {
+    x1: 100 + outer * Math.sin(angle),
+    y1: 100 - outer * Math.cos(angle),
+    x2: 100 + inner * Math.sin(angle),
+    y2: 100 - inner * Math.cos(angle),
+    major: i % 3 === 0,
+  }
+})
 
 function formatTime(totalSeconds) {
   const clamped = Math.max(0, Math.round(totalSeconds))
@@ -120,6 +135,8 @@ function TimerPage() {
   }
 
   const isFinished = status === 'finished'
+  const fraction = duration > 0 ? remaining / duration : 0
+  const dialColor = isFinished ? 'var(--color-blue-300)' : 'var(--color-blue-500)'
 
   return (
     <div className="flex flex-col gap-4">
@@ -129,10 +146,10 @@ function TimerPage() {
             key={preset.seconds}
             type="button"
             onClick={() => selectDuration(preset.seconds)}
-            className={`rounded-2xl py-3 text-sm font-semibold ${
+            className={`rounded-md border py-3 font-mono text-sm font-semibold ${
               duration === preset.seconds
-                ? 'bg-blue-500 text-white'
-                : 'bg-neutral-900 text-neutral-300 active:bg-neutral-800'
+                ? 'border-blue-500 bg-blue-500 text-chalk'
+                : 'border-line bg-surface text-chalk-dim active:border-blue-500'
             }`}
           >
             {preset.label}
@@ -140,7 +157,7 @@ function TimerPage() {
         ))}
       </div>
 
-      <Card className="p-4">
+      <Card className="p-3">
         <form onSubmit={handleCustomSubmit} className="flex gap-2">
           <input
             type="number"
@@ -148,11 +165,11 @@ function TimerPage() {
             value={customValue}
             onChange={(e) => setCustomValue(e.target.value)}
             placeholder="Custom seconds"
-            className="w-full min-w-0 rounded-xl border border-neutral-800 bg-neutral-800/60 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-blue-500 focus:outline-none"
+            className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
           />
           <button
             type="submit"
-            className="shrink-0 rounded-xl bg-neutral-800 px-4 py-2 text-sm font-semibold text-neutral-200 active:bg-neutral-700"
+            className="shrink-0 rounded-md border border-line bg-surface-2 px-4 py-2 font-body text-sm font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400"
           >
             Set
           </button>
@@ -160,20 +177,63 @@ function TimerPage() {
       </Card>
 
       <Card
-        className={`flex flex-col items-center gap-2 p-8 transition ${
-          isFinished ? 'bg-emerald-500/10 ring-2 ring-emerald-500' : ''
+        className={`flex flex-col items-center gap-1 border-0 bg-transparent py-4 transition ${
+          isFinished ? 'motion-safe:animate-pulse' : ''
         }`}
       >
-        <p className={`text-sm ${isFinished ? 'text-emerald-400' : 'text-neutral-500'}`}>
-          {STATUS_LABEL[status]}
-        </p>
-        <p
-          className={`text-7xl font-bold tabular-nums ${
-            isFinished ? 'animate-pulse text-emerald-400' : 'text-white'
-          }`}
-        >
-          {formatTime(remaining)}
-        </p>
+        <div className="relative flex h-64 w-64 items-center justify-center">
+          <svg viewBox="0 0 200 200" className="h-full w-full">
+            {DIAL_TICKS.map((t, i) => (
+              <line
+                key={i}
+                x1={t.x1}
+                y1={t.y1}
+                x2={t.x2}
+                y2={t.y2}
+                stroke="var(--color-line)"
+                strokeWidth={t.major ? 2.5 : 1.25}
+                strokeLinecap="round"
+              />
+            ))}
+            <circle
+              cx="100"
+              cy="100"
+              r={DIAL_RADIUS}
+              fill="none"
+              stroke="var(--color-surface-2)"
+              strokeWidth="10"
+            />
+            <circle
+              cx="100"
+              cy="100"
+              r={DIAL_RADIUS}
+              fill="none"
+              stroke={dialColor}
+              strokeWidth="10"
+              strokeLinecap="round"
+              strokeDasharray={DIAL_CIRCUMFERENCE}
+              strokeDashoffset={DIAL_CIRCUMFERENCE * (1 - fraction)}
+              transform="rotate(-90 100 100)"
+              className="transition-[stroke-dashoffset] duration-200 ease-linear"
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <p
+              className={`font-mono text-6xl font-bold tabular-nums ${
+                isFinished ? 'text-blue-300' : 'text-chalk'
+              }`}
+            >
+              {formatTime(remaining)}
+            </p>
+            <p
+              className={`mt-2 font-mono text-xs tracking-[0.3em] uppercase ${
+                isFinished ? 'text-blue-300' : 'text-chalk-dim'
+              }`}
+            >
+              {STATUS_LABEL[status]}
+            </p>
+          </div>
+        </div>
       </Card>
 
       <div className="grid grid-cols-3 gap-2">
@@ -181,7 +241,7 @@ function TimerPage() {
           type="button"
           onClick={handleStart}
           disabled={status === 'running'}
-          className="rounded-2xl bg-blue-500 py-4 text-base font-semibold text-white active:bg-blue-600 disabled:pointer-events-none disabled:opacity-40"
+          className="rounded-md bg-blue-500 py-4 font-body text-base font-bold text-chalk active:bg-blue-600 disabled:pointer-events-none disabled:opacity-40"
         >
           {status === 'paused' ? 'Resume' : 'Start'}
         </button>
@@ -189,14 +249,14 @@ function TimerPage() {
           type="button"
           onClick={handlePause}
           disabled={status !== 'running'}
-          className="rounded-2xl bg-neutral-900 py-4 text-base font-semibold text-white active:bg-neutral-800 disabled:pointer-events-none disabled:opacity-40"
+          className="rounded-md border border-line bg-surface py-4 font-body text-base font-semibold text-chalk active:border-blue-500 disabled:pointer-events-none disabled:opacity-40"
         >
           Pause
         </button>
         <button
           type="button"
           onClick={handleReset}
-          className="rounded-2xl bg-neutral-900 py-4 text-base font-semibold text-neutral-300 active:bg-neutral-800"
+          className="rounded-md border border-line bg-surface py-4 font-body text-base font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400"
         >
           Reset
         </button>

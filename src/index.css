@@ -1,11 +1,38 @@
 @import "tailwindcss";
 
+@theme {
+  --color-ink: #0a0a0c;
+  --color-surface: #16161a;
+  --color-surface-2: #202024;
+  --color-line: #2c2c32;
+
+  --color-chalk: #e9eaee;
+  --color-chalk-dim: #8b8d97;
+
+  --color-danger: #e5484d;
+
+  --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
 @layer base {
   html {
     color-scheme: dark;
   }
 
   body {
-    @apply bg-neutral-950 text-neutral-100;
+    @apply bg-ink text-chalk font-body;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-blue-500) 35%, transparent);
+    color: var(--color-chalk);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-blue-500);
+    outline-offset: 2px;
   }
 }

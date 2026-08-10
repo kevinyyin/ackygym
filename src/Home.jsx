@@ -9,6 +9,15 @@ import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
 
+function SectionLabel({ children }) {
+  return (
+    <h2 className="flex items-center gap-2 px-1 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+      <span className="h-2.5 w-0.5 bg-blue-500" />
+      {children}
+    </h2>
+  )
+}
+
 function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
   const [exercises, setExercises] = useState([])
   const [todaysSets, setTodaysSets] = useState([])
@@ -111,66 +120,76 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <div className="grid grid-cols-2 gap-3">
-        <Card className="flex flex-col justify-between p-5">
-          <p className="text-xs text-neutral-500">{WEEKDAY_NAME[todayDayOfWeek]}</p>
-          <p className="mt-3 text-2xl leading-tight font-bold text-white">
+        <Card className="flex flex-col justify-between p-4">
+          <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+            {WEEKDAY_NAME[todayDayOfWeek]}
+          </p>
+          <p className="mt-3 font-display text-2xl leading-[0.95] tracking-tight text-chalk uppercase">
             {todaysLabel || 'Rest day'}
           </p>
         </Card>
-        <Card className="flex flex-col justify-between p-5">
-          <p className="text-xs text-neutral-500">Sets today</p>
-          <p className="mt-3 text-4xl font-bold text-white">{todaysSets.length}</p>
+        <Card className="flex flex-col justify-between p-4">
+          <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+            Sets today
+          </p>
+          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">{todaysSets.length}</p>
         </Card>
       </div>
 
-      <Card className="p-5">
-        <h2 className="mb-4 text-sm font-semibold text-neutral-300">Log a set</h2>
-        <WorkoutForm
-          exercises={exercises}
-          userId={session.user.id}
-          onLogged={() => setRefreshKey((key) => key + 1)}
-          onError={onError}
-        />
+      <Card className="p-4">
+        <SectionLabel>Log a set</SectionLabel>
+        <div className="mt-3">
+          <WorkoutForm
+            exercises={exercises}
+            userId={session.user.id}
+            onLogged={() => setRefreshKey((key) => key + 1)}
+            onError={onError}
+          />
+        </div>
       </Card>
 
       <div className="flex flex-col gap-3">
-        <h2 className="px-1 text-sm font-semibold text-neutral-300">Today&apos;s sets</h2>
+        <SectionLabel>Today&apos;s sets</SectionLabel>
         {groupedSets.length === 0 ? (
-          <Card className="p-5">
-            <p className="text-sm text-neutral-500">No sets logged yet today.</p>
+          <Card className="p-4">
+            <p className="text-sm text-chalk-dim">No sets logged yet today.</p>
           </Card>
         ) : (
           groupedSets.map((group) => (
             <Card key={group.userId} className="overflow-hidden">
-              <h3 className="px-5 pt-4 text-xs text-neutral-500">{group.name}</h3>
-              <ul className="mt-2 divide-y divide-neutral-800">
+              <h3 className="border-b border-line px-4 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+                {group.name}
+              </h3>
+              <ul className="divide-y divide-line">
                 {group.sets.map((set) => (
                   <li
                     key={set.id}
-                    className="flex items-center justify-between gap-2 px-5 py-3"
+                    className="flex items-center justify-between gap-2 px-4 py-3"
                   >
-                    <span className="font-medium text-white">
+                    <span className="font-medium text-chalk">
                       {set.exercises.name}
                     </span>
                     <span className="flex items-center gap-3">
-                      <span className="text-sm text-neutral-400">
-                        {set.weight} x {set.reps}
+                      <span className="font-mono text-sm text-chalk-dim">
+                        {set.weight}
+                        <span className="text-chalk-dim/60">×</span>
+                        {set.reps}
                       </span>
                       {set.user_id === session.user.id && (
                         <>
                           <button
                             onClick={() => handleRepeatSet(set)}
                             aria-label={`Repeat ${set.exercises.name} set`}
-                            className="shrink-0 text-neutral-500 hover:text-blue-400"
+                            className="shrink-0 text-chalk-dim hover:text-blue-400"
                           >
                             ↻
                           </button>
                           <button
                             onClick={() => handleDeleteSet(set.id)}
                             aria-label={`Delete ${set.exercises.name} set`}
-                            className="shrink-0 text-neutral-500 hover:text-red-400"
+                            className="shrink-0 text-chalk-dim hover:text-danger"
                           >
                             ✕
                           </button>
@@ -186,7 +205,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
       </div>
 
       <div className="flex flex-col gap-3">
-        <h2 className="px-1 text-sm font-semibold text-neutral-300">Weekly schedule</h2>
+        <SectionLabel>Weekly schedule</SectionLabel>
         <WeekSchedule
           schedule={schedule}
           profiles={profiles}
@@ -196,19 +215,19 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
         />
       </div>
 
-      <Card className="p-5">
-        <h2 className="mb-3 text-sm font-semibold text-neutral-300">Exercises</h2>
-        <ul className="flex flex-wrap gap-2">
+      <Card className="p-4">
+        <SectionLabel>Exercises</SectionLabel>
+        <ul className="mt-3 flex flex-wrap gap-2">
           {exercises.map((exercise) => (
             <li
               key={exercise.id}
-              className="flex items-center gap-1.5 rounded-full bg-neutral-800 py-1.5 pl-3 pr-2 text-sm text-neutral-200"
+              className="flex items-center gap-1.5 rounded-full border border-line bg-surface-2 py-1.5 pl-3 pr-2 text-sm text-chalk"
             >
               {exercise.name}
               <button
                 onClick={() => handleDeleteExercise(exercise.id)}
                 aria-label={`Delete ${exercise.name}`}
-                className="text-neutral-500 hover:text-red-400"
+                className="text-chalk-dim hover:text-danger"
               >
                 ✕
               </button>

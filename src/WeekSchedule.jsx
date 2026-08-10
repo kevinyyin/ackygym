@@ -15,7 +15,7 @@ function ScheduleCell({ initialValue, onSave }) {
         if (value !== initialValue) onSave(value)
       }}
       placeholder="—"
-      className="w-full min-w-0 rounded-lg border border-neutral-800 bg-neutral-800/60 px-1 py-1.5 text-center text-xs text-white placeholder:text-neutral-600 focus:border-blue-500 focus:outline-none"
+      className="w-full min-w-0 rounded border border-line bg-surface-2 px-1 py-1.5 text-center font-mono text-xs text-chalk placeholder:text-chalk-dim/60 focus:border-blue-500 focus:outline-none"
     />
   )
 }
@@ -48,13 +48,13 @@ function WeekSchedule({ schedule, profiles, userId, onSaved, onError }) {
   })
 
   return (
-    <div className="rounded-3xl bg-neutral-900 p-4">
+    <div className="rounded-lg border border-line bg-surface p-4">
       <div className="grid grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] items-center gap-1">
         <div />
         {WEEKDAY_ORDER.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-medium text-neutral-500"
+            className="text-center font-mono text-[11px] font-medium tracking-wide text-chalk-dim uppercase"
           >
             {WEEKDAY_SHORT[day].slice(0, 2)}
           </div>
@@ -63,7 +63,7 @@ function WeekSchedule({ schedule, profiles, userId, onSaved, onError }) {
         {rows.map((profile) => (
           <Fragment key={profile.id}>
             <div
-              className="truncate text-xs text-neutral-400"
+              className="truncate text-xs text-chalk-dim"
               title={displayName(profile)}
             >
               {displayName(profile)}
@@ -79,7 +79,7 @@ function WeekSchedule({ schedule, profiles, userId, onSaved, onError }) {
               ) : (
                 <div
                   key={day}
-                  className="truncate text-center text-xs text-neutral-500"
+                  className="truncate text-center font-mono text-xs text-chalk-dim/70"
                   title={label}
                 >
                   {label || '—'}

@@ -37,11 +37,11 @@ function AddExerciseForm({ exercises, onAdded, onError }) {
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="New exercise"
-        className="w-full min-w-0 rounded-xl border border-neutral-800 bg-neutral-800/60 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-blue-500 focus:outline-none"
+        className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
       />
       <button
         type="submit"
-        className="shrink-0 rounded-xl bg-blue-500 px-3 py-2 text-sm font-semibold text-white active:bg-blue-600"
+        className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-chalk active:bg-blue-600"
       >
         Add
       </button>

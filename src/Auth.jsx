@@ -25,12 +25,17 @@ function Auth() {
   }
 
   const inputClasses =
-    'w-full rounded-2xl border border-neutral-800 bg-neutral-800/60 px-4 py-3 text-base text-white placeholder:text-neutral-500 focus:border-blue-500 focus:outline-none'
+    'w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none'
 
   return (
-    <div className="flex min-h-svh flex-col justify-center bg-neutral-950 p-4">
-      <form className="mx-auto flex w-full max-w-md flex-col gap-3 rounded-3xl bg-neutral-900 p-6">
-        <h1 className="mb-1 text-2xl font-bold text-white">Gym Tracker</h1>
+    <div className="flex min-h-svh flex-col justify-center bg-ink p-4">
+      <form className="mx-auto flex w-full max-w-md flex-col gap-3 rounded-lg border border-line bg-surface p-6">
+        <p className="text-[11px] font-semibold tracking-[0.25em] text-blue-400 uppercase">
+          Ackygym
+        </p>
+        <h1 className="mb-1 font-display text-4xl leading-none tracking-tight text-chalk uppercase">
+          Sign in
+        </h1>
         <input
           type="email"
           value={email}
@@ -48,18 +53,18 @@ function Auth() {
         <button
           type="submit"
           onClick={handleSignIn}
-          className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-base font-semibold text-white active:bg-blue-600"
+          className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-chalk active:bg-blue-600"
         >
           Sign in
         </button>
         <button
           type="submit"
           onClick={handleSignUp}
-          className="w-full rounded-2xl border border-neutral-700 px-4 py-3 text-base font-semibold text-neutral-200 active:bg-neutral-800"
+          className="w-full rounded-md border border-line px-4 py-3 font-body text-base font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400"
         >
           Sign up
         </button>
-        {message && <p className="text-sm text-neutral-400">{message}</p>}
+        {message && <p className="text-sm text-chalk-dim">{message}</p>}
       </form>
     </div>
   )
