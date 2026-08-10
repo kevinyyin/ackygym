@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Auth from './Auth'
 import WorkoutForm from './WorkoutForm'
+import WeekSchedule from './WeekSchedule'
+import { WEEKDAY_NAME } from './weekdays'
 
 function getTodayDateString() {
   const now = new Date()
@@ -16,8 +18,10 @@ function App() {
   const [exercises, setExercises] = useState([])
   const [todaysSets, setTodaysSets] = useState([])
   const [profiles, setProfiles] = useState([])
+  const [schedule, setSchedule] = useState([])
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [scheduleVersion, setScheduleVersion] = useState(0)
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -79,6 +83,24 @@ function App() {
     fetchTodaysSets()
   }, [session, refreshKey])
 
+  useEffect(() => {
+    if (!session) return
+
+    async function fetchSchedule() {
+      const { data, error } = await supabase
+        .from('schedule')
+        .select('id, user_id, day_of_week, label')
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+      setSchedule(data)
+    }
+
+    fetchSchedule()
+  }, [session, scheduleVersion])
+
   if (!session) {
     return <Auth />
   }
@@ -103,6 +125,11 @@ function App() {
       return a.email.localeCompare(b.email)
     })
 
+  const todayDayOfWeek = new Date().getDay()
+  const todaysLabel = schedule.find(
+    (s) => s.user_id === session.user.id && s.day_of_week === todayDayOfWeek
+  )?.label
+
   return (
     <div className="mx-auto flex min-h-svh max-w-md flex-col gap-6 p-4 pb-12">
       <header className="flex items-center justify-between gap-3 pt-2">
@@ -122,6 +149,13 @@ function App() {
           {error}
         </p>
       )}
+
+      <section className="rounded-2xl bg-blue-600 p-4 text-center text-white dark:bg-blue-500">
+        <p className="text-sm font-medium text-blue-100 dark:text-blue-950">
+          {WEEKDAY_NAME[todayDayOfWeek]}
+        </p>
+        <p className="text-2xl font-bold">{todaysLabel || 'No label set'}</p>
+      </section>
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
         <h2 className="mb-3 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
@@ -167,6 +201,19 @@ function App() {
             </div>
           ))
         )}
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          Weekly schedule
+        </h2>
+        <WeekSchedule
+          schedule={schedule}
+          profiles={profiles}
+          userId={session.user.id}
+          onSaved={() => setScheduleVersion((v) => v + 1)}
+          onError={setError}
+        />
       </section>
 
       <section>
