@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient'
 import Auth from './Auth'
 import WorkoutForm from './WorkoutForm'
 import WeekSchedule from './WeekSchedule'
+import AddExerciseForm from './AddExerciseForm'
 import { WEEKDAY_NAME } from './weekdays'
 
 function getTodayDateString() {
@@ -22,6 +23,7 @@ function App() {
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [scheduleVersion, setScheduleVersion] = useState(0)
+  const [exercisesVersion, setExercisesVersion] = useState(0)
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -46,7 +48,7 @@ function App() {
     }
 
     fetchExercises()
-  }, [session])
+  }, [session, exercisesVersion])
 
   useEffect(() => {
     if (!session) return
@@ -230,6 +232,11 @@ function App() {
             </li>
           ))}
         </ul>
+        <AddExerciseForm
+          exercises={exercises}
+          onAdded={() => setExercisesVersion((v) => v + 1)}
+          onError={setError}
+        />
       </section>
     </div>
   )
