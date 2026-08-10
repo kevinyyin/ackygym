@@ -132,6 +132,30 @@ function App() {
     (s) => s.user_id === session.user.id && s.day_of_week === todayDayOfWeek
   )?.label
 
+  async function handleDeleteSet(setId) {
+    setError('')
+    const { error } = await supabase.from('sets').delete().eq('id', setId)
+    if (error) {
+      setError(error.message)
+      return
+    }
+    setRefreshKey((key) => key + 1)
+  }
+
+  async function handleDeleteExercise(exerciseId) {
+    setError('')
+    const { error } = await supabase.from('exercises').delete().eq('id', exerciseId)
+    if (error) {
+      setError(
+        error.code === '23503'
+          ? 'Can’t delete an exercise that has logged sets.'
+          : error.message
+      )
+      return
+    }
+    setExercisesVersion((v) => v + 1)
+  }
+
   return (
     <div className="mx-auto flex min-h-svh max-w-md flex-col gap-6 p-4 pb-12">
       <header className="flex items-center justify-between gap-3 pt-2">
@@ -189,13 +213,24 @@ function App() {
                 {group.sets.map((set) => (
                   <li
                     key={set.id}
-                    className="flex items-center justify-between px-4 py-3"
+                    className="flex items-center justify-between gap-2 px-4 py-3"
                   >
                     <span className="font-medium text-neutral-900 dark:text-neutral-100">
                       {set.exercises.name}
                     </span>
-                    <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {set.weight} x {set.reps}
+                    <span className="flex items-center gap-3">
+                      <span className="text-sm text-neutral-500 dark:text-neutral-400">
+                        {set.weight} x {set.reps}
+                      </span>
+                      {set.user_id === session.user.id && (
+                        <button
+                          onClick={() => handleDeleteSet(set.id)}
+                          aria-label={`Delete ${set.exercises.name} set`}
+                          className="shrink-0 text-neutral-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </span>
                   </li>
                 ))}
@@ -226,9 +261,16 @@ function App() {
           {exercises.map((exercise) => (
             <li
               key={exercise.id}
-              className="rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+              className="flex items-center gap-1.5 rounded-full bg-neutral-100 py-1 pl-3 pr-2 text-sm text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
             >
               {exercise.name}
+              <button
+                onClick={() => handleDeleteExercise(exercise.id)}
+                aria-label={`Delete ${exercise.name}`}
+                className="text-neutral-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+              >
+                ✕
+              </button>
             </li>
           ))}
         </ul>
