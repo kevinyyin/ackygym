@@ -60,6 +60,14 @@ export function TimerIcon(props) {
   )
 }
 
+export function DropletIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 3s7 7.5 7 12a7 7 0 0 1-14 0c0-4.5 7-12 7-12Z" />
+    </BaseIcon>
+  )
+}
+
 export function LogOutIcon(props) {
   return (
     <BaseIcon {...props}>

@@ -4,6 +4,7 @@ import WorkoutForm from './WorkoutForm'
 import WeekSchedule from './WeekSchedule'
 import AddExerciseForm from './AddExerciseForm'
 import Card from './Card'
+import WaterTracker from './WaterTracker'
 import { displayName } from './displayName'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
@@ -137,6 +138,8 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
           <p className="mt-3 font-mono text-4xl font-bold text-blue-400">{todaysSets.length}</p>
         </Card>
       </div>
+
+      <WaterTracker session={session} profiles={profiles} onError={onError} />
 
       <Card className="p-4">
         <SectionLabel>Log a set</SectionLabel>

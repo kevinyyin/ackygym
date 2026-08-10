@@ -1,0 +1,172 @@
+import { useEffect, useState } from 'react'
+import { supabase } from './supabaseClient'
+import Card from './Card'
+import { displayName } from './displayName'
+import { getTodayDateString } from './dateUtils'
+import { DropletIcon } from './icons'
+
+const GOAL_ML = 2000
+const QUICK_ADD_ML = [250, 500, 750]
+
+function SectionLabel({ children }) {
+  return (
+    <h2 className="flex items-center gap-2 px-1 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+      <span className="h-2.5 w-0.5 bg-blue-500" />
+      {children}
+    </h2>
+  )
+}
+
+function WaterTracker({ session, profiles, onError }) {
+  const [logs, setLogs] = useState([])
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [customValue, setCustomValue] = useState('')
+
+  useEffect(() => {
+    async function fetchLogs() {
+      const { data, error } = await supabase
+        .from('water_logs')
+        .select('id, user_id, amount_ml, created_at')
+        .eq('date', getTodayDateString())
+        .order('created_at')
+
+      if (error) {
+        onError(error.message)
+        return
+      }
+      setLogs(data)
+    }
+
+    fetchLogs()
+  }, [refreshKey, onError])
+
+  async function handleAdd(amountMl) {
+    onError('')
+    const { error } = await supabase
+      .from('water_logs')
+      .insert({ user_id: session.user.id, amount_ml: amountMl })
+
+    if (error) {
+      onError(error.message)
+      return
+    }
+    setRefreshKey((k) => k + 1)
+  }
+
+  async function handleCustomAdd(e) {
+    e.preventDefault()
+    const amount = Number(customValue)
+    if (!amount || amount <= 0) return
+    await handleAdd(amount)
+    setCustomValue('')
+  }
+
+  async function handleUndo() {
+    const ownLogs = logs.filter((log) => log.user_id === session.user.id)
+    const last = ownLogs[ownLogs.length - 1]
+    if (!last) return
+
+    onError('')
+    const { error } = await supabase.from('water_logs').delete().eq('id', last.id)
+    if (error) {
+      onError(error.message)
+      return
+    }
+    setRefreshKey((k) => k + 1)
+  }
+
+  const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
+
+  const totalsByUserId = new Map()
+  for (const log of logs) {
+    totalsByUserId.set(
+      log.user_id,
+      (totalsByUserId.get(log.user_id) || 0) + Number(log.amount_ml)
+    )
+  }
+
+  const ownTotalMl = totalsByUserId.get(session.user.id) || 0
+  const ownProgress = Math.min(ownTotalMl / GOAL_ML, 1)
+
+  const otherTotals = [...totalsByUserId.entries()]
+    .filter(([userId]) => userId !== session.user.id)
+    .map(([userId, totalMl]) => ({
+      userId,
+      name: profileByUserId[userId] ? displayName(profileByUserId[userId]) : userId,
+      totalMl,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <SectionLabel>Water</SectionLabel>
+        <DropletIcon className="h-4 w-4 text-blue-400" />
+      </div>
+
+      <p className="mt-3 font-mono text-4xl font-bold text-blue-400">
+        {ownTotalMl}
+        <span className="ml-1 font-body text-lg font-normal text-chalk-dim">/ {GOAL_ML} ml</span>
+      </p>
+
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2">
+        <div
+          className="h-full rounded-full bg-blue-500 transition-all"
+          style={{ width: `${ownProgress * 100}%` }}
+        />
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {QUICK_ADD_ML.map((amount) => (
+          <button
+            key={amount}
+            onClick={() => handleAdd(amount)}
+            className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk active:border-blue-500 active:text-blue-400"
+          >
+            +{amount} ml
+          </button>
+        ))}
+        <button
+          onClick={handleUndo}
+          disabled={ownTotalMl === 0}
+          aria-label="Undo last water entry"
+          className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk-dim active:border-danger active:text-danger disabled:opacity-40"
+        >
+          Undo
+        </button>
+      </div>
+
+      <form onSubmit={handleCustomAdd} className="mt-3 flex gap-2">
+        <input
+          type="number"
+          min="1"
+          value={customValue}
+          onChange={(e) => setCustomValue(e.target.value)}
+          placeholder="Custom amount (ml)"
+          className="w-full rounded-md border border-line bg-surface-2 px-4 py-2.5 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-md bg-blue-500 px-4 py-2.5 font-body text-sm font-bold text-chalk active:bg-blue-600"
+        >
+          Add
+        </button>
+      </form>
+
+      {otherTotals.length > 0 && (
+        <ul className="mt-4 flex flex-col gap-2 border-t border-line pt-3">
+          {otherTotals.map((entry) => (
+            <li key={entry.userId} className="flex items-center justify-between gap-2">
+              <span className="text-sm text-chalk-dim">{entry.name}</span>
+              <span className="font-mono text-sm text-chalk">
+                {entry.totalMl} / {GOAL_ML} ml
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  )
+}
+
+export default WaterTracker
