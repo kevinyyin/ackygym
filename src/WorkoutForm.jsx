@@ -1,13 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
-
-function getTodayDateString() {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+import { logSet } from './logSet'
 
 function WorkoutForm({ exercises, userId, onLogged, onError }) {
   const [exerciseId, setExerciseId] = useState('')
@@ -16,50 +9,45 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
 
   const selectedExerciseId = exerciseId || exercises[0]?.id || ''
 
+  useEffect(() => {
+    if (!selectedExerciseId) return
+
+    async function fetchLastSet() {
+      const { data, error } = await supabase
+        .from('sets')
+        .select('weight, reps, workouts!inner(date)')
+        .eq('user_id', userId)
+        .eq('exercise_id', Number(selectedExerciseId))
+        .order('date', { foreignTable: 'workouts', ascending: false })
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        onError(error.message)
+        return
+      }
+
+      setWeight(data ? String(data.weight) : '')
+      setReps(data ? String(data.reps) : '')
+    }
+
+    fetchLastSet()
+  }, [selectedExerciseId, userId, onError])
+
   async function handleSubmit(e) {
     e.preventDefault()
     onError('')
 
-    const today = getTodayDateString()
-
-    const { data: existingWorkout, error: workoutSelectError } = await supabase
-      .from('workouts')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .maybeSingle()
-
-    if (workoutSelectError) {
-      onError(workoutSelectError.message)
-      return
-    }
-
-    let workoutId = existingWorkout?.id
-
-    if (!workoutId) {
-      const { data: newWorkout, error: workoutInsertError } = await supabase
-        .from('workouts')
-        .insert({ user_id: userId, date: today })
-        .select('id')
-        .single()
-
-      if (workoutInsertError) {
-        onError(workoutInsertError.message)
-        return
-      }
-      workoutId = newWorkout.id
-    }
-
-    const { error: setInsertError } = await supabase.from('sets').insert({
-      workout_id: workoutId,
-      exercise_id: Number(selectedExerciseId),
-      user_id: userId,
+    const { error } = await logSet({
+      userId,
+      exerciseId: Number(selectedExerciseId),
       weight: Number(weight),
       reps: Number(reps),
     })
 
-    if (setInsertError) {
-      onError(setInsertError.message)
+    if (error) {
+      onError(error.message)
       return
     }
 
@@ -69,7 +57,7 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
   }
 
   const inputClasses =
-    'w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500'
+    'w-full rounded-2xl border border-neutral-800 bg-neutral-800/60 px-4 py-3 text-base text-white placeholder:text-neutral-500 focus:border-blue-500 focus:outline-none'
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -104,7 +92,7 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
       </div>
       <button
         type="submit"
-        className="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-semibold text-white active:bg-blue-700 dark:bg-blue-500 dark:active:bg-blue-600"
+        className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-base font-semibold text-white active:bg-blue-600"
       >
         Log set
       </button>

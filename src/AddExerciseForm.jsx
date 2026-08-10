@@ -31,17 +31,17 @@ function AddExerciseForm({ exercises, onAdded, onError }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-2 flex gap-2">
+    <form onSubmit={handleSubmit} className="mt-3 flex gap-2">
       <input
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="New exercise"
-        className="w-full min-w-0 rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+        className="w-full min-w-0 rounded-xl border border-neutral-800 bg-neutral-800/60 px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-blue-500 focus:outline-none"
       />
       <button
         type="submit"
-        className="shrink-0 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white active:bg-blue-700 dark:bg-blue-500 dark:active:bg-blue-600"
+        className="shrink-0 rounded-xl bg-blue-500 px-3 py-2 text-sm font-semibold text-white active:bg-blue-600"
       >
         Add
       </button>

@@ -14,7 +14,7 @@ function ScheduleCell({ initialValue, onSave }) {
         if (value !== initialValue) onSave(value)
       }}
       placeholder="—"
-      className="w-full min-w-0 rounded-md border border-neutral-300 bg-white px-1 py-1.5 text-center text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+      className="w-full min-w-0 rounded-lg border border-neutral-800 bg-neutral-800/60 px-1 py-1.5 text-center text-xs text-white placeholder:text-neutral-600 focus:border-blue-500 focus:outline-none"
     />
   )
 }
@@ -47,13 +47,13 @@ function WeekSchedule({ schedule, profiles, userId, onSaved, onError }) {
   })
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="rounded-3xl bg-neutral-900 p-4">
       <div className="grid grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] items-center gap-1">
         <div />
         {WEEKDAY_ORDER.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-medium text-neutral-500 dark:text-neutral-400"
+            className="text-center text-xs font-medium text-neutral-500"
           >
             {WEEKDAY_SHORT[day].slice(0, 2)}
           </div>
@@ -62,7 +62,7 @@ function WeekSchedule({ schedule, profiles, userId, onSaved, onError }) {
         {rows.map((profile) => (
           <Fragment key={profile.id}>
             <div
-              className="truncate text-xs text-neutral-700 dark:text-neutral-300"
+              className="truncate text-xs text-neutral-400"
               title={profile.email}
             >
               {profile.email.split('@')[0]}
@@ -78,7 +78,7 @@ function WeekSchedule({ schedule, profiles, userId, onSaved, onError }) {
               ) : (
                 <div
                   key={day}
-                  className="truncate text-center text-xs text-neutral-500 dark:text-neutral-400"
+                  className="truncate text-center text-xs text-neutral-500"
                   title={label}
                 >
                   {label || '—'}

@@ -25,14 +25,12 @@ function Auth() {
   }
 
   const inputClasses =
-    'w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-blue-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500'
+    'w-full rounded-2xl border border-neutral-800 bg-neutral-800/60 px-4 py-3 text-base text-white placeholder:text-neutral-500 focus:border-blue-500 focus:outline-none'
 
   return (
-    <div className="mx-auto flex min-h-svh max-w-md flex-col justify-center p-4">
-      <form className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <h1 className="mb-1 text-xl font-semibold text-neutral-900 dark:text-neutral-100">
-          Gym Tracker
-        </h1>
+    <div className="flex min-h-svh flex-col justify-center bg-neutral-950 p-4">
+      <form className="mx-auto flex w-full max-w-md flex-col gap-3 rounded-3xl bg-neutral-900 p-6">
+        <h1 className="mb-1 text-2xl font-bold text-white">Gym Tracker</h1>
         <input
           type="email"
           value={email}
@@ -50,20 +48,18 @@ function Auth() {
         <button
           type="submit"
           onClick={handleSignIn}
-          className="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-semibold text-white active:bg-blue-700 dark:bg-blue-500 dark:active:bg-blue-600"
+          className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-base font-semibold text-white active:bg-blue-600"
         >
           Sign in
         </button>
         <button
           type="submit"
           onClick={handleSignUp}
-          className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-base font-semibold text-neutral-700 active:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-200 dark:active:bg-neutral-800"
+          className="w-full rounded-2xl border border-neutral-700 px-4 py-3 text-base font-semibold text-neutral-200 active:bg-neutral-800"
         >
           Sign up
         </button>
-        {message && (
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">{message}</p>
-        )}
+        {message && <p className="text-sm text-neutral-400">{message}</p>}
       </form>
     </div>
   )
