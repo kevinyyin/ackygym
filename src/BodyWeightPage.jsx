@@ -4,6 +4,7 @@ import Card from './Card'
 import { displayName } from './displayName'
 import { getTodayDateString } from './dateUtils'
 import { convertWeight, roundWeight } from './weightUnits'
+import CalorieCalculator from './CalorieCalculator'
 
 const UNIT_STORAGE_KEY = 'gym-tracker:body-weight-unit'
 
@@ -178,6 +179,8 @@ function BodyWeightPage({ profiles, userId, onError }) {
           </button>
         </form>
       </Card>
+
+      <CalorieCalculator latestWeightKg={latestOwnEntry?.weight_kg} unit={unit} />
 
       <div className="flex flex-col gap-3">
         <SectionLabel>History</SectionLabel>
