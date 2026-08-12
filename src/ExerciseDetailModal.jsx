@@ -1,8 +1,9 @@
 import Card from './Card'
 import MuscleTags from './MuscleTags'
 import MuscleBodyMap from './MuscleBodyMap'
+import ExerciseProgression from './ExerciseProgression'
 
-function ExerciseDetailModal({ exercise, onClose }) {
+function ExerciseDetailModal({ exercise, userId, onClose, onError }) {
   if (!exercise) return null
 
   return (
@@ -11,7 +12,7 @@ function ExerciseDetailModal({ exercise, onClose }) {
       onClick={onClose}
     >
       <Card
-        className="w-full max-w-md p-5"
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -34,6 +35,13 @@ function ExerciseDetailModal({ exercise, onClose }) {
 
         <div className="mt-4">
           <MuscleBodyMap muscles={exercise.exercise_muscles} />
+        </div>
+
+        <div className="mt-4 border-t border-line pt-4">
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+            Progression
+          </p>
+          <ExerciseProgression exerciseId={exercise.id} userId={userId} onError={onError} />
         </div>
       </Card>
     </div>

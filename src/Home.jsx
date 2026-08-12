@@ -75,12 +75,18 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
         .from('routines')
         .select('id, user_id, name, routine_exercises(id, position, exercise_id, exercises(name))')
         .order('name')
-        .order('position', { foreignTable: 'routine_exercises' })
       if (error) {
         onError(error.message)
         return
       }
-      setRoutines(data)
+      // Sorted client-side — `.order(col, { foreignTable })` is a no-op on
+      // this project's PostgREST version, see lastSet.js for details.
+      setRoutines(
+        data.map((routine) => ({
+          ...routine,
+          routine_exercises: [...routine.routine_exercises].sort((a, b) => a.position - b.position),
+        }))
+      )
     }
 
     fetchRoutines()
@@ -210,7 +216,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
 
       {suggestedRoutine && !activeRoutine && (
         <Card className="flex items-center justify-between gap-2 p-4">
-          <p className="min-w-0 truncate text-sm text-chalk">
+          <p className="min-w-0 flex-1 truncate text-sm text-chalk">
             <span className="text-chalk-dim">Scheduled: </span>
             {suggestedRoutine.name}
           </p>
@@ -403,7 +409,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
                   onClick={() => setSelectedExercise(exercise)}
                   className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left"
                 >
-                  <span className="truncate text-sm text-chalk">{exercise.name}</span>
+                  <span className="w-full truncate text-sm text-chalk">{exercise.name}</span>
                   <MuscleTags muscles={exercise.exercise_muscles} />
                 </button>
                 <button
@@ -423,7 +429,9 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
 
       <ExerciseDetailModal
         exercise={selectedExercise}
+        userId={session.user.id}
         onClose={() => setSelectedExercise(null)}
+        onError={onError}
       />
     </div>
   )
