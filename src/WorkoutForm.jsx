@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { logSet } from './logSet'
 import { fetchLastSet } from './lastSet'
+import { BarbellIcon } from './icons'
+import PlateCalculatorModal from './PlateCalculatorModal'
 
 function WorkoutForm({ exercises, userId, onLogged, onError }) {
   const [exerciseId, setExerciseId] = useState('')
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
+  const [showCalculator, setShowCalculator] = useState(false)
 
   const selectedExerciseId = exerciseId || exercises[0]?.id || ''
 
@@ -73,6 +76,14 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
           required
           className={inputClasses}
         />
+        <button
+          type="button"
+          onClick={() => setShowCalculator(true)}
+          aria-label="Plate calculator"
+          className="flex shrink-0 items-center justify-center rounded-md border border-line bg-surface-2 px-3 text-chalk-dim active:border-blue-500 active:text-blue-400"
+        >
+          <BarbellIcon className="h-5 w-5" />
+        </button>
         <input
           type="number"
           value={reps}
@@ -88,6 +99,13 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
       >
         Log set
       </button>
+
+      {showCalculator && (
+        <PlateCalculatorModal
+          initialWeight={Number(weight) || 0}
+          onClose={() => setShowCalculator(false)}
+        />
+      )}
     </form>
   )
 }

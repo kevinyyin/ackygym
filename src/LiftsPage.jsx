@@ -4,6 +4,7 @@ import { displayName } from './displayName'
 import Card from './Card'
 import MuscleTags from './MuscleTags'
 import ExerciseDetailModal from './ExerciseDetailModal'
+import { MedalIcon } from './icons'
 
 function formatDate(dateStr) {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
@@ -76,6 +77,12 @@ function LiftsPage({ profiles, userId, onError }) {
     return displayName(a).localeCompare(displayName(b))
   })
 
+  function leaderboardFor(exerciseId) {
+    return rows
+      .map((profile) => ({ profile, entry: latestSets.get(`${exerciseId}:${profile.id}`) }))
+      .sort((a, b) => (b.entry?.weight ?? -Infinity) - (a.entry?.weight ?? -Infinity))
+  }
+
   return (
     <>
       {exercises.length === 0 ? (
@@ -97,12 +104,15 @@ function LiftsPage({ profiles, userId, onError }) {
                 <MuscleTags muscles={exercise.exercise_muscles} />
               </button>
               <div className="flex flex-col gap-3">
-                {rows.map((profile) => {
-                  const entry = latestSets.get(`${exercise.id}:${profile.id}`)
+                {leaderboardFor(exercise.id).map(({ profile, entry }, i) => {
+                  const isLeader = i === 0 && entry
                   return (
                     <div key={profile.id} className="border-l-2 border-line pl-2">
-                      <p className="truncate text-[11px] text-chalk-dim">
-                        {displayName(profile)}
+                      <p className="flex items-center gap-1 text-[11px] text-chalk-dim">
+                        {isLeader && (
+                          <MedalIcon className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate">{displayName(profile)}</span>
                       </p>
                       {entry ? (
                         <>
