@@ -148,7 +148,7 @@ function TimerPage() {
             onClick={() => selectDuration(preset.seconds)}
             className={`rounded-md border py-3 font-mono text-sm font-semibold ${
               duration === preset.seconds
-                ? 'border-blue-500 bg-blue-500 text-chalk'
+                ? 'border-blue-500 bg-blue-500 text-onblue'
                 : 'border-line bg-surface text-chalk-dim active:border-blue-500'
             }`}
           >
@@ -241,7 +241,7 @@ function TimerPage() {
           type="button"
           onClick={handleStart}
           disabled={status === 'running'}
-          className="rounded-md bg-blue-500 py-4 font-body text-base font-bold text-chalk active:bg-blue-600 disabled:pointer-events-none disabled:opacity-40"
+          className="rounded-md bg-blue-500 py-4 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:pointer-events-none disabled:opacity-40"
         >
           {status === 'paused' ? 'Resume' : 'Start'}
         </button>

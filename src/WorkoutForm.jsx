@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { supabase } from './supabaseClient'
 import { logSet } from './logSet'
+import { fetchLastSet } from './lastSet'
 
 function WorkoutForm({ exercises, userId, onLogged, onError }) {
   const [exerciseId, setExerciseId] = useState('')
@@ -12,16 +12,8 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
   useEffect(() => {
     if (!selectedExerciseId) return
 
-    async function fetchLastSet() {
-      const { data, error } = await supabase
-        .from('sets')
-        .select('weight, reps, workouts!inner(date)')
-        .eq('user_id', userId)
-        .eq('exercise_id', Number(selectedExerciseId))
-        .order('date', { foreignTable: 'workouts', ascending: false })
-        .order('id', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+    async function loadLastSet() {
+      const { data, error } = await fetchLastSet(userId, Number(selectedExerciseId))
 
       if (error) {
         onError(error.message)
@@ -32,7 +24,7 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
       setReps(data ? String(data.reps) : '')
     }
 
-    fetchLastSet()
+    loadLastSet()
   }, [selectedExerciseId, userId, onError])
 
   async function handleSubmit(e) {
@@ -92,7 +84,7 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
       </div>
       <button
         type="submit"
-        className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-chalk active:bg-blue-600"
+        className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600"
       >
         Log set
       </button>

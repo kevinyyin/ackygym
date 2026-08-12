@@ -10,6 +10,7 @@
   --color-chalk-dim: #8b8d97;
 
   --color-danger: #e5484d;
+  --color-onblue: #ffffff;
 
   --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
@@ -19,6 +20,17 @@
 @layer base {
   html {
     color-scheme: dark;
+  }
+
+  html[data-theme="light"] {
+    color-scheme: light;
+    --color-ink: #f4f4f6;
+    --color-surface: #ffffff;
+    --color-surface-2: #eef0f3;
+    --color-line: #dcdfe4;
+    --color-chalk: #16171b;
+    --color-chalk-dim: #6b6e78;
+    --color-danger: #d0353d;
   }
 
   body {

@@ -4,11 +4,31 @@ import WorkoutForm from './WorkoutForm'
 import WeekSchedule from './WeekSchedule'
 import AddExerciseForm from './AddExerciseForm'
 import Card from './Card'
+import MuscleTags from './MuscleTags'
+import ExerciseDetailModal from './ExerciseDetailModal'
+import ActiveRoutine from './ActiveRoutine'
+import Routines from './Routines'
 import WaterTracker from './WaterTracker'
 import { displayName } from './displayName'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
+import { NoteIcon } from './icons'
+
+function groupSetsByExercise(sets) {
+  const order = []
+  const byExerciseId = new Map()
+
+  for (const set of sets) {
+    if (!byExerciseId.has(set.exercise_id)) {
+      byExerciseId.set(set.exercise_id, { exerciseId: set.exercise_id, name: set.exercises.name, sets: [] })
+      order.push(set.exercise_id)
+    }
+    byExerciseId.get(set.exercise_id).sets.push(set)
+  }
+
+  return order.map((exerciseId) => byExerciseId.get(exerciseId))
+}
 
 function SectionLabel({ children }) {
   return (
@@ -24,10 +44,20 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
   const [todaysSets, setTodaysSets] = useState([])
   const [refreshKey, setRefreshKey] = useState(0)
   const [exercisesVersion, setExercisesVersion] = useState(0)
+  const [selectedExercise, setSelectedExercise] = useState(null)
+  const [editingNoteId, setEditingNoteId] = useState(null)
+  const [noteDraft, setNoteDraft] = useState('')
+  const [showLogSet, setShowLogSet] = useState(false)
+  const [routines, setRoutines] = useState([])
+  const [routinesVersion, setRoutinesVersion] = useState(0)
+  const [activeRoutine, setActiveRoutine] = useState(null)
 
   useEffect(() => {
     async function fetchExercises() {
-      const { data, error } = await supabase.from('exercises').select('*')
+      const { data, error } = await supabase
+        .from('exercises')
+        .select('id, name, exercise_muscles(muscle, role, muscle_groups(label))')
+        .order('name')
       if (error) {
         onError(error.message)
         return
@@ -39,10 +69,27 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
   }, [exercisesVersion, onError])
 
   useEffect(() => {
+    async function fetchRoutines() {
+      const { data, error } = await supabase
+        .from('routines')
+        .select('id, user_id, name, routine_exercises(id, position, exercise_id, exercises(name))')
+        .order('name')
+        .order('position', { foreignTable: 'routine_exercises' })
+      if (error) {
+        onError(error.message)
+        return
+      }
+      setRoutines(data)
+    }
+
+    fetchRoutines()
+  }, [routinesVersion, onError])
+
+  useEffect(() => {
     async function fetchTodaysSets() {
       const { data, error } = await supabase
         .from('sets')
-        .select('id, weight, reps, user_id, exercise_id, exercises (name), workouts!inner (date)')
+        .select('id, weight, reps, note, user_id, exercise_id, exercises (name), workouts!inner (date)')
         .eq('workouts.date', getTodayDateString())
         .order('id')
 
@@ -77,9 +124,13 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
     })
 
   const todayDayOfWeek = new Date().getDay()
-  const todaysLabel = schedule.find(
+  const todaysScheduleEntry = schedule.find(
     (s) => s.user_id === session.user.id && s.day_of_week === todayDayOfWeek
-  )?.label
+  )
+  const todaysLabel = todaysScheduleEntry?.label
+  const suggestedRoutine = todaysScheduleEntry?.routine_id
+    ? routines.find((r) => r.id === todaysScheduleEntry.routine_id)
+    : null
 
   async function handleRepeatSet(set) {
     onError('')
@@ -103,6 +154,23 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
       onError(error.message)
       return
     }
+    setRefreshKey((key) => key + 1)
+  }
+
+  function openNoteEditor(set) {
+    setEditingNoteId(set.id)
+    setNoteDraft(set.note ?? '')
+  }
+
+  async function handleSaveNote(setId, note) {
+    onError('')
+    const trimmed = note.trim()
+    const { error } = await supabase.from('sets').update({ note: trimmed || null }).eq('id', setId)
+    if (error) {
+      onError(error.message)
+      return
+    }
+    setEditingNoteId(null)
     setRefreshKey((key) => key + 1)
   }
 
@@ -139,19 +207,54 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
         </Card>
       </div>
 
-      <WaterTracker session={session} profiles={profiles} onError={onError} />
+      {suggestedRoutine && !activeRoutine && (
+        <Card className="flex items-center justify-between gap-2 p-4">
+          <p className="min-w-0 truncate text-sm text-chalk">
+            <span className="text-chalk-dim">Scheduled: </span>
+            {suggestedRoutine.name}
+          </p>
+          <button
+            type="button"
+            onClick={() => setActiveRoutine(suggestedRoutine)}
+            className="shrink-0 rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600"
+          >
+            Start
+          </button>
+        </Card>
+      )}
 
       <Card className="p-4">
-        <SectionLabel>Log a set</SectionLabel>
-        <div className="mt-3">
-          <WorkoutForm
-            exercises={exercises}
-            userId={session.user.id}
-            onLogged={() => setRefreshKey((key) => key + 1)}
-            onError={onError}
-          />
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel>Log a set</SectionLabel>
+          <button
+            type="button"
+            onClick={() => setShowLogSet((v) => !v)}
+            className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+          >
+            {showLogSet ? 'Hide' : 'Show'}
+          </button>
         </div>
+        {showLogSet && (
+          <div className="mt-3">
+            <WorkoutForm
+              exercises={exercises}
+              userId={session.user.id}
+              onLogged={() => setRefreshKey((key) => key + 1)}
+              onError={onError}
+            />
+          </div>
+        )}
       </Card>
+
+      {activeRoutine && (
+        <ActiveRoutine
+          routine={activeRoutine}
+          userId={session.user.id}
+          onExit={() => setActiveRoutine(null)}
+          onLogged={() => setRefreshKey((key) => key + 1)}
+          onError={onError}
+        />
+      )}
 
       <div className="flex flex-col gap-3">
         <SectionLabel>Today&apos;s sets</SectionLabel>
@@ -165,43 +268,82 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
               <h3 className="border-b border-line px-4 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
                 {group.name}
               </h3>
-              <ul className="divide-y divide-line">
-                {group.sets.map((set) => (
-                  <li
-                    key={set.id}
-                    className="flex items-center justify-between gap-2 px-4 py-3"
-                  >
-                    <span className="font-medium text-chalk">
-                      {set.exercises.name}
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span className="font-mono text-sm text-chalk-dim">
-                        {set.weight}
-                        <span className="text-chalk-dim/60">×</span>
-                        {set.reps}
-                      </span>
-                      {set.user_id === session.user.id && (
-                        <>
-                          <button
-                            onClick={() => handleRepeatSet(set)}
-                            aria-label={`Repeat ${set.exercises.name} set`}
-                            className="shrink-0 text-chalk-dim hover:text-blue-400"
-                          >
-                            ↻
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSet(set.id)}
-                            aria-label={`Delete ${set.exercises.name} set`}
-                            className="shrink-0 text-chalk-dim hover:text-danger"
-                          >
-                            ✕
-                          </button>
-                        </>
-                      )}
-                    </span>
-                  </li>
+              <div className="divide-y divide-line">
+                {groupSetsByExercise(group.sets).map((exerciseGroup) => (
+                  <div key={exerciseGroup.exerciseId} className="px-4 py-3">
+                    <p className="font-medium text-chalk">{exerciseGroup.name}</p>
+                    <ul className="mt-1.5 flex flex-col gap-1.5">
+                      {exerciseGroup.sets.map((set, i) => {
+                        const showWeight =
+                          i === 0 || set.weight !== exerciseGroup.sets[i - 1].weight
+
+                        return (
+                          <li key={set.id} className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-mono text-sm text-chalk-dim">
+                                {showWeight && (
+                                  <>
+                                    {set.weight}
+                                    <span className="text-chalk-dim/60">×</span>
+                                  </>
+                                )}
+                                {set.reps}
+                              </span>
+                              <span className="flex items-center gap-3">
+                                {set.user_id === session.user.id && (
+                                  <>
+                                    <button
+                                      onClick={() => openNoteEditor(set)}
+                                      aria-label={`Note for ${exerciseGroup.name} set`}
+                                      className="shrink-0 text-chalk-dim hover:text-blue-400"
+                                    >
+                                      <NoteIcon className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleRepeatSet(set)}
+                                      aria-label={`Repeat ${exerciseGroup.name} set`}
+                                      className="shrink-0 text-chalk-dim hover:text-blue-400"
+                                    >
+                                      ↻
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSet(set.id)}
+                                      aria-label={`Delete ${exerciseGroup.name} set`}
+                                      className="shrink-0 text-chalk-dim hover:text-danger"
+                                    >
+                                      ✕
+                                    </button>
+                                  </>
+                                )}
+                              </span>
+                            </div>
+
+                            {editingNoteId === set.id ? (
+                              <input
+                                autoFocus
+                                type="text"
+                                value={noteDraft}
+                                onChange={(e) => setNoteDraft(e.target.value)}
+                                onBlur={() => handleSaveNote(set.id, noteDraft)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') e.currentTarget.blur()
+                                  if (e.key === 'Escape') setEditingNoteId(null)
+                                }}
+                                placeholder="Add a note…"
+                                className="w-full rounded-md border border-line bg-surface-2 px-2 py-1 font-body text-xs text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+                              />
+                            ) : (
+                              set.note && (
+                                <p className="truncate text-xs text-chalk-dim italic">{set.note}</p>
+                              )
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </Card>
           ))
         )}
@@ -219,18 +361,39 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
       </div>
 
       <Card className="p-4">
+        <SectionLabel>Routines</SectionLabel>
+        <Routines
+          routines={routines}
+          exercises={exercises}
+          schedule={schedule}
+          userId={session.user.id}
+          onRoutinesChanged={() => setRoutinesVersion((v) => v + 1)}
+          onScheduleChanged={onScheduleSaved}
+          onStart={setActiveRoutine}
+          onError={onError}
+        />
+      </Card>
+
+      <Card className="p-4">
         <SectionLabel>Exercises</SectionLabel>
-        <ul className="mt-3 flex flex-wrap gap-2">
+        <ul className="mt-3 flex flex-col gap-2">
           {exercises.map((exercise) => (
             <li
               key={exercise.id}
-              className="flex items-center gap-1.5 rounded-full border border-line bg-surface-2 py-1.5 pl-3 pr-2 text-sm text-chalk"
+              className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface-2 py-1.5 pl-3 pr-2"
             >
-              {exercise.name}
+              <button
+                type="button"
+                onClick={() => setSelectedExercise(exercise)}
+                className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left"
+              >
+                <span className="truncate text-sm text-chalk">{exercise.name}</span>
+                <MuscleTags muscles={exercise.exercise_muscles} />
+              </button>
               <button
                 onClick={() => handleDeleteExercise(exercise.id)}
                 aria-label={`Delete ${exercise.name}`}
-                className="text-chalk-dim hover:text-danger"
+                className="shrink-0 text-chalk-dim hover:text-danger"
               >
                 ✕
               </button>
@@ -243,6 +406,13 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
           onError={onError}
         />
       </Card>
+
+      <WaterTracker session={session} profiles={profiles} onError={onError} />
+
+      <ExerciseDetailModal
+        exercise={selectedExercise}
+        onClose={() => setSelectedExercise(null)}
+      />
     </div>
   )
 }
