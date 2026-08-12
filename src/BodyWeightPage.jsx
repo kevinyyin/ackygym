@@ -129,7 +129,7 @@ function BodyWeightPage({ profiles, userId, onError }) {
           type="button"
           onClick={() => handleUnitChange(option)}
           className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
-            unit === option ? 'bg-blue-500 text-chalk' : 'text-chalk-dim'
+            unit === option ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
           }`}
         >
           {option}
@@ -172,7 +172,7 @@ function BodyWeightPage({ profiles, userId, onError }) {
           />
           <button
             type="submit"
-            className="shrink-0 rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-chalk active:bg-blue-600"
+            className="shrink-0 rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600"
           >
             Log
           </button>

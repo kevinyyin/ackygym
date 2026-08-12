@@ -78,6 +78,33 @@ export function LogOutIcon(props) {
   )
 }
 
+export function SunIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <circle cx="12" cy="12" r="4.5" />
+      <path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12h2.5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8" />
+    </BaseIcon>
+  )
+}
+
+export function MoonIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+    </BaseIcon>
+  )
+}
+
+export function NoteIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="M14 3v5h5" />
+      <path d="M8 13h8M8 17h5" />
+    </BaseIcon>
+  )
+}
+
 export function ChevronLeftIcon(props) {
   return (
     <BaseIcon strokeWidth="2.5" {...props}>

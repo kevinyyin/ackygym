@@ -8,7 +8,16 @@ import LiftsPage from './LiftsPage'
 import BodyWeightPage from './BodyWeightPage'
 import TimerPage from './TimerPage'
 import UsernameField from './UsernameField'
-import { GridIcon, CalendarIcon, BarbellIcon, ScaleIcon, TimerIcon, LogOutIcon } from './icons'
+import {
+  GridIcon,
+  CalendarIcon,
+  BarbellIcon,
+  ScaleIcon,
+  TimerIcon,
+  LogOutIcon,
+  SunIcon,
+  MoonIcon,
+} from './icons'
 
 const PAGE_TITLES = {
   '/': 'Home',
@@ -33,7 +42,13 @@ function App() {
   const [error, setError] = useState('')
   const [scheduleVersion, setScheduleVersion] = useState(0)
   const [profilesVersion, setProfilesVersion] = useState(0)
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
   const location = useLocation()
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -66,7 +81,7 @@ function App() {
     async function fetchSchedule() {
       const { data, error } = await supabase
         .from('schedule')
-        .select('id, user_id, day_of_week, label')
+        .select('id, user_id, day_of_week, label, routine_id')
 
       if (error) {
         setError(error.message)
@@ -102,13 +117,22 @@ function App() {
               onError={setError}
             />
           </div>
-          <button
-            onClick={() => supabase.auth.signOut()}
-            aria-label="Sign out"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
-          >
-            <LogOutIcon className="h-5 w-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
+            >
+              {theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+            </button>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              aria-label="Sign out"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
+            >
+              <LogOutIcon className="h-5 w-5" />
+            </button>
+          </div>
         </header>
 
         {error && (

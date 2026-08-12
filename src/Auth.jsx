@@ -53,7 +53,7 @@ function Auth() {
         <button
           type="submit"
           onClick={handleSignIn}
-          className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-chalk active:bg-blue-600"
+          className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600"
         >
           Sign in
         </button>

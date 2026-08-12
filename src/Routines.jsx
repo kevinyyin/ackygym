@@ -1,0 +1,283 @@
+import { useState } from 'react'
+import { supabase } from './supabaseClient'
+import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
+
+function RoutineNameField({ routine, onSaved, onError }) {
+  const [value, setValue] = useState(routine.name)
+
+  async function handleBlur() {
+    const trimmed = value.trim()
+    if (!trimmed || trimmed === routine.name) {
+      setValue(routine.name)
+      return
+    }
+
+    onError('')
+    const { error } = await supabase.from('routines').update({ name: trimmed }).eq('id', routine.id)
+    if (error) {
+      onError(error.message)
+      setValue(routine.name)
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={handleBlur}
+      className="min-w-0 flex-1 truncate bg-transparent font-medium text-chalk focus:text-blue-400 focus:outline-none"
+    />
+  )
+}
+
+function AddExerciseToRoutine({ routine, availableExercises, onAdded, onError }) {
+  const [exerciseId, setExerciseId] = useState('')
+  const selected = exerciseId || availableExercises[0]?.id || ''
+
+  if (availableExercises.length === 0) return null
+
+  async function handleAdd() {
+    if (!selected) return
+    onError('')
+    const { error } = await supabase.from('routine_exercises').insert({
+      routine_id: routine.id,
+      exercise_id: Number(selected),
+      position: routine.routine_exercises.length,
+    })
+    if (error) {
+      onError(error.message)
+      return
+    }
+    setExerciseId('')
+    onAdded()
+  }
+
+  return (
+    <div className="mt-2 flex gap-2">
+      <select
+        value={selected}
+        onChange={(e) => setExerciseId(e.target.value)}
+        className="w-full min-w-0 rounded-md border border-line bg-surface px-2 py-1.5 font-body text-xs text-chalk focus:border-blue-500 focus:outline-none"
+      >
+        {availableExercises.map((exercise) => (
+          <option key={exercise.id} value={exercise.id}>
+            {exercise.name}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={handleAdd}
+        className="shrink-0 rounded-md border border-line px-3 py-1.5 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:border-blue-500 hover:text-blue-400"
+      >
+        Add
+      </button>
+    </div>
+  )
+}
+
+function DayToggles({ routine, schedule, userId, onChanged, onError }) {
+  async function toggleDay(day) {
+    onError('')
+    const existing = schedule.find((s) => s.user_id === userId && s.day_of_week === day)
+    const currentlyLinked = existing?.routine_id === routine.id
+
+    const { error } = await supabase.from('schedule').upsert(
+      {
+        user_id: userId,
+        day_of_week: day,
+        label: !currentlyLinked && !existing?.label ? routine.name : (existing?.label ?? ''),
+        routine_id: currentlyLinked ? null : routine.id,
+      },
+      { onConflict: 'user_id,day_of_week' }
+    )
+
+    if (error) {
+      onError(error.message)
+      return
+    }
+    onChanged()
+  }
+
+  return (
+    <div className="mt-2 flex gap-1">
+      {WEEKDAY_ORDER.map((day) => {
+        const linked = schedule.some(
+          (s) => s.user_id === userId && s.day_of_week === day && s.routine_id === routine.id
+        )
+        return (
+          <button
+            key={day}
+            type="button"
+            onClick={() => toggleDay(day)}
+            className={
+              linked
+                ? 'flex-1 rounded border border-blue-500 bg-blue-500 py-1 font-mono text-[10px] tracking-wide text-onblue uppercase'
+                : 'flex-1 rounded border border-line bg-surface py-1 font-mono text-[10px] tracking-wide text-chalk-dim uppercase'
+            }
+          >
+            {WEEKDAY_SHORT[day].slice(0, 2)}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function Routines({
+  routines,
+  exercises,
+  schedule,
+  userId,
+  onRoutinesChanged,
+  onScheduleChanged,
+  onStart,
+  onError,
+}) {
+  const [newRoutineName, setNewRoutineName] = useState('')
+
+  async function handleCreate(e) {
+    e.preventDefault()
+    onError('')
+    const trimmed = newRoutineName.trim()
+    if (!trimmed) return
+
+    const { error } = await supabase.from('routines').insert({ name: trimmed })
+    if (error) {
+      onError(error.message)
+      return
+    }
+    setNewRoutineName('')
+    onRoutinesChanged()
+  }
+
+  async function handleDeleteRoutine(routineId) {
+    onError('')
+    const { error } = await supabase.from('routines').delete().eq('id', routineId)
+    if (error) {
+      onError(error.message)
+      return
+    }
+    onRoutinesChanged()
+  }
+
+  async function handleRemoveExercise(routineExerciseId) {
+    onError('')
+    const { error } = await supabase.from('routine_exercises').delete().eq('id', routineExerciseId)
+    if (error) {
+      onError(error.message)
+      return
+    }
+    onRoutinesChanged()
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-3">
+      {routines.length === 0 ? (
+        <p className="text-sm text-chalk-dim">No routines yet.</p>
+      ) : (
+        routines.map((routine) => {
+          const isOwn = routine.user_id === userId
+          const availableExercises = exercises.filter(
+            (ex) => !routine.routine_exercises.some((re) => re.exercise_id === ex.id)
+          )
+
+          return (
+            <div key={routine.id} className="rounded-md border border-line bg-surface-2 p-3">
+              <div className="flex items-center justify-between gap-2">
+                {isOwn ? (
+                  <RoutineNameField routine={routine} onSaved={onRoutinesChanged} onError={onError} />
+                ) : (
+                  <p className="min-w-0 flex-1 truncate font-medium text-chalk">{routine.name}</p>
+                )}
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onStart(routine)}
+                    className="font-mono text-[11px] tracking-wide text-blue-400 uppercase hover:text-blue-300"
+                  >
+                    Start
+                  </button>
+                  {isOwn && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRoutine(routine.id)}
+                      aria-label={`Delete ${routine.name}`}
+                      className="text-chalk-dim hover:text-danger"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {routine.routine_exercises.length === 0 ? (
+                  <span className="text-xs text-chalk-dim">No exercises yet.</span>
+                ) : (
+                  routine.routine_exercises.map((re) => (
+                    <span
+                      key={re.id}
+                      className="flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 font-mono text-[10px] tracking-wide text-chalk-dim uppercase"
+                    >
+                      {re.exercises.name}
+                      {isOwn && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExercise(re.id)}
+                          aria-label={`Remove ${re.exercises.name} from ${routine.name}`}
+                          className="text-chalk-dim hover:text-danger"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </span>
+                  ))
+                )}
+              </div>
+
+              {isOwn && (
+                <>
+                  <AddExerciseToRoutine
+                    routine={routine}
+                    availableExercises={availableExercises}
+                    onAdded={onRoutinesChanged}
+                    onError={onError}
+                  />
+                  <DayToggles
+                    routine={routine}
+                    schedule={schedule}
+                    userId={userId}
+                    onChanged={onScheduleChanged}
+                    onError={onError}
+                  />
+                </>
+              )}
+            </div>
+          )
+        })
+      )}
+
+      <form onSubmit={handleCreate} className="flex gap-2">
+        <input
+          type="text"
+          value={newRoutineName}
+          onChange={(e) => setNewRoutineName(e.target.value)}
+          placeholder="New routine"
+          className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600"
+        >
+          Create
+        </button>
+      </form>
+    </div>
+  )
+}
+
+export default Routines

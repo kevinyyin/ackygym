@@ -21,6 +21,7 @@ function WaterTracker({ session, profiles, onError }) {
   const [logs, setLogs] = useState([])
   const [refreshKey, setRefreshKey] = useState(0)
   const [customValue, setCustomValue] = useState('')
+  const [expanded, setExpanded] = useState(true)
 
   useEffect(() => {
     async function fetchLogs() {
@@ -99,71 +100,84 @@ function WaterTracker({ session, profiles, onError }) {
 
   return (
     <Card className="p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <SectionLabel>Water</SectionLabel>
-        <DropletIcon className="h-4 w-4 text-blue-400" />
-      </div>
-
-      <p className="mt-3 font-mono text-4xl font-bold text-blue-400">
-        {ownTotalMl}
-        <span className="ml-1 font-body text-lg font-normal text-chalk-dim">/ {GOAL_ML} ml</span>
-      </p>
-
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2">
-        <div
-          className="h-full rounded-full bg-blue-500 transition-all"
-          style={{ width: `${ownProgress * 100}%` }}
-        />
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {QUICK_ADD_ML.map((amount) => (
+        <div className="flex shrink-0 items-center gap-3">
+          <DropletIcon className="h-4 w-4 text-blue-400" />
           <button
-            key={amount}
-            onClick={() => handleAdd(amount)}
-            className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk active:border-blue-500 active:text-blue-400"
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
           >
-            +{amount} ml
+            {expanded ? 'Hide' : 'Show'}
           </button>
-        ))}
-        <button
-          onClick={handleUndo}
-          disabled={ownTotalMl === 0}
-          aria-label="Undo last water entry"
-          className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk-dim active:border-danger active:text-danger disabled:opacity-40"
-        >
-          Undo
-        </button>
+        </div>
       </div>
 
-      <form onSubmit={handleCustomAdd} className="mt-3 flex gap-2">
-        <input
-          type="number"
-          min="1"
-          value={customValue}
-          onChange={(e) => setCustomValue(e.target.value)}
-          placeholder="Custom amount (ml)"
-          className="w-full rounded-md border border-line bg-surface-2 px-4 py-2.5 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="shrink-0 rounded-md bg-blue-500 px-4 py-2.5 font-body text-sm font-bold text-chalk active:bg-blue-600"
-        >
-          Add
-        </button>
-      </form>
+      {expanded && (
+        <>
+          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">
+            {ownTotalMl}
+            <span className="ml-1 font-body text-lg font-normal text-chalk-dim">/ {GOAL_ML} ml</span>
+          </p>
 
-      {otherTotals.length > 0 && (
-        <ul className="mt-4 flex flex-col gap-2 border-t border-line pt-3">
-          {otherTotals.map((entry) => (
-            <li key={entry.userId} className="flex items-center justify-between gap-2">
-              <span className="text-sm text-chalk-dim">{entry.name}</span>
-              <span className="font-mono text-sm text-chalk">
-                {entry.totalMl} / {GOAL_ML} ml
-              </span>
-            </li>
-          ))}
-        </ul>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2">
+            <div
+              className="h-full rounded-full bg-blue-500 transition-all"
+              style={{ width: `${ownProgress * 100}%` }}
+            />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {QUICK_ADD_ML.map((amount) => (
+              <button
+                key={amount}
+                onClick={() => handleAdd(amount)}
+                className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk active:border-blue-500 active:text-blue-400"
+              >
+                +{amount} ml
+              </button>
+            ))}
+            <button
+              onClick={handleUndo}
+              disabled={ownTotalMl === 0}
+              aria-label="Undo last water entry"
+              className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk-dim active:border-danger active:text-danger disabled:opacity-40"
+            >
+              Undo
+            </button>
+          </div>
+
+          <form onSubmit={handleCustomAdd} className="mt-3 flex gap-2">
+            <input
+              type="number"
+              min="1"
+              value={customValue}
+              onChange={(e) => setCustomValue(e.target.value)}
+              placeholder="Custom amount (ml)"
+              className="w-full rounded-md border border-line bg-surface-2 px-4 py-2.5 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-md bg-blue-500 px-4 py-2.5 font-body text-sm font-bold text-onblue active:bg-blue-600"
+            >
+              Add
+            </button>
+          </form>
+
+          {otherTotals.length > 0 && (
+            <ul className="mt-4 flex flex-col gap-2 border-t border-line pt-3">
+              {otherTotals.map((entry) => (
+                <li key={entry.userId} className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-chalk-dim">{entry.name}</span>
+                  <span className="font-mono text-sm text-chalk">
+                    {entry.totalMl} / {GOAL_ML} ml
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </Card>
   )
