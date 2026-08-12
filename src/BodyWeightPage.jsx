@@ -5,6 +5,7 @@ import { displayName } from './displayName'
 import { getTodayDateString } from './dateUtils'
 import { convertWeight, roundWeight } from './weightUnits'
 import CalorieCalculator from './CalorieCalculator'
+import MuscleVolume from './MuscleVolume'
 
 const UNIT_STORAGE_KEY = 'gym-tracker:body-weight-unit'
 
@@ -159,6 +160,8 @@ function BodyWeightPage({ profiles, userId, onError }) {
         </p>
       </Card>
 
+      <MuscleVolume userId={userId} onError={onError} />
+
       <Card className="p-4">
         <SectionLabel>Log today&apos;s weight</SectionLabel>
         <form onSubmit={handleSubmit} className="mt-3 flex gap-3">
@@ -180,7 +183,7 @@ function BodyWeightPage({ profiles, userId, onError }) {
         </form>
       </Card>
 
-      <CalorieCalculator latestWeightKg={latestOwnEntry?.weight_kg} unit={unit} />
+      <CalorieCalculator userId={userId} latestWeightKg={latestOwnEntry?.weight_kg} unit={unit} />
 
       <div className="flex flex-col gap-3">
         <SectionLabel>History</SectionLabel>

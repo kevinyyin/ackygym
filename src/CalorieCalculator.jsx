@@ -7,11 +7,13 @@ function roundTenth(value) {
   return Math.round(value * 10) / 10
 }
 
-const PROFILE_STORAGE_KEY = 'gym-tracker:calorie-calc-profile'
+function getProfileStorageKey(userId) {
+  return `gym-tracker:calorie-calc-profile:${userId}`
+}
 
-function loadStoredProfile() {
+function loadStoredProfile(userId) {
   try {
-    const raw = localStorage.getItem(PROFILE_STORAGE_KEY)
+    const raw = localStorage.getItem(getProfileStorageKey(userId))
     return raw ? JSON.parse(raw) : {}
   } catch {
     return {}
@@ -24,9 +26,9 @@ const GOALS = [
   { value: 'gain', label: 'Gain' },
 ]
 
-function CalorieCalculator({ latestWeightKg, unit }) {
+function CalorieCalculator({ userId, latestWeightKg, unit }) {
   const [expanded, setExpanded] = useState(false)
-  const stored = loadStoredProfile()
+  const stored = loadStoredProfile(userId)
 
   const [height, setHeight] = useState(String(stored.height ?? ''))
   const [age, setAge] = useState(String(stored.age ?? ''))
@@ -71,10 +73,10 @@ function CalorieCalculator({ latestWeightKg, unit }) {
 
   useEffect(() => {
     localStorage.setItem(
-      PROFILE_STORAGE_KEY,
+      getProfileStorageKey(userId),
       JSON.stringify({ height, age, sex, activityLevel, goal })
     )
-  }, [height, age, sex, activityLevel, goal])
+  }, [userId, height, age, sex, activityLevel, goal])
 
   const heightUnit = unit === 'kg' ? 'cm' : 'in'
 
