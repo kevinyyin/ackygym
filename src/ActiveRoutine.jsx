@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import Card from './Card'
 import { fetchLastSet } from './lastSet'
 import { logSet } from './logSet'
+import { BarbellIcon } from './icons'
+import PlateCalculatorModal from './PlateCalculatorModal'
 
 function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
   const [rows, setRows] = useState(null)
+  const [calculatorRowId, setCalculatorRowId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -86,6 +89,14 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
                 placeholder="Wt"
                 className={inputClasses}
               />
+              <button
+                type="button"
+                onClick={() => setCalculatorRowId(row.exerciseId)}
+                aria-label={`Plate calculator for ${row.name}`}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
+              >
+                <BarbellIcon className="h-4 w-4" />
+              </button>
               <span className="text-chalk-dim/60">×</span>
               <input
                 type="number"
@@ -105,6 +116,13 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
             </li>
           ))}
         </ul>
+      )}
+
+      {calculatorRowId !== null && (
+        <PlateCalculatorModal
+          initialWeight={Number(rows.find((r) => r.exerciseId === calculatorRowId)?.weight) || 0}
+          onClose={() => setCalculatorRowId(null)}
+        />
       )}
     </Card>
   )

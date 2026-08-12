@@ -95,6 +95,16 @@ export function MoonIcon(props) {
   )
 }
 
+export function MedalIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M8.5 3L11 9M15.5 3L13 9" />
+      <circle cx="12" cy="15" r="6" />
+      <circle cx="12" cy="15" r="2.25" fill="currentColor" stroke="none" />
+    </BaseIcon>
+  )
+}
+
 export function NoteIcon(props) {
   return (
     <BaseIcon {...props}>
