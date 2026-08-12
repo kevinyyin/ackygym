@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
+import { GripIcon } from './icons'
 
 function RoutineNameField({ routine, onSaved, onError }) {
   const [value, setValue] = useState(routine.name)
@@ -76,6 +77,109 @@ function AddExerciseToRoutine({ routine, availableExercises, onAdded, onError })
         Add
       </button>
     </div>
+  )
+}
+
+function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
+  const [items, setItems] = useState(routine.routine_exercises)
+  const draggingIdRef = useRef(null)
+  const orderChangedRef = useRef(false)
+
+  useEffect(() => {
+    if (draggingIdRef.current === null) setItems(routine.routine_exercises)
+  }, [routine.routine_exercises])
+
+  function handlePointerDown(e, id) {
+    draggingIdRef.current = id
+    orderChangedRef.current = false
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function handlePointerMove(e) {
+    const draggingId = draggingIdRef.current
+    if (draggingId === null) return
+
+    const row = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-reorder-id]')
+    if (!row) return
+    const targetId = Number(row.dataset.reorderId)
+    if (targetId === draggingId) return
+
+    setItems((current) => {
+      const fromIndex = current.findIndex((it) => it.id === draggingId)
+      const toIndex = current.findIndex((it) => it.id === targetId)
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return current
+      const next = [...current]
+      const [moved] = next.splice(fromIndex, 1)
+      next.splice(toIndex, 0, moved)
+      return next
+    })
+    orderChangedRef.current = true
+  }
+
+  function handlePointerCancel() {
+    draggingIdRef.current = null
+    setItems(routine.routine_exercises)
+  }
+
+  async function handlePointerUp() {
+    const draggingId = draggingIdRef.current
+    draggingIdRef.current = null
+    if (draggingId === null || !orderChangedRef.current) return
+
+    onError('')
+    const results = await Promise.all(
+      items.map((item, index) =>
+        supabase.from('routine_exercises').update({ position: index }).eq('id', item.id)
+      )
+    )
+    const failed = results.find((r) => r.error)
+    if (failed) {
+      onError(failed.error.message)
+      return
+    }
+    onReordered()
+  }
+
+  if (items.length === 0) {
+    return <p className="mt-2 text-xs text-chalk-dim">No exercises yet.</p>
+  }
+
+  return (
+    <ul className="mt-2 flex flex-col gap-1.5">
+      {items.map((re, index) => (
+        <li
+          key={re.id}
+          data-reorder-id={re.id}
+          className="flex items-center gap-2 rounded-md border border-line bg-surface px-2 py-1.5"
+        >
+          <span className="w-4 shrink-0 text-center font-mono text-[10px] text-chalk-dim">
+            {index + 1}
+          </span>
+          <button
+            type="button"
+            onPointerDown={(e) => handlePointerDown(e, re.id)}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            aria-label={`Reorder ${re.exercises.name}`}
+            className="shrink-0 touch-none cursor-grab text-chalk-dim active:cursor-grabbing"
+          >
+            <GripIcon className="h-4 w-4" />
+          </button>
+          <span className="min-w-0 flex-1 truncate font-mono text-[10px] tracking-wide text-chalk-dim uppercase">
+            {re.exercises.name}
+          </span>
+          <button
+            type="button"
+            onClick={() => onRemove(re.id)}
+            aria-label={`Remove ${re.exercises.name} from ${routine.name}`}
+            className="shrink-0 text-chalk-dim hover:text-danger"
+          >
+            ✕
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -214,30 +318,29 @@ function Routines({
                 </div>
               </div>
 
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {routine.routine_exercises.length === 0 ? (
-                  <span className="text-xs text-chalk-dim">No exercises yet.</span>
-                ) : (
-                  routine.routine_exercises.map((re) => (
-                    <span
-                      key={re.id}
-                      className="flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 font-mono text-[10px] tracking-wide text-chalk-dim uppercase"
-                    >
-                      {re.exercises.name}
-                      {isOwn && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveExercise(re.id)}
-                          aria-label={`Remove ${re.exercises.name} from ${routine.name}`}
-                          className="text-chalk-dim hover:text-danger"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </span>
-                  ))
-                )}
-              </div>
+              {isOwn ? (
+                <ReorderableExerciseList
+                  routine={routine}
+                  onRemove={handleRemoveExercise}
+                  onReordered={onRoutinesChanged}
+                  onError={onError}
+                />
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {routine.routine_exercises.length === 0 ? (
+                    <span className="text-xs text-chalk-dim">No exercises yet.</span>
+                  ) : (
+                    routine.routine_exercises.map((re) => (
+                      <span
+                        key={re.id}
+                        className="flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 font-mono text-[10px] tracking-wide text-chalk-dim uppercase"
+                      >
+                        {re.exercises.name}
+                      </span>
+                    ))
+                  )}
+                </div>
+              )}
 
               {isOwn && (
                 <>
