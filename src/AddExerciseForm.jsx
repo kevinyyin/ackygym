@@ -24,7 +24,7 @@ function AddExerciseForm({ exercises, onAdded, onError }) {
   }, [onError])
 
   async function ensureCatalogLoaded() {
-    if (catalog !== null) return
+    if (catalog !== null) return catalog
 
     const { data, error } = await supabase
       .from('exercise_catalog')
@@ -34,9 +34,45 @@ function AddExerciseForm({ exercises, onAdded, onError }) {
     if (error) {
       onError(error.message)
       setCatalog([])
-      return
+      return []
     }
     setCatalog(data)
+    return data
+  }
+
+  async function addToCatalogIfMissing(trimmedName, normalizedName, muscleRows) {
+    const currentCatalog = await ensureCatalogLoaded()
+    const alreadyCataloged = currentCatalog.some(
+      (item) => normalizeExerciseName(item.name) === normalizedName
+    )
+    if (alreadyCataloged) return
+
+    const { data: catalogInserted, error: catalogError } = await supabase
+      .from('exercise_catalog')
+      .insert({ name: trimmedName })
+      .select('id')
+      .single()
+
+    // Catalog enrichment is a background nice-to-have — the exercise the
+    // user actually asked for is already saved, so don't surface an error
+    // for this secondary step.
+    if (catalogError) return
+
+    const catalogMuscles = muscleRows.map((m) => ({ muscle: m.muscle, role: m.role }))
+    if (catalogMuscles.length > 0) {
+      await supabase.from('exercise_catalog_muscles').insert(
+        catalogMuscles.map((m) => ({ catalog_id: catalogInserted.id, ...m }))
+      )
+    }
+
+    setCatalog((current) => [
+      ...(current ?? []),
+      {
+        id: catalogInserted.id,
+        name: trimmedName,
+        exercise_catalog_muscles: catalogMuscles,
+      },
+    ])
   }
 
   const normalized = normalizeExerciseName(name)
@@ -107,6 +143,8 @@ function AddExerciseForm({ exercises, onAdded, onError }) {
         return
       }
     }
+
+    await addToCatalogIfMissing(trimmedName, normalizedName, muscleRows)
 
     setName('')
     setSelected({})
