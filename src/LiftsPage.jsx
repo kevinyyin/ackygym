@@ -38,24 +38,31 @@ function LiftsPage({ profiles, userId, onError }) {
     async function fetchLatestSets() {
       const { data, error } = await supabase
         .from('sets')
-        .select('user_id, exercise_id, weight, reps, workouts!inner(date)')
-        .order('date', { foreignTable: 'workouts', ascending: false })
-        .order('id', { ascending: false })
+        .select('id, user_id, exercise_id, weight, reps, workouts!inner(date)')
 
       if (error) {
         onError(error.message)
         return
       }
 
+      // Sorted client-side — `.order(col, { foreignTable })` is a no-op on
+      // this project's PostgREST version, see lastSet.js for details.
       const latest = new Map()
       for (const set of data) {
         const key = `${set.exercise_id}:${set.user_id}`
-        if (latest.has(key)) continue
-        latest.set(key, {
-          weight: set.weight,
-          reps: set.reps,
-          date: set.workouts.date,
-        })
+        const existing = latest.get(key)
+        const isNewer =
+          !existing ||
+          set.workouts.date > existing.date ||
+          (set.workouts.date === existing.date && set.id > existing.id)
+        if (isNewer) {
+          latest.set(key, {
+            weight: set.weight,
+            reps: set.reps,
+            date: set.workouts.date,
+            id: set.id,
+          })
+        }
       }
       setLatestSets(latest)
     }
@@ -82,9 +89,9 @@ function LiftsPage({ profiles, userId, onError }) {
               <button
                 type="button"
                 onClick={() => setSelectedExercise(exercise)}
-                className="flex flex-col items-start gap-1.5 text-left"
+                className="flex w-full min-w-0 flex-col items-start gap-1.5 text-left"
               >
-                <p className="truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+                <p className="w-full truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
                   {exercise.name}
                 </p>
                 <MuscleTags muscles={exercise.exercise_muscles} />
@@ -123,7 +130,9 @@ function LiftsPage({ profiles, userId, onError }) {
 
       <ExerciseDetailModal
         exercise={selectedExercise}
+        userId={userId}
         onClose={() => setSelectedExercise(null)}
+        onError={onError}
       />
     </>
   )
