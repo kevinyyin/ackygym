@@ -190,9 +190,9 @@ function App() {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-md items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto flex max-w-md items-stretch justify-around px-2 pb-[calc(env(safe-area-inset-bottom)+0.625rem)]">
           {TABS.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} aria-label={label} className="px-3 pt-2.5 pb-2">
+            <NavLink key={to} to={to} end={end} aria-label={label} className="px-3 pt-2.5 pb-3">
               {({ isActive }) => (
                 <span
                   className={`flex flex-col items-center gap-2 ${
