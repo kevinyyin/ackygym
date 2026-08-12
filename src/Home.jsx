@@ -48,6 +48,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [showLogSet, setShowLogSet] = useState(false)
+  const [showExercises, setShowExercises] = useState(false)
   const [routines, setRoutines] = useState([])
   const [routinesVersion, setRoutinesVersion] = useState(0)
   const [activeRoutine, setActiveRoutine] = useState(null)
@@ -375,36 +376,47 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
       </Card>
 
       <Card className="p-4">
-        <SectionLabel>Exercises</SectionLabel>
-        <ul className="mt-3 flex flex-col gap-2">
-          {exercises.map((exercise) => (
-            <li
-              key={exercise.id}
-              className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface-2 py-1.5 pl-3 pr-2"
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedExercise(exercise)}
-                className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left"
-              >
-                <span className="truncate text-sm text-chalk">{exercise.name}</span>
-                <MuscleTags muscles={exercise.exercise_muscles} />
-              </button>
-              <button
-                onClick={() => handleDeleteExercise(exercise.id)}
-                aria-label={`Delete ${exercise.name}`}
-                className="shrink-0 text-chalk-dim hover:text-danger"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel>Exercises</SectionLabel>
+          <button
+            type="button"
+            onClick={() => setShowExercises((v) => !v)}
+            className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+          >
+            {showExercises ? 'Hide' : 'Show'}
+          </button>
+        </div>
         <AddExerciseForm
           exercises={exercises}
           onAdded={() => setExercisesVersion((v) => v + 1)}
           onError={onError}
         />
+        {showExercises && (
+          <ul className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto">
+            {exercises.map((exercise) => (
+              <li
+                key={exercise.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface-2 py-1.5 pl-3 pr-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedExercise(exercise)}
+                  className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left"
+                >
+                  <span className="truncate text-sm text-chalk">{exercise.name}</span>
+                  <MuscleTags muscles={exercise.exercise_muscles} />
+                </button>
+                <button
+                  onClick={() => handleDeleteExercise(exercise.id)}
+                  aria-label={`Delete ${exercise.name}`}
+                  className="shrink-0 text-chalk-dim hover:text-danger"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <WaterTracker session={session} profiles={profiles} onError={onError} />
