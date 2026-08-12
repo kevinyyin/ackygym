@@ -8,3 +8,9 @@ export function toDateString(date) {
 export function getTodayDateString() {
   return toDateString(new Date())
 }
+
+export function getDateDaysAgoString(daysAgo) {
+  const date = new Date()
+  date.setDate(date.getDate() - daysAgo)
+  return toDateString(date)
+}
