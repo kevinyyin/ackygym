@@ -105,6 +105,19 @@ export function MedalIcon(props) {
   )
 }
 
+export function TrophyIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 5H4.5A2.5 2.5 0 0 0 7 9.5" />
+      <path d="M17 5h2.5A2.5 2.5 0 0 1 17 9.5" />
+      <path d="M12 13v3.5" />
+      <path d="M9 20.5h6" />
+      <path d="M9.5 17h5l.5 3.5h-6Z" />
+    </BaseIcon>
+  )
+}
+
 export function NoteIcon(props) {
   return (
     <BaseIcon {...props}>

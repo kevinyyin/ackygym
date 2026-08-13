@@ -48,3 +48,24 @@
     outline-offset: 2px;
   }
 }
+
+@layer utilities {
+  @keyframes water-sway {
+    from {
+      transform: translateX(-6px);
+    }
+    to {
+      transform: translateX(6px);
+    }
+  }
+
+  .water-wave {
+    animation: water-sway 3.2s ease-in-out infinite alternate;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .water-wave {
+      animation: none;
+    }
+  }
+}

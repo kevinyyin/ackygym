@@ -4,6 +4,7 @@ import Card from './Card'
 import { displayName } from './displayName'
 import { getTodayDateString } from './dateUtils'
 import { DropletIcon } from './icons'
+import WaterBottle from './WaterBottle'
 
 const GOAL_ML = 2000
 const QUICK_ADD_ML = [250, 500, 750]
@@ -76,6 +77,20 @@ function WaterTracker({ session, profiles, onError }) {
     setRefreshKey((k) => k + 1)
   }
 
+  async function handleClear() {
+    onError('')
+    const { error } = await supabase
+      .from('water_logs')
+      .delete()
+      .eq('user_id', session.user.id)
+      .eq('date', getTodayDateString())
+    if (error) {
+      onError(error.message)
+      return
+    }
+    setRefreshKey((k) => k + 1)
+  }
+
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
 
   const totalsByUserId = new Map()
@@ -116,16 +131,23 @@ function WaterTracker({ session, profiles, onError }) {
 
       {expanded && (
         <>
-          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">
-            {ownTotalMl}
-            <span className="ml-1 font-body text-lg font-normal text-chalk-dim">/ {GOAL_ML} ml</span>
-          </p>
-
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2">
-            <div
-              className="h-full rounded-full bg-blue-500 transition-all"
-              style={{ width: `${ownProgress * 100}%` }}
-            />
+          <div className="mt-3 flex items-center gap-4">
+            <WaterBottle progress={ownProgress} className="h-32 w-20 shrink-0" />
+            <div className="min-w-0">
+              <p className="font-mono text-4xl font-bold text-blue-400">
+                {ownTotalMl}
+                <span className="ml-1 font-body text-lg font-normal text-chalk-dim">
+                  / {GOAL_ML} ml
+                </span>
+              </p>
+              <p className="mt-1 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+                {ownProgress >= 1 ? (
+                  <span className="text-blue-400">Goal reached</span>
+                ) : (
+                  `${Math.round(ownProgress * 100)}% of today's goal`
+                )}
+              </p>
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -145,6 +167,14 @@ function WaterTracker({ session, profiles, onError }) {
               className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk-dim active:border-danger active:text-danger disabled:opacity-40"
             >
               Undo
+            </button>
+            <button
+              onClick={handleClear}
+              disabled={ownTotalMl === 0}
+              aria-label="Clear today's water"
+              className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk-dim active:border-danger active:text-danger disabled:opacity-40"
+            >
+              Clear
             </button>
           </div>
 

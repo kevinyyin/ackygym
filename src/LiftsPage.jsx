@@ -13,10 +13,48 @@ function formatDate(dateStr) {
   })
 }
 
+// Which muscle_groups.name values count as "lower body" for the purpose of
+// this grouping — everything else (including core) is bucketed as upper body.
+const LOWER_BODY_MUSCLES = new Set([
+  'quads',
+  'hamstrings',
+  'glutes',
+  'calves',
+  'adductors',
+  'abductors',
+  'lower_back',
+])
+
+// An exercise's region is decided by its primary muscles (falling back to
+// secondary ones if it has no primary muscles logged), since that's what
+// "upper body exercise" vs "lower body exercise" means in normal gym usage —
+// e.g. a deadlift is a lower-body exercise even though back/traps assist.
+function bodyRegionFor(exercise) {
+  const muscles = exercise.exercise_muscles || []
+
+  for (const role of ['primary', 'secondary']) {
+    let upper = 0
+    let lower = 0
+    for (const m of muscles) {
+      if (m.role !== role) continue
+      if (LOWER_BODY_MUSCLES.has(m.muscle)) lower += 1
+      else upper += 1
+    }
+    if (upper > lower) return 'Upper Body'
+    if (lower > upper) return 'Lower Body'
+  }
+
+  return 'Upper Body'
+}
+
+const COLLAPSED_COUNT = 8
+
 function LiftsPage({ profiles, userId, onError }) {
   const [exercises, setExercises] = useState([])
   const [latestSets, setLatestSets] = useState(new Map())
   const [selectedExercise, setSelectedExercise] = useState(null)
+  const [expandedUpper, setExpandedUpper] = useState(false)
+  const [expandedLower, setExpandedLower] = useState(false)
 
   useEffect(() => {
     async function fetchExercises() {
@@ -83,6 +121,76 @@ function LiftsPage({ profiles, userId, onError }) {
       .sort((a, b) => (b.entry?.weight ?? -Infinity) - (a.entry?.weight ?? -Infinity))
   }
 
+  function renderExerciseCard(exercise) {
+    return (
+      <Card key={exercise.id} className="flex flex-col gap-3 p-4">
+        <button
+          type="button"
+          onClick={() => setSelectedExercise(exercise)}
+          className="flex w-full min-w-0 flex-col items-start gap-1.5 text-left"
+        >
+          <p className="w-full truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+            {exercise.name}
+          </p>
+          <MuscleTags muscles={exercise.exercise_muscles} />
+        </button>
+        <div className="flex flex-col gap-3">
+          {leaderboardFor(exercise.id).map(({ profile, entry }, i) => {
+            const isLeader = i === 0 && entry
+            return (
+              <div key={profile.id} className="border-l-2 border-line pl-2">
+                <p className="flex items-center gap-1 text-[11px] text-chalk-dim">
+                  {isLeader && <MedalIcon className="h-3.5 w-3.5 shrink-0 text-amber-400" />}
+                  <span className="min-w-0 flex-1 truncate">{displayName(profile)}</span>
+                </p>
+                {entry ? (
+                  <>
+                    <p className="font-mono text-xl font-bold text-blue-400">
+                      {entry.weight}
+                      <span className="ml-1 text-sm font-normal text-chalk-dim">×{entry.reps}</span>
+                    </p>
+                    <p className="font-mono text-[11px] text-chalk-dim/70">{formatDate(entry.date)}</p>
+                  </>
+                ) : (
+                  <p className="font-mono text-xl font-bold text-chalk-dim/40">—</p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+    )
+  }
+
+  function renderSection(label, sectionExercises, expanded, setExpanded) {
+    if (sectionExercises.length === 0) return null
+
+    const hasOverflow = sectionExercises.length > COLLAPSED_COUNT
+    const visible = expanded ? sectionExercises : sectionExercises.slice(0, COLLAPSED_COUNT)
+
+    return (
+      <div className="flex flex-col gap-3">
+        <h2 className="flex items-center gap-2 px-1 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+          <span className="h-2.5 w-0.5 bg-blue-500" />
+          {label}
+        </h2>
+        <div className="grid grid-cols-2 gap-3">{visible.map(renderExerciseCard)}</div>
+        {hasOverflow && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="w-full rounded-md border border-line bg-surface-2 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase active:border-blue-500 active:text-blue-400"
+          >
+            {expanded ? 'Show less' : `Show all (${sectionExercises.length})`}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  const upperExercises = exercises.filter((e) => bodyRegionFor(e) === 'Upper Body')
+  const lowerExercises = exercises.filter((e) => bodyRegionFor(e) === 'Lower Body')
+
   return (
     <>
       {exercises.length === 0 ? (
@@ -90,51 +198,9 @@ function LiftsPage({ profiles, userId, onError }) {
           <p className="text-sm text-chalk-dim">No exercises yet.</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {exercises.map((exercise) => (
-            <Card key={exercise.id} className="flex flex-col gap-3 p-4">
-              <button
-                type="button"
-                onClick={() => setSelectedExercise(exercise)}
-                className="flex w-full min-w-0 flex-col items-start gap-1.5 text-left"
-              >
-                <p className="w-full truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-                  {exercise.name}
-                </p>
-                <MuscleTags muscles={exercise.exercise_muscles} />
-              </button>
-              <div className="flex flex-col gap-3">
-                {leaderboardFor(exercise.id).map(({ profile, entry }, i) => {
-                  const isLeader = i === 0 && entry
-                  return (
-                    <div key={profile.id} className="border-l-2 border-line pl-2">
-                      <p className="flex items-center gap-1 text-[11px] text-chalk-dim">
-                        {isLeader && (
-                          <MedalIcon className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                        )}
-                        <span className="min-w-0 flex-1 truncate">{displayName(profile)}</span>
-                      </p>
-                      {entry ? (
-                        <>
-                          <p className="font-mono text-xl font-bold text-blue-400">
-                            {entry.weight}
-                            <span className="ml-1 text-sm font-normal text-chalk-dim">
-                              ×{entry.reps}
-                            </span>
-                          </p>
-                          <p className="font-mono text-[11px] text-chalk-dim/70">
-                            {formatDate(entry.date)}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="font-mono text-xl font-bold text-chalk-dim/40">—</p>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </Card>
-          ))}
+        <div className="flex flex-col gap-5">
+          {renderSection('Upper Body', upperExercises, expandedUpper, setExpandedUpper)}
+          {renderSection('Lower Body', lowerExercises, expandedLower, setExpandedLower)}
         </div>
       )}
 
