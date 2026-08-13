@@ -13,7 +13,7 @@ import { displayName } from './displayName'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
-import { NoteIcon } from './icons'
+import { NoteIcon, TrophyIcon } from './icons'
 
 function groupSetsByExercise(sets) {
   const order = []
@@ -96,7 +96,9 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
     async function fetchTodaysSets() {
       const { data, error } = await supabase
         .from('sets')
-        .select('id, weight, reps, note, user_id, exercise_id, exercises (name), workouts!inner (date)')
+        .select(
+          'id, weight, reps, note, is_pr, user_id, exercise_id, exercises (name), workouts!inner (date)'
+        )
         .eq('workouts.date', getTodayDateString())
         .order('id')
 
@@ -287,7 +289,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
                         return (
                           <li key={set.id} className="flex flex-col gap-1">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-sm text-chalk-dim">
+                              <span className="inline-flex items-center gap-1.5 font-mono text-sm text-chalk-dim">
                                 {showWeight && (
                                   <>
                                     {set.weight}
@@ -295,6 +297,12 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
                                   </>
                                 )}
                                 {set.reps}
+                                {set.is_pr && (
+                                  <TrophyIcon
+                                    className="h-3.5 w-3.5 shrink-0 text-amber-400"
+                                    aria-label="New PR"
+                                  />
+                                )}
                               </span>
                               <span className="flex items-center gap-3">
                                 {set.user_id === session.user.id && (

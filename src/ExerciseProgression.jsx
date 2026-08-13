@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { supabase } from './supabaseClient'
+import { TrophyIcon } from './icons'
 
 function formatDate(dateStr) {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
@@ -42,7 +43,7 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
     async function fetchSets() {
       const { data, error } = await supabase
         .from('sets')
-        .select('id, weight, reps, workouts!inner(date)')
+        .select('id, weight, reps, is_pr, workouts!inner(date)')
         .eq('user_id', userId)
         .eq('exercise_id', exerciseId)
 
@@ -140,7 +141,7 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
               {session.sets.map((set, i) => {
                 const showWeight = i === 0 || set.weight !== session.sets[i - 1].weight
                 return (
-                  <li key={set.id} className="font-mono text-sm text-chalk-dim">
+                  <li className="inline-flex items-center gap-1.5 font-mono text-sm text-chalk-dim" key={set.id}>
                     {showWeight && (
                       <>
                         {set.weight}
@@ -148,6 +149,9 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
                       </>
                     )}
                     {set.reps}
+                    {set.is_pr && (
+                      <TrophyIcon className="h-3 w-3 shrink-0 text-amber-400" aria-label="New PR" />
+                    )}
                   </li>
                 )
               })}

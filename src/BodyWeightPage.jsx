@@ -6,6 +6,7 @@ import { getTodayDateString } from './dateUtils'
 import { convertWeight, roundWeight } from './weightUnits'
 import CalorieCalculator from './CalorieCalculator'
 import MuscleVolume from './MuscleVolume'
+import WeightHistoryModal from './WeightHistoryModal'
 
 const UNIT_STORAGE_KEY = 'gym-tracker:body-weight-unit'
 
@@ -36,6 +37,7 @@ function BodyWeightPage({ profiles, userId, onError }) {
   const [entries, setEntries] = useState([])
   const [inputValue, setInputValue] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [chartGroup, setChartGroup] = useState(null)
 
   useEffect(() => {
     async function fetchEntries() {
@@ -194,9 +196,13 @@ function BodyWeightPage({ profiles, userId, onError }) {
         ) : (
           groupedEntries.map((group) => (
             <Card key={group.userId} className="overflow-hidden">
-              <h3 className="border-b border-line px-4 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+              <button
+                type="button"
+                onClick={() => setChartGroup(group)}
+                className="w-full border-b border-line px-4 py-2 text-left font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+              >
                 {group.name}
-              </h3>
+              </button>
               <ul className="divide-y divide-line">
                 {group.entries.map((entry) => (
                   <li
@@ -227,6 +233,8 @@ function BodyWeightPage({ profiles, userId, onError }) {
           ))
         )}
       </div>
+
+      <WeightHistoryModal group={chartGroup} unit={unit} onClose={() => setChartGroup(null)} />
     </div>
   )
 }
