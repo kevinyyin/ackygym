@@ -6,6 +6,7 @@ import Home from './Home'
 import CalendarPage from './CalendarPage'
 import LiftsPage from './LiftsPage'
 import BodyWeightPage from './BodyWeightPage'
+import ProgressPhotosPage from './ProgressPhotosPage'
 import TimerPage from './TimerPage'
 import UsernameField from './UsernameField'
 import {
@@ -13,6 +14,7 @@ import {
   CalendarIcon,
   BarbellIcon,
   ScaleIcon,
+  CameraIcon,
   TimerIcon,
   LogOutIcon,
   SunIcon,
@@ -24,6 +26,7 @@ const PAGE_TITLES = {
   '/calendar': 'Calendar',
   '/lifts': 'Lifts',
   '/weight': 'Weight',
+  '/photos': 'Photos',
   '/timer': 'Timer',
 }
 
@@ -32,6 +35,7 @@ const TABS = [
   { to: '/calendar', label: 'Calendar', icon: CalendarIcon },
   { to: '/lifts', label: 'Lifts', icon: BarbellIcon },
   { to: '/weight', label: 'Weight', icon: ScaleIcon },
+  { to: '/photos', label: 'Photos', icon: CameraIcon },
   { to: '/timer', label: 'Timer', icon: TimerIcon },
 ]
 
@@ -179,6 +183,16 @@ function App() {
             path="/weight"
             element={
               <BodyWeightPage
+                profiles={profiles}
+                userId={session.user.id}
+                onError={setError}
+              />
+            }
+          />
+          <Route
+            path="/photos"
+            element={
+              <ProgressPhotosPage
                 profiles={profiles}
                 userId={session.user.id}
                 onError={setError}
