@@ -85,7 +85,7 @@ function App() {
     async function fetchSchedule() {
       const { data, error } = await supabase
         .from('schedule')
-        .select('id, user_id, day_of_week, label, routine_id')
+        .select('id, user_id, day_of_week, routine_id, routines(name)')
 
       if (error) {
         setError(error.message)

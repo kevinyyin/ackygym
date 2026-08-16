@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import WorkoutForm from './WorkoutForm'
-import WeekSchedule from './WeekSchedule'
 import AddExerciseForm from './AddExerciseForm'
 import Card from './Card'
 import MuscleTags from './MuscleTags'
@@ -73,7 +72,9 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
     async function fetchRoutines() {
       const { data, error } = await supabase
         .from('routines')
-        .select('id, user_id, name, routine_exercises(id, position, exercise_id, exercises(name))')
+        .select(
+          'id, user_id, name, routine_exercises(id, position, exercise_id, exercises(name, exercise_muscles(muscle, role, muscle_groups(label))))'
+        )
         .order('name')
       if (error) {
         onError(error.message)
@@ -136,7 +137,6 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
   const todaysScheduleEntry = schedule.find(
     (s) => s.user_id === session.user.id && s.day_of_week === todayDayOfWeek
   )
-  const todaysLabel = todaysScheduleEntry?.label
   const suggestedRoutine = todaysScheduleEntry?.routine_id
     ? routines.find((r) => r.id === todaysScheduleEntry.routine_id)
     : null
@@ -205,7 +205,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
             {WEEKDAY_NAME[todayDayOfWeek]}
           </p>
           <p className="mt-3 font-display text-2xl leading-[0.95] tracking-tight text-chalk uppercase">
-            {todaysLabel || 'Rest day'}
+            {suggestedRoutine?.name || 'Rest day'}
           </p>
         </Card>
         <Card className="flex flex-col justify-between p-4">
@@ -247,6 +247,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
           <div className="mt-3">
             <WorkoutForm
               exercises={exercises}
+              routines={routines}
               userId={session.user.id}
               onLogged={() => setRefreshKey((key) => key + 1)}
               onError={onError}
@@ -364,17 +365,6 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
         )}
       </div>
 
-      <div className="flex flex-col gap-3">
-        <SectionLabel>Weekly schedule</SectionLabel>
-        <WeekSchedule
-          schedule={schedule}
-          profiles={profiles}
-          userId={session.user.id}
-          onSaved={onScheduleSaved}
-          onError={onError}
-        />
-      </div>
-
       <Card className="p-4">
         <SectionLabel>Routines</SectionLabel>
         <Routines
@@ -402,6 +392,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
         </div>
         <AddExerciseForm
           exercises={exercises}
+          showMuscleGroups={showExercises}
           onAdded={() => setExercisesVersion((v) => v + 1)}
           onError={onError}
         />

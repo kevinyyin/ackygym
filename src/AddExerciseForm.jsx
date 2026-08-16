@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient'
 import { normalizeExerciseName } from './normalizeExerciseName'
 import { sortMuscleGroups } from './muscleGroupOrder'
 
-function AddExerciseForm({ exercises, onAdded, onError }) {
+function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
   const [name, setName] = useState('')
   const [muscleGroups, setMuscleGroups] = useState([])
   const [selected, setSelected] = useState({})
@@ -197,7 +197,7 @@ function AddExerciseForm({ exercises, onAdded, onError }) {
         </button>
       </div>
 
-      {muscleGroups.length > 0 && (
+      {muscleGroups.length > 0 && showMuscleGroups && (
         <div className="flex flex-col gap-1.5">
           <p className="text-[11px] text-chalk-dim">
             Muscle groups worked — tap to mark primary, tap again for secondary
