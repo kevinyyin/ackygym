@@ -1,16 +1,31 @@
 import { useEffect, useState } from 'react'
 import { logSet } from './logSet'
 import { fetchLastSet } from './lastSet'
+import { groupByMuscle } from './exerciseGrouping'
 import { BarbellIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 
-function WorkoutForm({ exercises, userId, onLogged, onError }) {
+function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
+  const [routineId, setRoutineId] = useState('')
   const [exerciseId, setExerciseId] = useState('')
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [showCalculator, setShowCalculator] = useState(false)
 
-  const selectedExerciseId = exerciseId || exercises[0]?.id || ''
+  const selectedRoutine = routineId ? routines.find((r) => r.id === Number(routineId)) : null
+  const availableExercises = selectedRoutine
+    ? groupByMuscle(selectedRoutine.routine_exercises, (re) => re.exercises)
+        .flatMap((g) => g.items)
+        .map((re) => exercises.find((ex) => ex.id === re.exercise_id))
+        .filter(Boolean)
+    : exercises
+
+  const selectedExerciseId = exerciseId || availableExercises[0]?.id || ''
+
+  function handleRoutineChange(value) {
+    setRoutineId(value)
+    setExerciseId('')
+  }
 
   useEffect(() => {
     if (!selectedExerciseId) return
@@ -32,6 +47,7 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (!selectedExerciseId) return
     onError('')
 
     const { error } = await logSet({
@@ -56,16 +72,34 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {routines.length > 0 && (
+        <select
+          value={routineId}
+          onChange={(e) => handleRoutineChange(e.target.value)}
+          className={inputClasses}
+        >
+          <option value="">All exercises</option>
+          {routines.map((routine) => (
+            <option key={routine.id} value={routine.id}>
+              {routine.name}
+            </option>
+          ))}
+        </select>
+      )}
       <select
         value={selectedExerciseId}
         onChange={(e) => setExerciseId(e.target.value)}
         className={inputClasses}
       >
-        {exercises.map((exercise) => (
-          <option key={exercise.id} value={exercise.id}>
-            {exercise.name}
-          </option>
-        ))}
+        {availableExercises.length === 0 ? (
+          <option value="">No exercises in this routine</option>
+        ) : (
+          availableExercises.map((exercise) => (
+            <option key={exercise.id} value={exercise.id}>
+              {exercise.name}
+            </option>
+          ))
+        )}
       </select>
       <div className="flex gap-3">
         <input
@@ -95,7 +129,8 @@ function WorkoutForm({ exercises, userId, onLogged, onError }) {
       </div>
       <button
         type="submit"
-        className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600"
+        disabled={!selectedExerciseId}
+        className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
       >
         Log set
       </button>

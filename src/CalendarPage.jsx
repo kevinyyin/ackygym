@@ -31,7 +31,7 @@ function computeStreak(userId, schedule, workoutDates) {
     const dateStr = toDateString(cursor)
     const dayOfWeek = cursor.getDay()
     const isScheduled = schedule.some(
-      (s) => s.user_id === userId && s.day_of_week === dayOfWeek && s.label
+      (s) => s.user_id === userId && s.day_of_week === dayOfWeek && s.routine_id
     )
 
     if (isScheduled) {
@@ -231,17 +231,17 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
                       const hasWorkout = workouts.some(
                         (w) => w.user_id === profile.id && w.date === dateStr
                       )
-                      const label = schedule.find(
+                      const routineName = schedule.find(
                         (s) => s.user_id === profile.id && s.day_of_week === dayOfWeek
-                      )?.label
+                      )?.routines?.name
 
-                      if (!label && !hasWorkout) return null
+                      if (!routineName && !hasWorkout) return null
 
                       return (
                         <div
                           key={profile.id}
                           className="flex min-w-0 items-center gap-1"
-                          title={label || ''}
+                          title={routineName || ''}
                         >
                           <span
                             className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]} ${
@@ -249,7 +249,7 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
                             }`}
                           />
                           <span className="truncate text-[10px] text-chalk-dim">
-                            {label || '—'}
+                            {routineName || '—'}
                           </span>
                         </div>
                       )
