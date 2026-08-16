@@ -16,6 +16,13 @@ function formatDate(dateStr) {
   })
 }
 
+function captionFor(photo, userId, profileByUserId) {
+  const isOwn = photo.user_id === userId
+  return isOwn
+    ? formatDate(photo.date)
+    : `${profileByUserId[photo.user_id] ? displayName(profileByUserId[photo.user_id]) : 'Shared'} · ${formatDate(photo.date)}`
+}
+
 function SectionLabel({ children }) {
   return (
     <h2 className="flex items-center gap-2 px-1 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
@@ -30,6 +37,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   const [signedUrlByPath, setSignedUrlByPath] = useState({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [uploading, setUploading] = useState(false)
+  const [viewingPhoto, setViewingPhoto] = useState(null)
 
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
 
@@ -80,6 +88,17 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
       cancelled = true
     }
   }, [photos, onError])
+
+  useEffect(() => {
+    if (!viewingPhoto) return
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setViewingPhoto(null)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [viewingPhoto])
 
   async function handleUpload(e) {
     const file = e.target.files?.[0]
@@ -188,7 +207,8 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                     <img
                       src={signedUrlByPath[photo.path]}
                       alt={`Progress photo from ${formatDate(photo.date)}`}
-                      className="h-full w-full object-cover"
+                      onClick={() => setViewingPhoto(photo)}
+                      className="h-full w-full cursor-pointer object-cover"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-chalk-dim">
@@ -217,13 +237,37 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                   )}
                 </div>
                 <p className="px-3 py-2 text-center font-mono text-xs text-chalk-dim">
-                  {isOwn
-                    ? formatDate(photo.date)
-                    : `${profileByUserId[photo.user_id] ? displayName(profileByUserId[photo.user_id]) : 'Shared'} · ${formatDate(photo.date)}`}
+                  {captionFor(photo, userId, profileByUserId)}
                 </p>
               </Card>
             )
           })}
+        </div>
+      )}
+
+      {viewingPhoto && (
+        <div
+          onClick={() => setViewingPhoto(null)}
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-ink/90 p-4"
+        >
+          <button
+            onClick={() => setViewingPhoto(null)}
+            aria-label="Close"
+            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur active:text-danger"
+          >
+            ✕
+          </button>
+          {signedUrlByPath[viewingPhoto.path] && (
+            <img
+              src={signedUrlByPath[viewingPhoto.path]}
+              alt={`Progress photo from ${formatDate(viewingPhoto.date)}`}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[85vh] max-w-[95vw] object-contain"
+            />
+          )}
+          <p className="font-mono text-xs text-chalk-dim">
+            {captionFor(viewingPhoto, userId, profileByUserId)}
+          </p>
         </div>
       )}
     </div>
