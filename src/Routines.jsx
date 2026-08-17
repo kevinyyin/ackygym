@@ -219,6 +219,7 @@ function DayToggles({ routine, schedule, userId, onChanged, onError }) {
       {
         user_id: userId,
         day_of_week: day,
+        label: '',
         routine_id: currentlyLinked ? null : routine.id,
       },
       { onConflict: 'user_id,day_of_week' }
