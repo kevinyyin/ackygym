@@ -92,7 +92,9 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
         className={inputClasses}
       >
         {availableExercises.length === 0 ? (
-          <option value="">No exercises in this routine</option>
+          <option value="">
+            {selectedRoutine ? 'No exercises in this routine' : 'No exercises yet'}
+          </option>
         ) : (
           availableExercises.map((exercise) => (
             <option key={exercise.id} value={exercise.id}>
