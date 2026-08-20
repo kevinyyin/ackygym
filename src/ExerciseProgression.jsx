@@ -10,6 +10,7 @@ import {
 } from 'recharts'
 import { supabase } from './supabaseClient'
 import { TrophyIcon } from './icons'
+import { estimatedOneRepMax } from './oneRepMax'
 
 function formatDate(dateStr) {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
@@ -82,13 +83,35 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
 
   const chartData = sessions.map((session) => ({
     date: formatDate(session.date),
-    weight: Math.max(...session.sets.map((s) => s.weight)),
+    e1rm: Math.max(...session.sets.map((s) => estimatedOneRepMax(s.weight, s.reps))),
   }))
+
+  let bestE1rm = 0
+  let bestE1rmDate = null
+  for (const session of sessions) {
+    for (const set of session.sets) {
+      const e1rm = estimatedOneRepMax(set.weight, set.reps)
+      if (e1rm > bestE1rm) {
+        bestE1rm = e1rm
+        bestE1rmDate = session.date
+      }
+    }
+  }
 
   const sessionsNewestFirst = [...sessions].reverse()
 
   return (
     <div className="mt-4 flex flex-col gap-4">
+      <div className="flex items-baseline justify-between rounded-md border border-line bg-surface-2 px-3 py-2">
+        <div>
+          <p className="text-[11px] tracking-wide text-chalk-dim uppercase">Est. 1RM</p>
+          <p className="font-mono text-2xl font-bold text-blue-400">{bestE1rm}</p>
+        </div>
+        {bestE1rmDate && (
+          <p className="font-mono text-[11px] text-chalk-dim/70">{formatDate(bestE1rmDate)}</p>
+        )}
+      </div>
+
       {sessions.length === 1 ? (
         <p className="text-xs text-chalk-dim">Log another session to see a trend.</p>
       ) : (
@@ -117,10 +140,12 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
                   fontSize: 12,
                 }}
                 labelStyle={{ color: 'var(--color-chalk-dim)' }}
+                formatter={(value) => [value, 'Est. 1RM']}
               />
               <Line
                 type="monotone"
-                dataKey="weight"
+                dataKey="e1rm"
+                name="Est. 1RM"
                 stroke="var(--color-blue-500)"
                 strokeWidth={2}
                 dot={{ r: 3, fill: 'var(--color-blue-500)' }}
