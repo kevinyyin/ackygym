@@ -29,8 +29,8 @@ function Auth() {
 
   return (
     <div className="flex min-h-svh flex-col justify-center bg-ink p-4">
-      <form className="mx-auto flex w-full max-w-md flex-col gap-3 rounded-lg border border-line bg-surface p-6">
-        <p className="text-[11px] font-semibold tracking-[0.25em] text-blue-400 uppercase">
+      <form className="mx-auto flex w-full max-w-md flex-col gap-3 rounded-lg border border-line bg-surface p-6 shadow-[inset_0_1px_0_var(--card-highlight),0_10px_28px_-16px_var(--shadow-tint)]">
+        <p className="mb-1 text-[11px] font-semibold tracking-[0.3em] text-blue-400 uppercase">
           Ackygym
         </p>
         <h1 className="mb-1 font-display text-4xl leading-none tracking-tight text-chalk uppercase">
