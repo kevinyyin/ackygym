@@ -105,13 +105,13 @@ function App() {
 
   return (
     <div className="min-h-svh bg-ink text-chalk">
-      <div className="mx-auto flex min-h-svh max-w-md flex-col gap-5 px-4 pb-28 pt-6">
+      <div className="mx-auto flex min-h-svh max-w-md flex-col gap-6 px-4 pb-28 pt-6">
         <header className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold tracking-[0.25em] text-blue-400 uppercase">
+            <p className="mb-1 text-[11px] font-semibold tracking-[0.3em] text-blue-400 uppercase">
               Ackygym
             </p>
-            <h1 className="font-display text-3xl leading-none tracking-tight text-chalk uppercase">
+            <h1 className="font-display text-4xl leading-none tracking-tight text-chalk uppercase">
               {pageTitle}
             </h1>
             <UsernameField
@@ -203,19 +203,19 @@ function App() {
         </Routes>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 shadow-[0_-12px_28px_-18px_var(--shadow-tint)] backdrop-blur">
         <div className="mx-auto flex max-w-md items-stretch justify-around px-2 pb-[calc(env(safe-area-inset-bottom)+0.625rem)]">
           {TABS.map(({ to, label, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end} aria-label={label} className="px-3 pt-2.5 pb-3">
               {({ isActive }) => (
                 <span
-                  className={`flex flex-col items-center gap-2 ${
+                  className={`flex flex-col items-center gap-2 transition-colors ${
                     isActive ? 'text-blue-400' : 'text-chalk-dim'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
                   <span
-                    className={`h-[2px] w-4 rounded-full ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}
+                    className={`h-[2px] w-4 rounded-full transition-colors ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}
                   />
                 </span>
               )}
