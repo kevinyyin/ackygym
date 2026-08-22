@@ -4,6 +4,7 @@ import { fetchLastSet } from './lastSet'
 import { groupByMuscle } from './exerciseGrouping'
 import { BarbellIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
+import ExercisePicker from './ExercisePicker'
 
 function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
   const [routineId, setRoutineId] = useState('')
@@ -86,23 +87,14 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
           ))}
         </select>
       )}
-      <select
+      <ExercisePicker
+        exercises={availableExercises}
         value={selectedExerciseId}
-        onChange={(e) => setExerciseId(e.target.value)}
-        className={inputClasses}
-      >
-        {availableExercises.length === 0 ? (
-          <option value="">
-            {selectedRoutine ? 'No exercises in this routine' : 'No exercises yet'}
-          </option>
-        ) : (
-          availableExercises.map((exercise) => (
-            <option key={exercise.id} value={exercise.id}>
-              {exercise.name}
-            </option>
-          ))
-        )}
-      </select>
+        onChange={setExerciseId}
+        placeholder="Search exercises"
+        emptyMessage={selectedRoutine ? 'No exercises in this routine' : 'No exercises yet'}
+        inputClassName={inputClasses}
+      />
       <div className="flex gap-3">
         <input
           type="number"

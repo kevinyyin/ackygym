@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient'
 import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
 import { primaryMuscleGroup, groupByMuscle } from './exerciseGrouping'
 import { GripIcon, ChevronRightIcon } from './icons'
+import ExercisePicker from './ExercisePicker'
 
 function GroupHeader({ children }) {
   return (
@@ -67,17 +68,13 @@ function AddExerciseToRoutine({ routine, availableExercises, onAdded, onError })
 
   return (
     <div className="mt-2 flex gap-2">
-      <select
+      <ExercisePicker
+        exercises={availableExercises}
         value={selected}
-        onChange={(e) => setExerciseId(e.target.value)}
-        className="w-full min-w-0 rounded-md border border-line bg-surface px-2 py-1.5 font-body text-xs text-chalk focus:border-blue-500 focus:outline-none"
-      >
-        {availableExercises.map((exercise) => (
-          <option key={exercise.id} value={exercise.id}>
-            {exercise.name}
-          </option>
-        ))}
-      </select>
+        onChange={setExerciseId}
+        placeholder="Search exercises"
+        inputClassName="w-full min-w-0 rounded-md border border-line bg-surface px-2 py-1.5 font-body text-xs text-chalk focus:border-blue-500 focus:outline-none"
+      />
       <button
         type="button"
         onClick={handleAdd}
