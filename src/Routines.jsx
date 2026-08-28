@@ -266,6 +266,16 @@ function Routines({
 }) {
   const [newRoutineName, setNewRoutineName] = useState('')
   const [collapsedIds, setCollapsedIds] = useState(() => new Set())
+  const appliedInitialCollapse = useRef(false)
+
+  // Routines start collapsed on each fresh load of the app. Once applied,
+  // later routine list changes (add/delete/reorder) don't reset the user's
+  // own expand/collapse choices.
+  useEffect(() => {
+    if (appliedInitialCollapse.current || routines.length === 0) return
+    appliedInitialCollapse.current = true
+    setCollapsedIds(new Set(routines.map((r) => r.id)))
+  }, [routines])
 
   function toggleCollapsed(routineId) {
     setCollapsedIds((current) => {

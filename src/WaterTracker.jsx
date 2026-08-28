@@ -22,7 +22,7 @@ function WaterTracker({ session, profiles, onError }) {
   const [logs, setLogs] = useState([])
   const [refreshKey, setRefreshKey] = useState(0)
   const [customValue, setCustomValue] = useState('')
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     async function fetchLogs() {

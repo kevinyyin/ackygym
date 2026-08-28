@@ -44,6 +44,7 @@ function MuscleVolume({ userId, onError }) {
   const [rangeDays, setRangeDays] = useState(getStoredRangeDays)
   const [workoutCount, setWorkoutCount] = useState(0)
   const [sets, setSets] = useState(null)
+  const [expanded, setExpanded] = useState(false)
 
   function handleRangeChange(days) {
     setRangeDays(days)
@@ -127,23 +128,35 @@ function MuscleVolume({ userId, onError }) {
         <p className="mt-3 text-sm text-chalk-dim">No sets logged in this period.</p>
       ) : (
         <>
-          <div className="mt-3">
-            <MuscleBodyMap muscles={bodyMapMuscles} />
-          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="mt-3 w-full rounded-md border border-line bg-surface-2 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase active:border-blue-500 active:text-blue-400"
+          >
+            {expanded ? 'Hide breakdown' : 'Show breakdown'}
+          </button>
 
-          <ul className="mt-4 flex flex-col gap-1.5">
-            {volumeByCount.map((v) => {
-              const total = v.primarySets + v.secondarySets
-              return (
-                <li key={v.name} className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-chalk">{v.label}</span>
-                  <span className="font-mono text-sm text-chalk-dim">
-                    {total} {total === 1 ? 'set' : 'sets'}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
+          {expanded && (
+            <>
+              <div className="mt-3">
+                <MuscleBodyMap muscles={bodyMapMuscles} />
+              </div>
+
+              <ul className="mt-4 flex flex-col gap-1.5">
+                {volumeByCount.map((v) => {
+                  const total = v.primarySets + v.secondarySets
+                  return (
+                    <li key={v.name} className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-chalk">{v.label}</span>
+                      <span className="font-mono text-sm text-chalk-dim">
+                        {total} {total === 1 ? 'set' : 'sets'}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
+          )}
         </>
       )}
     </Card>
