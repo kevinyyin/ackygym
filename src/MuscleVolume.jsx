@@ -85,6 +85,9 @@ function MuscleVolume({ userId, onError }) {
   }, [userId, rangeDays, onError])
 
   const volume = sets === null ? [] : aggregateVolume(sets)
+  const volumeByCount = [...volume].sort(
+    (a, b) => b.primarySets + b.secondarySets - (a.primarySets + a.secondarySets)
+  )
   const bodyMapMuscles = volume.map((v) => ({
     muscle: v.name,
     role: v.primarySets > 0 ? 'primary' : 'secondary',
@@ -129,7 +132,7 @@ function MuscleVolume({ userId, onError }) {
           </div>
 
           <ul className="mt-4 flex flex-col gap-1.5">
-            {volume.map((v) => {
+            {volumeByCount.map((v) => {
               const total = v.primarySets + v.secondarySets
               return (
                 <li key={v.name} className="flex items-center justify-between gap-2">

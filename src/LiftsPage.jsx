@@ -51,7 +51,7 @@ const COLLAPSED_COUNT = 8
 
 function LiftsPage({ profiles, userId, onError }) {
   const [exercises, setExercises] = useState([])
-  const [latestSets, setLatestSets] = useState(new Map())
+  const [bestSets, setBestSets] = useState(new Map())
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [expandedUpper, setExpandedUpper] = useState(false)
   const [expandedLower, setExpandedLower] = useState(false)
@@ -74,7 +74,7 @@ function LiftsPage({ profiles, userId, onError }) {
   }, [onError])
 
   useEffect(() => {
-    async function fetchLatestSets() {
+    async function fetchBestSets() {
       const { data, error } = await supabase
         .from('sets')
         .select('id, user_id, exercise_id, weight, reps, workouts!inner(date)')
@@ -86,16 +86,19 @@ function LiftsPage({ profiles, userId, onError }) {
 
       // Sorted client-side — `.order(col, { foreignTable })` is a no-op on
       // this project's PostgREST version, see lastSet.js for details.
-      const latest = new Map()
+      const best = new Map()
       for (const set of data) {
         const key = `${set.exercise_id}:${set.user_id}`
-        const existing = latest.get(key)
-        const isNewer =
+        const existing = best.get(key)
+        const isHeavier =
           !existing ||
-          set.workouts.date > existing.date ||
-          (set.workouts.date === existing.date && set.id > existing.id)
-        if (isNewer) {
-          latest.set(key, {
+          set.weight > existing.weight ||
+          (set.weight === existing.weight && set.reps > existing.reps) ||
+          (set.weight === existing.weight &&
+            set.reps === existing.reps &&
+            set.workouts.date > existing.date)
+        if (isHeavier) {
+          best.set(key, {
             weight: set.weight,
             reps: set.reps,
             date: set.workouts.date,
@@ -103,10 +106,10 @@ function LiftsPage({ profiles, userId, onError }) {
           })
         }
       }
-      setLatestSets(latest)
+      setBestSets(best)
     }
 
-    fetchLatestSets()
+    fetchBestSets()
   }, [onError])
 
   const rows = [...profiles].sort((a, b) => {
@@ -117,7 +120,7 @@ function LiftsPage({ profiles, userId, onError }) {
 
   function leaderboardFor(exerciseId) {
     return rows
-      .map((profile) => ({ profile, entry: latestSets.get(`${exerciseId}:${profile.id}`) }))
+      .map((profile) => ({ profile, entry: bestSets.get(`${exerciseId}:${profile.id}`) }))
       .sort((a, b) => (b.entry?.weight ?? -Infinity) - (a.entry?.weight ?? -Infinity))
   }
 
@@ -188,8 +191,16 @@ function LiftsPage({ profiles, userId, onError }) {
     )
   }
 
-  const upperExercises = exercises.filter((e) => bodyRegionFor(e) === 'Upper Body')
-  const lowerExercises = exercises.filter((e) => bodyRegionFor(e) === 'Lower Body')
+  // Stable sort: exercises with a logged set for the current user come
+  // first, alphabetical order (from the query) is preserved within each group.
+  function byLoggedFirst(a, b) {
+    const aLogged = bestSets.has(`${a.id}:${userId}`)
+    const bLogged = bestSets.has(`${b.id}:${userId}`)
+    return aLogged === bLogged ? 0 : aLogged ? -1 : 1
+  }
+
+  const upperExercises = exercises.filter((e) => bodyRegionFor(e) === 'Upper Body').sort(byLoggedFirst)
+  const lowerExercises = exercises.filter((e) => bodyRegionFor(e) === 'Lower Body').sort(byLoggedFirst)
 
   return (
     <>
