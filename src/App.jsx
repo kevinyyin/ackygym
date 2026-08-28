@@ -9,6 +9,8 @@ import BodyWeightPage from './BodyWeightPage'
 import ProgressPhotosPage from './ProgressPhotosPage'
 import TimerPage from './TimerPage'
 import UsernameField from './UsernameField'
+import SettingsModal from './SettingsModal'
+import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
 import {
   GridIcon,
   CalendarIcon,
@@ -19,6 +21,7 @@ import {
   LogOutIcon,
   SunIcon,
   MoonIcon,
+  SettingsIcon,
 } from './icons'
 
 const PAGE_TITLES = {
@@ -47,12 +50,22 @@ function App() {
   const [scheduleVersion, setScheduleVersion] = useState(0)
   const [profilesVersion, setProfilesVersion] = useState(0)
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
+  const [cardVisibility, setCardVisibility] = useState(loadCardVisibility)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const location = useLocation()
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
+
+  function toggleCardVisibility(key) {
+    setCardVisibility((current) => {
+      const next = { ...current, [key]: !current[key] }
+      saveCardVisibility(next)
+      return next
+    })
+  }
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -123,6 +136,13 @@ function App() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
+            >
+              <SettingsIcon className="h-5 w-5" />
+            </button>
+            <button
               onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
@@ -155,6 +175,7 @@ function App() {
                 schedule={schedule}
                 onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
                 onError={setError}
+                showWaterTracker={cardVisibility.water}
               />
             }
           />
@@ -163,7 +184,6 @@ function App() {
             element={
               <CalendarPage
                 profiles={profiles}
-                schedule={schedule}
                 userId={session.user.id}
                 onError={setError}
               />
@@ -186,6 +206,7 @@ function App() {
                 profiles={profiles}
                 userId={session.user.id}
                 onError={setError}
+                showCalorieTracker={cardVisibility.calorie}
               />
             }
           />
@@ -223,6 +244,13 @@ function App() {
           ))}
         </div>
       </nav>
+
+      <SettingsModal
+        open={settingsOpen}
+        visibility={cardVisibility}
+        onToggle={toggleCardVisibility}
+        onClose={() => setSettingsOpen(false)}
+      />
     </div>
   )
 }

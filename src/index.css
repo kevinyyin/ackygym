@@ -20,11 +20,23 @@
 :root {
   --shadow-tint: rgba(0, 0, 0, 0.55);
   --card-highlight: rgba(255, 255, 255, 0.04);
+
+  --color-heat-0: #202024;
+  --color-heat-1: #0e4429;
+  --color-heat-2: #006d32;
+  --color-heat-3: #26a641;
+  --color-heat-4: #39d353;
 }
 
 html[data-theme="light"] {
   --shadow-tint: rgba(30, 32, 40, 0.14);
   --card-highlight: rgba(255, 255, 255, 0.6);
+
+  --color-heat-0: #eef0f3;
+  --color-heat-1: #9be9a8;
+  --color-heat-2: #40c463;
+  --color-heat-3: #30a14e;
+  --color-heat-4: #216e39;
 }
 
 @layer base {

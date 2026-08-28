@@ -1,26 +1,110 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
-import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
+import { WEEKDAY_SHORT } from './weekdays'
 import { toDateString } from './dateUtils'
 import { displayName } from './displayName'
 import Card from './Card'
-import { ChevronLeftIcon, ChevronRightIcon } from './icons'
 
 const DOT_COLORS = ['bg-blue-400', 'bg-emerald-400', 'bg-amber-400', 'bg-purple-400']
 const STREAK_WINDOW_DAYS = 90
 
-function getMonthWeeks(year, month) {
-  const startWeekday = (new Date(year, month, 1).getDay() + 6) % 7 // Mon = 0 .. Sun = 6
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
+const WEEKS_COUNT = 53
+const DAYS_COUNT = WEEKS_COUNT * 7
+const CELL_PX = 10
+const GAP_PX = 3
+const COLUMN_PITCH_PX = CELL_PX + GAP_PX
+const LEVEL_COUNT = 4
+const LABELED_WEEKDAYS = new Set([1, 3, 5]) // Mon, Wed, Fri
 
-  const cells = []
-  for (let i = 0; i < startWeekday; i++) cells.push(null)
-  for (let day = 1; day <= daysInMonth; day++) cells.push(new Date(year, month, day))
-  while (cells.length % 7 !== 0) cells.push(null)
+function formatDate(dateStr) {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
+// Contribution grid spans the trailing 53 weeks (Sun..Sat columns) ending
+// on the Saturday of the current week, matching GitHub's contribution graph.
+function getContributionRange() {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const endOfWeek = new Date(today)
+  endOfWeek.setDate(today.getDate() + (6 - today.getDay()))
+
+  const start = new Date(endOfWeek)
+  start.setDate(endOfWeek.getDate() - (DAYS_COUNT - 1))
+
+  return { today, start }
+}
+
+// Pure date scaffold for the grid — shared across every user's heatmap.
+function buildDateScaffold(start, today) {
   const weeks = []
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+
+  for (let w = 0; w < WEEKS_COUNT; w++) {
+    const days = []
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(start)
+      date.setDate(start.getDate() + w * 7 + d)
+      days.push({
+        date,
+        dateStr: toDateString(date),
+        dayOfWeek: d,
+        isFuture: date > today,
+      })
+    }
+    weeks.push(days)
+  }
+
   return weeks
+}
+
+function getMonthLabels(weeks) {
+  const labels = []
+  let lastMonth = -1
+
+  weeks.forEach((week, weekIndex) => {
+    const month = week[0].date.getMonth()
+    if (month !== lastMonth) {
+      labels.push({
+        weekIndex,
+        label: week[0].date.toLocaleDateString(undefined, { month: 'short' }),
+      })
+      lastMonth = month
+    }
+  })
+
+  return labels
+}
+
+// Fallback scale: relative to each user's own busiest logged day (like
+// GitHub's relative scale), so someone who logs 6 sets/day and someone who
+// logs 30 both get a full range of shading.
+function levelForSetCount(count, maxCount) {
+  if (count <= 0 || maxCount <= 0) return 0
+  return Math.max(1, Math.min(LEVEL_COUNT, Math.ceil((count / maxCount) * LEVEL_COUNT)))
+}
+
+// If the day's scheduled routine had any of its exercises logged, shade by
+// how much of that routine got done. Otherwise fall back to the day's total
+// set count relative to the user's busiest day.
+function levelAndLabelFor(entry, routineExerciseIds, maxCount) {
+  const total = entry?.total ?? 0
+  if (total === 0) return { level: 0, label: null }
+
+  if (routineExerciseIds && routineExerciseIds.size > 0) {
+    const done = [...entry.exerciseIds].filter((id) => routineExerciseIds.has(id)).length
+    if (done > 0) {
+      const ratio = Math.min(1, done / routineExerciseIds.size)
+      return {
+        level: Math.max(1, Math.ceil(ratio * LEVEL_COUNT)),
+        label: `${done}/${routineExerciseIds.size} exercises`,
+      }
+    }
+  }
+
+  return { level: levelForSetCount(total, maxCount), label: `${total} set${total === 1 ? '' : 's'}` }
 }
 
 function computeStreak(workoutDates) {
@@ -44,72 +128,120 @@ function computeStreak(workoutDates) {
   return streak
 }
 
-function CalendarPage({ profiles, schedule, userId, onError }) {
-  const today = new Date()
-  const [year, setYear] = useState(today.getFullYear())
-  const [month, setMonth] = useState(today.getMonth())
-  const [workouts, setWorkouts] = useState([])
-  const [streakWorkouts, setStreakWorkouts] = useState([])
+function ContributionGraph({ weeks, monthLabels }) {
+  const gridWidth = WEEKS_COUNT * COLUMN_PITCH_PX - GAP_PX
+
+  return (
+    <div className="flex gap-1.5">
+      <div className="flex shrink-0 flex-col gap-[3px] pt-[16px]">
+        {[0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => (
+          <div
+            key={dayOfWeek}
+            style={{ height: CELL_PX }}
+            className="flex items-center font-mono text-[9px] text-chalk-dim"
+          >
+            {LABELED_WEEKDAYS.has(dayOfWeek) ? WEEKDAY_SHORT[dayOfWeek] : ''}
+          </div>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto pb-1">
+        <div style={{ width: gridWidth }}>
+          <div className="relative" style={{ height: 14 }}>
+            {monthLabels.map(({ weekIndex, label }) => (
+              <span
+                key={weekIndex}
+                style={{ left: weekIndex * COLUMN_PITCH_PX }}
+                className="absolute font-mono text-[9px] text-chalk-dim"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+
+          <div className="flex gap-[3px]">
+            {weeks.map((week, weekIndex) => (
+              <div key={weekIndex} className="flex flex-col gap-[3px]">
+                {week.map((day) =>
+                  day.isFuture ? (
+                    <div key={day.dateStr} style={{ height: CELL_PX, width: CELL_PX }} />
+                  ) : (
+                    <div
+                      key={day.dateStr}
+                      title={`${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}`}
+                      style={{
+                        height: CELL_PX,
+                        width: CELL_PX,
+                        backgroundColor: `var(--color-heat-${day.level})`,
+                      }}
+                      className="rounded-[2px]"
+                    />
+                  )
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CalendarPage({ profiles, userId, onError }) {
+  const [dayDataByUser, setDayDataByUser] = useState(new Map())
+  const [scheduleMap, setScheduleMap] = useState(new Map())
 
   useEffect(() => {
-    async function fetchWorkouts() {
-      const monthStart = toDateString(new Date(year, month, 1))
-      const monthEnd = toDateString(new Date(year, month + 1, 0))
-
+    async function fetchSchedule() {
       const { data, error } = await supabase
-        .from('workouts')
-        .select('id, user_id, date')
-        .gte('date', monthStart)
-        .lte('date', monthEnd)
+        .from('schedule')
+        .select('user_id, day_of_week, routine_id, routines(routine_exercises(exercise_id))')
 
       if (error) {
         onError(error.message)
         return
       }
-      setWorkouts(data)
-    }
 
-    fetchWorkouts()
-  }, [year, month, onError])
-
-  useEffect(() => {
-    async function fetchStreakWorkouts() {
-      const windowStart = new Date()
-      windowStart.setDate(windowStart.getDate() - (STREAK_WINDOW_DAYS - 1))
-
-      const { data, error } = await supabase
-        .from('workouts')
-        .select('id, user_id, date')
-        .gte('date', toDateString(windowStart))
-        .lte('date', toDateString(new Date()))
-
-      if (error) {
-        onError(error.message)
-        return
+      const map = new Map()
+      for (const row of data) {
+        const exerciseIds = new Set((row.routines?.routine_exercises ?? []).map((re) => re.exercise_id))
+        if (exerciseIds.size === 0) continue
+        map.set(`${row.user_id}:${row.day_of_week}`, exerciseIds)
       }
-      setStreakWorkouts(data)
+      setScheduleMap(map)
     }
 
-    fetchStreakWorkouts()
+    fetchSchedule()
   }, [onError])
 
-  function goToPrevMonth() {
-    if (month === 0) {
-      setYear((y) => y - 1)
-      setMonth(11)
-    } else {
-      setMonth((m) => m - 1)
-    }
-  }
+  useEffect(() => {
+    async function fetchSets() {
+      const { start } = getContributionRange()
 
-  function goToNextMonth() {
-    if (month === 11) {
-      setYear((y) => y + 1)
-      setMonth(0)
-    } else {
-      setMonth((m) => m + 1)
+      const { data, error } = await supabase
+        .from('sets')
+        .select('id, user_id, exercise_id, workouts!inner(date)')
+        .gte('workouts.date', toDateString(start))
+
+      if (error) {
+        onError(error.message)
+        return
+      }
+
+      const byUser = new Map()
+      for (const set of data) {
+        if (!byUser.has(set.user_id)) byUser.set(set.user_id, new Map())
+        const byDate = byUser.get(set.user_id)
+        const entry = byDate.get(set.workouts.date) ?? { total: 0, exerciseIds: new Set() }
+        entry.total += 1
+        entry.exerciseIds.add(set.exercise_id)
+        byDate.set(set.workouts.date, entry)
+      }
+      setDayDataByUser(byUser)
     }
-  }
+
+    fetchSets()
+  }, [onError])
 
   const rows = [...profiles].sort((a, b) => {
     if (a.id === userId) return -1
@@ -117,48 +249,19 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
     return displayName(a).localeCompare(displayName(b))
   })
 
-  const weeks = getMonthWeeks(year, month)
-  const monthLabel = new Date(year, month, 1).toLocaleDateString(undefined, {
-    month: 'long',
-    year: 'numeric',
-  })
-  const todayStr = toDateString(today)
-
-  const workoutDatesByUser = new Map()
-  for (const w of streakWorkouts) {
-    if (!workoutDatesByUser.has(w.user_id)) workoutDatesByUser.set(w.user_id, new Set())
-    workoutDatesByUser.get(w.user_id).add(w.date)
-  }
+  const { today, start } = getContributionRange()
+  const dateScaffold = buildDateScaffold(start, today)
+  const monthLabels = getMonthLabels(dateScaffold)
 
   const streaksByUserId = Object.fromEntries(
-    rows.map((profile) => [
-      profile.id,
-      computeStreak(workoutDatesByUser.get(profile.id) ?? new Set()),
-    ])
+    rows.map((profile) => {
+      const dates = new Set((dayDataByUser.get(profile.id) ?? new Map()).keys())
+      return [profile.id, computeStreak(dates)]
+    })
   )
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={goToPrevMonth}
-          aria-label="Previous month"
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-        </button>
-        <h2 className="font-display text-2xl tracking-tight text-chalk uppercase">
-          {monthLabel}
-        </h2>
-        <button
-          onClick={goToNextMonth}
-          aria-label="Next month"
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
-        >
-          <ChevronRightIcon className="h-4 w-4" />
-        </button>
-      </div>
-
       <div className="grid grid-cols-2 gap-3">
         {rows.map((profile, i) => {
           const streak = streaksByUserId[profile.id]
@@ -191,70 +294,51 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
         })}
       </div>
 
-      <Card className="p-3">
-        <div className="grid grid-cols-7 gap-1">
-          {WEEKDAY_ORDER.map((day) => (
-            <div
-              key={day}
-              className="text-center font-mono text-[10px] font-medium tracking-wide text-chalk-dim uppercase"
-            >
-              {WEEKDAY_SHORT[day].slice(0, 2)}
-            </div>
-          ))}
+      <div className="flex flex-col gap-3">
+        {rows.map((profile, i) => {
+          const byDate = dayDataByUser.get(profile.id) ?? new Map()
+          const maxCount = Math.max(0, ...[...byDate.values()].map((e) => e.total))
 
-          {weeks.map((week, weekIndex) =>
-            week.map((date, dayIndex) => {
-              if (!date) return <div key={`${weekIndex}-${dayIndex}`} />
-
-              const dateStr = toDateString(date)
-              const dayOfWeek = date.getDay()
-              const isToday = dateStr === todayStr
-
-              return (
-                <div
-                  key={dateStr}
-                  className={`flex min-h-16 min-w-0 flex-col gap-1 rounded p-1 ${
-                    isToday ? 'bg-blue-500/10 ring-1 ring-blue-500' : ''
-                  }`}
-                >
-                  <span className="font-mono text-xs text-chalk-dim">
-                    {date.getDate()}
-                  </span>
-                  <div className="flex flex-col gap-0.5">
-                    {rows.map((profile, i) => {
-                      const hasWorkout = workouts.some(
-                        (w) => w.user_id === profile.id && w.date === dateStr
-                      )
-                      const routineName = schedule.find(
-                        (s) => s.user_id === profile.id && s.day_of_week === dayOfWeek
-                      )?.routines?.name
-
-                      if (!routineName && !hasWorkout) return null
-
-                      return (
-                        <div
-                          key={profile.id}
-                          className="flex min-w-0 items-center gap-1"
-                          title={routineName || ''}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]} ${
-                              hasWorkout ? '' : 'opacity-30'
-                            }`}
-                          />
-                          <span className="truncate text-[10px] text-chalk-dim">
-                            {routineName || '—'}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
+          const weeks = dateScaffold.map((week) =>
+            week.map((day) => {
+              if (day.isFuture) return day
+              const entry = byDate.get(day.dateStr)
+              const routineExerciseIds = scheduleMap.get(`${profile.id}:${day.dayOfWeek}`)
+              const { level, label } = levelAndLabelFor(entry, routineExerciseIds, maxCount)
+              return { ...day, level, label }
             })
-          )}
-        </div>
-      </Card>
+          )
+
+          return (
+            <Card key={profile.id} className="p-3">
+              <div className="mb-2 flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]}`} />
+                <p className="truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+                  {displayName(profile)}
+                </p>
+              </div>
+
+              <ContributionGraph weeks={weeks} monthLabels={monthLabels} />
+
+              <div className="mt-1 flex items-center justify-end gap-1">
+                <span className="font-mono text-[9px] text-chalk-dim">Less</span>
+                {Array.from({ length: LEVEL_COUNT + 1 }, (_, level) => (
+                  <span
+                    key={level}
+                    style={{
+                      height: CELL_PX,
+                      width: CELL_PX,
+                      backgroundColor: `var(--color-heat-${level})`,
+                    }}
+                    className="rounded-[2px]"
+                  />
+                ))}
+                <span className="font-mono text-[9px] text-chalk-dim">More</span>
+              </div>
+            </Card>
+          )
+        })}
+      </div>
     </div>
   )
 }
