@@ -23,26 +23,20 @@ function getMonthWeeks(year, month) {
   return weeks
 }
 
-function computeStreak(userId, schedule, workoutDates) {
+function computeStreak(workoutDates) {
   let streak = 0
   const cursor = new Date()
 
   for (let daysAgo = 0; daysAgo < STREAK_WINDOW_DAYS; daysAgo++) {
     const dateStr = toDateString(cursor)
-    const dayOfWeek = cursor.getDay()
-    const isScheduled = schedule.some(
-      (s) => s.user_id === userId && s.day_of_week === dayOfWeek && s.routine_id
-    )
 
-    if (isScheduled) {
-      if (workoutDates.has(dateStr)) {
-        streak++
-      } else if (daysAgo > 0) {
-        break
-      }
-      // daysAgo === 0 (today) and not logged yet: the day isn't over,
-      // so it neither extends nor breaks the streak.
+    if (workoutDates.has(dateStr)) {
+      streak++
+    } else if (daysAgo > 0) {
+      break
     }
+    // daysAgo === 0 (today) and not logged yet: the day isn't over,
+    // so it neither extends nor breaks the streak.
 
     cursor.setDate(cursor.getDate() - 1)
   }
@@ -139,7 +133,7 @@ function CalendarPage({ profiles, schedule, userId, onError }) {
   const streaksByUserId = Object.fromEntries(
     rows.map((profile) => [
       profile.id,
-      computeStreak(profile.id, schedule, workoutDatesByUser.get(profile.id) ?? new Set()),
+      computeStreak(workoutDatesByUser.get(profile.id) ?? new Set()),
     ])
   )
 

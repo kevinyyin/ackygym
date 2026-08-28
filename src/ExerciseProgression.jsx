@@ -83,7 +83,7 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
 
   const chartData = sessions.map((session) => ({
     date: formatDate(session.date),
-    e1rm: Math.max(...session.sets.map((s) => estimatedOneRepMax(s.weight, s.reps))),
+    weight: Math.max(...session.sets.map((s) => s.weight)),
   }))
 
   let bestE1rm = 0
@@ -140,12 +140,12 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
                   fontSize: 12,
                 }}
                 labelStyle={{ color: 'var(--color-chalk-dim)' }}
-                formatter={(value) => [value, 'Est. 1RM']}
+                formatter={(value) => [value, 'Weight']}
               />
               <Line
                 type="monotone"
-                dataKey="e1rm"
-                name="Est. 1RM"
+                dataKey="weight"
+                name="Weight"
                 stroke="var(--color-blue-500)"
                 strokeWidth={2}
                 dot={{ r: 3, fill: 'var(--color-blue-500)' }}
