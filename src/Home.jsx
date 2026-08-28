@@ -38,7 +38,7 @@ function SectionLabel({ children }) {
   )
 }
 
-function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
+function Home({ session, profiles, schedule, onScheduleSaved, onError, showWaterTracker }) {
   const [exercises, setExercises] = useState([])
   const [todaysSets, setTodaysSets] = useState([])
   const [refreshKey, setRefreshKey] = useState(0)
@@ -424,7 +424,9 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError }) {
         )}
       </Card>
 
-      <WaterTracker session={session} profiles={profiles} onError={onError} />
+      {showWaterTracker && (
+        <WaterTracker session={session} profiles={profiles} onError={onError} />
+      )}
 
       <ExerciseDetailModal
         exercise={selectedExercise}

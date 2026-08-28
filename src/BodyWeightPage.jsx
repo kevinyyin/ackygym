@@ -32,7 +32,7 @@ function SectionLabel({ children }) {
   )
 }
 
-function BodyWeightPage({ profiles, userId, onError }) {
+function BodyWeightPage({ profiles, userId, onError, showCalorieTracker }) {
   const [unit, setUnit] = useState(getStoredUnit)
   const [entries, setEntries] = useState([])
   const [inputValue, setInputValue] = useState('')
@@ -185,7 +185,9 @@ function BodyWeightPage({ profiles, userId, onError }) {
         </form>
       </Card>
 
-      <CalorieCalculator userId={userId} latestWeightKg={latestOwnEntry?.weight_kg} unit={unit} />
+      {showCalorieTracker && (
+        <CalorieCalculator userId={userId} latestWeightKg={latestOwnEntry?.weight_kg} unit={unit} />
+      )}
 
       <div className="flex flex-col gap-3">
         <SectionLabel>History</SectionLabel>
