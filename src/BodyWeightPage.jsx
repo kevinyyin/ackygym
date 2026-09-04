@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
-import Card from './Card'
-import { displayName } from './displayName'
-import { getTodayDateString } from './dateUtils'
+import Card, { SectionLabel } from './Card'
+import { groupByUser } from './groupByUser'
+import { getTodayDateString, formatDate } from './dateUtils'
 import { convertWeight, roundWeight } from './weightUnits'
 import CalorieCalculator from './CalorieCalculator'
+import { calculateCalorieTargets, inToCm, loadStoredProfile } from './calorieMath'
 import MuscleVolume from './MuscleVolume'
 import WeightHistoryModal from './WeightHistoryModal'
+import CalorieTracker from './CalorieTracker'
 
 const UNIT_STORAGE_KEY = 'gym-tracker:body-weight-unit'
 
@@ -15,24 +17,7 @@ function getStoredUnit() {
   return stored === 'lb' ? 'lb' : 'kg'
 }
 
-function formatDate(dateStr) {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
-function SectionLabel({ children }) {
-  return (
-    <h2 className="flex items-center gap-2 px-1 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
-      <span className="h-2.5 w-0.5 bg-blue-500" />
-      {children}
-    </h2>
-  )
-}
-
-function BodyWeightPage({ profiles, userId, onError, showCalorieTracker }) {
+function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCalorieTracking }) {
   const [unit, setUnit] = useState(getStoredUnit)
   const [entries, setEntries] = useState([])
   const [inputValue, setInputValue] = useState('')
@@ -74,6 +59,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker }) {
     onError('')
 
     const numeric = Number(inputValue)
+    if (!numeric || numeric <= 0) return
     const weightKg = unit === 'kg' ? numeric : convertWeight(numeric, 'lb', 'kg')
 
     const { error } = await supabase.from('body_weights').upsert(
@@ -100,27 +86,31 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker }) {
     setRefreshKey((k) => k + 1)
   }
 
-  const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
-
-  const entriesByUserId = new Map()
-  for (const entry of entries) {
-    if (!entriesByUserId.has(entry.user_id)) entriesByUserId.set(entry.user_id, [])
-    entriesByUserId.get(entry.user_id).push(entry)
-  }
-
-  const groupedEntries = [...entriesByUserId.entries()]
-    .map(([entryUserId, userEntries]) => ({
-      userId: entryUserId,
-      name: profileByUserId[entryUserId] ? displayName(profileByUserId[entryUserId]) : entryUserId,
-      entries: userEntries,
-    }))
-    .sort((a, b) => {
-      if (a.userId === userId) return -1
-      if (b.userId === userId) return 1
-      return a.name.localeCompare(b.name)
-    })
+  const groupedEntries = groupByUser(entries, profiles, userId, 'entries')
 
   const latestOwnEntry = entries.find((entry) => entry.user_id === userId)
+
+  let calorieTarget = null
+  if (latestOwnEntry) {
+    const stored = loadStoredProfile(userId)
+    const storedHeightUnit = stored.heightUnit ?? (unit === 'kg' ? 'cm' : 'in')
+    const heightCm = stored.height
+      ? storedHeightUnit === 'cm'
+        ? Number(stored.height)
+        : inToCm(Number(stored.height))
+      : NaN
+    const ageNum = Number(stored.age)
+    if (heightCm > 0 && ageNum > 0) {
+      calorieTarget = calculateCalorieTargets({
+        weightKg: latestOwnEntry.weight_kg,
+        heightCm,
+        age: ageNum,
+        sex: stored.sex ?? 'female',
+        activityLevel: stored.activityLevel ?? 'sedentary',
+        goal: stored.goal ?? 'maintain',
+      }).target
+    }
+  }
 
   const inputClasses =
     'w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none'
@@ -158,7 +148,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker }) {
           <span className="ml-2 font-body text-lg font-normal text-chalk-dim">{unit}</span>
         </p>
         <p className="mt-1 text-xs text-chalk-dim">
-          {latestOwnEntry ? formatDate(latestOwnEntry.date) : 'Nothing logged yet'}
+          {latestOwnEntry ? formatDate(latestOwnEntry.date, { year: true }) : 'Nothing logged yet'}
         </p>
       </Card>
 
@@ -189,6 +179,10 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker }) {
         <CalorieCalculator userId={userId} latestWeightKg={latestOwnEntry?.weight_kg} unit={unit} />
       )}
 
+      {showCalorieTracking && (
+        <CalorieTracker profiles={profiles} userId={userId} target={calorieTarget} onError={onError} />
+      )}
+
       <div className="flex flex-col gap-3">
         <SectionLabel>History</SectionLabel>
         {groupedEntries.length === 0 ? (
@@ -212,7 +206,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker }) {
                     className="flex items-center justify-between gap-2 px-4 py-3"
                   >
                     <span className="font-mono text-sm text-chalk-dim">
-                      {formatDate(entry.date)}
+                      {formatDate(entry.date, { year: true })}
                     </span>
                     <span className="flex items-center gap-3">
                       <span className="font-mono font-medium text-chalk">
@@ -221,7 +215,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker }) {
                       {entry.user_id === userId && (
                         <button
                           onClick={() => handleDelete(entry.id)}
-                          aria-label={`Delete ${formatDate(entry.date)} weight entry`}
+                          aria-label={`Delete ${formatDate(entry.date, { year: true })} weight entry`}
                           className="shrink-0 text-chalk-dim hover:text-danger"
                         >
                           ✕

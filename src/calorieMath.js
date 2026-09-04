@@ -22,6 +22,19 @@ export function calculateBMR({ weightKg, heightCm, age, sex }) {
   return sex === 'male' ? base + 5 : base - 161
 }
 
+export function getProfileStorageKey(userId) {
+  return `gym-tracker:calorie-calc-profile:${userId}`
+}
+
+export function loadStoredProfile(userId) {
+  try {
+    const raw = localStorage.getItem(getProfileStorageKey(userId))
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
 export function calculateCalorieTargets({ weightKg, heightCm, age, sex, activityLevel, goal }) {
   const bmr = calculateBMR({ weightKg, heightCm, age, sex })
   const activity = ACTIVITY_LEVELS.find((a) => a.value === activityLevel) ?? ACTIVITY_LEVELS[0]

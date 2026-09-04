@@ -31,8 +31,11 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
   useEffect(() => {
     if (!selectedExerciseId) return
 
+    let cancelled = false
+
     async function loadLastSet() {
       const { data, error } = await fetchLastSet(userId, Number(selectedExerciseId))
+      if (cancelled) return
 
       if (error) {
         onError(error.message)
@@ -44,6 +47,9 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
     }
 
     loadLastSet()
+    return () => {
+      cancelled = true
+    }
   }, [selectedExerciseId, userId, onError])
 
   async function handleSubmit(e) {

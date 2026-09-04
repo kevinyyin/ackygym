@@ -12,6 +12,10 @@
   --color-danger: #e5484d;
   --color-onblue: #ffffff;
 
+  --color-amber: #fbbf24;
+  --color-emerald: #34d399;
+  --color-purple: #c084fc;
+
   --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
@@ -53,6 +57,9 @@ html[data-theme="light"] {
     --color-chalk: #16171b;
     --color-chalk-dim: #52545c;
     --color-danger: #d0353d;
+    --color-amber: #d97706;
+    --color-emerald: #059669;
+    --color-purple: #9333ea;
   }
 
   body {

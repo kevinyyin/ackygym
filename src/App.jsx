@@ -207,6 +207,7 @@ function App() {
                 userId={session.user.id}
                 onError={setError}
                 showCalorieTracker={cardVisibility.calorie}
+                showCalorieTracking={cardVisibility.calorieTracker}
               />
             }
           />

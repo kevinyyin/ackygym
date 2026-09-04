@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
-import Card from './Card'
+import Card, { SectionLabel } from './Card'
 import { displayName } from './displayName'
 import { getTodayDateString } from './dateUtils'
 import { DropletIcon } from './icons'
@@ -8,15 +8,6 @@ import WaterBottle from './WaterBottle'
 
 const GOAL_ML = 2000
 const QUICK_ADD_ML = [250, 500, 750]
-
-function SectionLabel({ children }) {
-  return (
-    <h2 className="flex items-center gap-2 px-1 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
-      <span className="h-2.5 w-0.5 bg-blue-500" />
-      {children}
-    </h2>
-  )
-}
 
 function WaterTracker({ session, profiles, onError }) {
   const [logs, setLogs] = useState([])
@@ -46,7 +37,7 @@ function WaterTracker({ session, profiles, onError }) {
     onError('')
     const { error } = await supabase
       .from('water_logs')
-      .insert({ user_id: session.user.id, amount_ml: amountMl })
+      .insert({ user_id: session.user.id, amount_ml: amountMl, date: getTodayDateString() })
 
     if (error) {
       onError(error.message)
