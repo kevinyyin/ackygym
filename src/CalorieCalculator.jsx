@@ -1,23 +1,17 @@
 import { useEffect, useState } from 'react'
 import Card from './Card'
 import { convertWeight, roundWeight } from './weightUnits'
-import { calculateCalorieTargets, ACTIVITY_LEVELS, cmToIn, inToCm } from './calorieMath'
+import {
+  calculateCalorieTargets,
+  ACTIVITY_LEVELS,
+  cmToIn,
+  inToCm,
+  getProfileStorageKey,
+  loadStoredProfile,
+} from './calorieMath'
 
 function roundTenth(value) {
   return Math.round(value * 10) / 10
-}
-
-function getProfileStorageKey(userId) {
-  return `gym-tracker:calorie-calc-profile:${userId}`
-}
-
-function loadStoredProfile(userId) {
-  try {
-    const raw = localStorage.getItem(getProfileStorageKey(userId))
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
 }
 
 const GOALS = [
@@ -74,9 +68,9 @@ function CalorieCalculator({ userId, latestWeightKg, unit }) {
   useEffect(() => {
     localStorage.setItem(
       getProfileStorageKey(userId),
-      JSON.stringify({ height, age, sex, activityLevel, goal })
+      JSON.stringify({ height, age, sex, activityLevel, goal, heightUnit: unit === 'kg' ? 'cm' : 'in' })
     )
-  }, [userId, height, age, sex, activityLevel, goal])
+  }, [userId, height, age, sex, activityLevel, goal, unit])
 
   const heightUnit = unit === 'kg' ? 'cm' : 'in'
 

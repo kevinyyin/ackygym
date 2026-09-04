@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { WEEKDAY_SHORT } from './weekdays'
-import { toDateString } from './dateUtils'
+import { toDateString, formatDate } from './dateUtils'
 import { displayName } from './displayName'
+import { sortProfilesSelfFirst } from './groupByUser'
 import Card from './Card'
 
-const DOT_COLORS = ['bg-blue-400', 'bg-emerald-400', 'bg-amber-400', 'bg-purple-400']
+const DOT_COLORS = ['bg-blue-400', 'bg-emerald', 'bg-amber', 'bg-purple']
 const STREAK_WINDOW_DAYS = 90
 
 const WEEKS_COUNT = 53
@@ -15,13 +16,6 @@ const GAP_PX = 3
 const COLUMN_PITCH_PX = CELL_PX + GAP_PX
 const LEVEL_COUNT = 4
 const LABELED_WEEKDAYS = new Set([1, 3, 5]) // Mon, Wed, Fri
-
-function formatDate(dateStr) {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
-}
 
 // Contribution grid spans the trailing 53 weeks (Sun..Sat columns) ending
 // on the Saturday of the current week, matching GitHub's contribution graph.
@@ -243,11 +237,7 @@ function CalendarPage({ profiles, userId, onError }) {
     fetchSets()
   }, [onError])
 
-  const rows = [...profiles].sort((a, b) => {
-    if (a.id === userId) return -1
-    if (b.id === userId) return 1
-    return displayName(a).localeCompare(displayName(b))
-  })
+  const rows = sortProfilesSelfFirst(profiles, userId)
 
   const { today, start } = getContributionRange()
   const dateScaffold = buildDateScaffold(start, today)

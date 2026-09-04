@@ -11,13 +11,7 @@ import {
 import { supabase } from './supabaseClient'
 import { TrophyIcon } from './icons'
 import { estimatedOneRepMax } from './oneRepMax'
-
-function formatDate(dateStr) {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
-}
+import { formatDate } from './dateUtils'
 
 function groupSetsBySession(sets) {
   const order = []
@@ -175,7 +169,7 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
                     )}
                     {set.reps}
                     {set.is_pr && (
-                      <TrophyIcon className="h-3 w-3 shrink-0 text-amber-400" aria-label="New PR" />
+                      <TrophyIcon className="h-3 w-3 shrink-0 text-amber" aria-label="New PR" />
                     )}
                   </li>
                 )

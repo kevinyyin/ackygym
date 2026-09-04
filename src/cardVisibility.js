@@ -2,7 +2,8 @@ const STORAGE_KEY = 'gym-tracker:card-visibility'
 
 export const TOGGLEABLE_CARDS = [
   { key: 'water', label: 'Water tracker' },
-  { key: 'calorie', label: 'Calorie tracker' },
+  { key: 'calorie', label: 'Calorie calculator' },
+  { key: 'calorieTracker', label: 'Calorie tracker' },
 ]
 
 function defaults() {

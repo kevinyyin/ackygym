@@ -14,3 +14,11 @@ export function getDateDaysAgoString(daysAgo) {
   date.setDate(date.getDate() - daysAgo)
   return toDateString(date)
 }
+
+export function formatDate(dateStr, { year = false } = {}) {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(year ? { year: 'numeric' } : {}),
+  })
+}

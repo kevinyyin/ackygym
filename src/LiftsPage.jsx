@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { displayName } from './displayName'
+import { sortProfilesSelfFirst } from './groupByUser'
 import Card from './Card'
 import MuscleTags from './MuscleTags'
 import ExerciseDetailModal from './ExerciseDetailModal'
 import { MedalIcon } from './icons'
-
-function formatDate(dateStr) {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
-}
+import { formatDate } from './dateUtils'
 
 // Which muscle_groups.name values count as "lower body" for the purpose of
 // this grouping — everything else (including core) is bucketed as upper body.
@@ -112,11 +107,7 @@ function LiftsPage({ profiles, userId, onError }) {
     fetchBestSets()
   }, [onError])
 
-  const rows = [...profiles].sort((a, b) => {
-    if (a.id === userId) return -1
-    if (b.id === userId) return 1
-    return displayName(a).localeCompare(displayName(b))
-  })
+  const rows = sortProfilesSelfFirst(profiles, userId)
 
   function leaderboardFor(exerciseId) {
     return rows
@@ -143,7 +134,7 @@ function LiftsPage({ profiles, userId, onError }) {
             return (
               <div key={profile.id} className="border-l-2 border-line pl-2">
                 <p className="flex items-center gap-1 text-[11px] text-chalk-dim">
-                  {isLeader && <MedalIcon className="h-3.5 w-3.5 shrink-0 text-amber-400" />}
+                  {isLeader && <MedalIcon className="h-3.5 w-3.5 shrink-0 text-amber" />}
                   <span className="min-w-0 flex-1 truncate">{displayName(profile)}</span>
                 </p>
                 {entry ? (

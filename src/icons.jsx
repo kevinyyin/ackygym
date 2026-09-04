@@ -68,6 +68,14 @@ export function DropletIcon(props) {
   )
 }
 
+export function FlameIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 2c1 3-2 4.5-2 7a2 2 0 0 0 4 0c1.5 1.5 2 3.5 2 5a6 6 0 0 1-12 0c0-4 3-7 3-9 0-1 1.5-2.5 1.5-3 1.5 1 1.5 0 1.5 0Z" />
+    </BaseIcon>
+  )
+}
+
 export function CameraIcon(props) {
   return (
     <BaseIcon {...props}>

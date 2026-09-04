@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import WorkoutForm from './WorkoutForm'
 import AddExerciseForm from './AddExerciseForm'
-import Card from './Card'
+import Card, { SectionLabel } from './Card'
 import MuscleTags from './MuscleTags'
 import ExerciseDetailModal from './ExerciseDetailModal'
 import ActiveRoutine from './ActiveRoutine'
 import Routines from './Routines'
 import WaterTracker from './WaterTracker'
-import { displayName } from './displayName'
+import { groupByUser } from './groupByUser'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
@@ -27,15 +27,6 @@ function groupSetsByExercise(sets) {
   }
 
   return order.map((exerciseId) => byExerciseId.get(exerciseId))
-}
-
-function SectionLabel({ children }) {
-  return (
-    <h2 className="flex items-center gap-2 px-1 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
-      <span className="h-2.5 w-0.5 bg-blue-500" />
-      {children}
-    </h2>
-  )
 }
 
 function Home({ session, profiles, schedule, onScheduleSaved, onError, showWaterTracker }) {
@@ -113,25 +104,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
     fetchTodaysSets()
   }, [refreshKey, onError])
 
-  const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
-
-  const setsByUserId = new Map()
-  for (const set of todaysSets) {
-    if (!setsByUserId.has(set.user_id)) setsByUserId.set(set.user_id, [])
-    setsByUserId.get(set.user_id).push(set)
-  }
-
-  const groupedSets = [...setsByUserId.entries()]
-    .map(([userId, sets]) => ({
-      userId,
-      name: profileByUserId[userId] ? displayName(profileByUserId[userId]) : userId,
-      sets,
-    }))
-    .sort((a, b) => {
-      if (a.userId === session.user.id) return -1
-      if (b.userId === session.user.id) return 1
-      return a.name.localeCompare(b.name)
-    })
+  const groupedSets = groupByUser(todaysSets, profiles, session.user.id, 'sets')
 
   const todayDayOfWeek = new Date().getDay()
   const todaysScheduleEntry = schedule.find(
@@ -300,7 +273,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
                                 {set.reps}
                                 {set.is_pr && (
                                   <TrophyIcon
-                                    className="h-3.5 w-3.5 shrink-0 text-amber-400"
+                                    className="h-3.5 w-3.5 shrink-0 text-amber"
                                     aria-label="New PR"
                                   />
                                 )}

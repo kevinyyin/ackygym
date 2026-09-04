@@ -1,35 +1,18 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
-import Card from './Card'
+import Card, { SectionLabel } from './Card'
 import { displayName } from './displayName'
-import { getTodayDateString } from './dateUtils'
+import { getTodayDateString, formatDate } from './dateUtils'
 import { CameraIcon } from './icons'
 
 const BUCKET = 'progress-photos'
 const SIGNED_URL_TTL = 60 * 60
 
-function formatDate(dateStr) {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
 function captionFor(photo, userId, profileByUserId) {
   const isOwn = photo.user_id === userId
   return isOwn
-    ? formatDate(photo.date)
-    : `${profileByUserId[photo.user_id] ? displayName(profileByUserId[photo.user_id]) : 'Shared'} · ${formatDate(photo.date)}`
-}
-
-function SectionLabel({ children }) {
-  return (
-    <h2 className="flex items-center gap-2 px-1 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
-      <span className="h-2.5 w-0.5 bg-blue-500" />
-      {children}
-    </h2>
-  )
+    ? formatDate(photo.date, { year: true })
+    : `${profileByUserId[photo.user_id] ? displayName(profileByUserId[photo.user_id]) : 'Shared'} · ${formatDate(photo.date, { year: true })}`
 }
 
 function ProgressPhotosPage({ profiles, userId, onError }) {
@@ -206,7 +189,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                   {signedUrlByPath[photo.path] ? (
                     <img
                       src={signedUrlByPath[photo.path]}
-                      alt={`Progress photo from ${formatDate(photo.date)}`}
+                      alt={`Progress photo from ${formatDate(photo.date, { year: true })}`}
                       onClick={() => setViewingPhoto(photo)}
                       className="h-full w-full cursor-pointer object-cover"
                     />
@@ -229,7 +212,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                   {isOwn && (
                     <button
                       onClick={() => handleDelete(photo)}
-                      aria-label={`Delete photo from ${formatDate(photo.date)}`}
+                      aria-label={`Delete photo from ${formatDate(photo.date, { year: true })}`}
                       className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur active:text-danger"
                     >
                       ✕
@@ -260,7 +243,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
           {signedUrlByPath[viewingPhoto.path] && (
             <img
               src={signedUrlByPath[viewingPhoto.path]}
-              alt={`Progress photo from ${formatDate(viewingPhoto.date)}`}
+              alt={`Progress photo from ${formatDate(viewingPhoto.date, { year: true })}`}
               onClick={(e) => e.stopPropagation()}
               className="max-h-[85vh] max-w-[95vw] object-contain"
             />

@@ -1,28 +1,22 @@
 import { supabase } from './supabaseClient'
 
-// NOTE: this deliberately sorts client-side rather than using
-// `.order(col, { foreignTable })` — that option silently produces a
-// no-op on this project's PostgREST version (confirmed: it emits the
-// legacy `workouts.order=date.asc` query param, which this PostgREST
-// ignores rather than erroring on), so any query relying on it for
-// worked-out-of-band-of-id date order returns rows in `id` order.
+// Sets are always logged against today's workout (see logSet.js — there's
+// no backdating), so `id` order already matches chronological order for a
+// given user+exercise. Ordering by `id` (the sets table's own column) also
+// sidesteps the documented PostgREST quirk where `.order(col, { foreignTable })`
+// is a silent no-op for a joined table's column.
 export async function fetchLastSet(userId, exerciseId) {
   const { data, error } = await supabase
     .from('sets')
-    .select('id, weight, reps, workouts!inner(date)')
+    .select('weight, reps')
     .eq('user_id', userId)
     .eq('exercise_id', exerciseId)
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (error) return { data: null, error }
-  if (!data || data.length === 0) return { data: null, error: null }
+  if (!data) return { data: null, error: null }
 
-  const last = data.reduce((latest, row) => {
-    if (!latest) return row
-    if (row.workouts.date !== latest.workouts.date) {
-      return row.workouts.date > latest.workouts.date ? row : latest
-    }
-    return row.id > latest.id ? row : latest
-  }, null)
-
-  return { data: { weight: last.weight, reps: last.reps }, error: null }
+  return { data: { weight: data.weight, reps: data.reps }, error: null }
 }
