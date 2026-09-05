@@ -8,6 +8,7 @@ import ConfirmDeleteButton from './ConfirmDeleteButton'
 
 const BUCKET = 'progress-photos'
 const SIGNED_URL_TTL = 60 * 60
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 
 function captionFor(photo, userId, profileByUserId) {
   const isOwn = photo.user_id === userId
@@ -90,6 +91,15 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      onError('Please choose an image file.')
+      return
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      onError('That image is too large — the limit is 15MB.')
+      return
+    }
 
     onError('')
     setUploading(true)

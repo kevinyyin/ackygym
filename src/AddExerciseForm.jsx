@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { normalizeExerciseName } from './normalizeExerciseName'
 import { sortMuscleGroups } from './muscleGroupOrder'
@@ -9,6 +9,8 @@ function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
   const [selected, setSelected] = useState({})
   const [catalog, setCatalog] = useState(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   useEffect(() => {
     async function fetchMuscleGroups() {
@@ -105,7 +107,7 @@ function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    onError('')
+    if (submittingRef.current) return
 
     const trimmedName = name.trim()
     if (!trimmedName) return
@@ -119,6 +121,10 @@ function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
       return
     }
 
+    submittingRef.current = true
+    onError('')
+    setSubmitting(true)
+
     const { data: inserted, error } = await supabase
       .from('exercises')
       .insert({ name: trimmedName })
@@ -127,6 +133,8 @@ function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
 
     if (error) {
       onError(error.message)
+      submittingRef.current = false
+      setSubmitting(false)
       return
     }
 
@@ -140,12 +148,16 @@ function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
       const { error: muscleError } = await supabase.from('exercise_muscles').insert(muscleRows)
       if (muscleError) {
         onError(muscleError.message)
+        submittingRef.current = false
+        setSubmitting(false)
         return
       }
     }
 
     await addToCatalogIfMissing(trimmedName, normalizedName, muscleRows)
 
+    submittingRef.current = false
+    setSubmitting(false)
     setName('')
     setSelected({})
     setDropdownOpen(false)
@@ -191,9 +203,10 @@ function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
         </div>
         <button
           type="submit"
-          className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600"
+          disabled={submitting}
+          className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
         >
-          Add
+          {submitting ? 'Adding…' : 'Add'}
         </button>
       </div>
 

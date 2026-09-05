@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Card from './Card'
 import { fetchLastSet } from './lastSet'
 import { logSet } from './logSet'
@@ -9,6 +9,11 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
   const [rows, setRows] = useState(null)
   const [calculatorRowId, setCalculatorRowId] = useState(null)
   const [prExerciseIds, setPrExerciseIds] = useState(() => new Set())
+  const [loggingExerciseIds, setLoggingExerciseIds] = useState(() => new Set())
+  // Mirrors loggingExerciseIds but updates synchronously, so a rapid double
+  // tap on the same row's Log button (both landing before React re-renders)
+  // can't both slip past the guard — see the same note in WorkoutForm.jsx.
+  const loggingExerciseIdsRef = useRef(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -46,14 +51,30 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
     })
   }
 
+  function isRowLoggable(row) {
+    return Number(row.weight) >= 0 && Number(row.reps) >= 1
+  }
+
   async function handleLog(row) {
+    if (loggingExerciseIdsRef.current.has(row.exerciseId) || !isRowLoggable(row)) return
+    loggingExerciseIdsRef.current.add(row.exerciseId)
     onError('')
+    setLoggingExerciseIds((current) => new Set(current).add(row.exerciseId))
+
     const { error, isPr } = await logSet({
       userId,
       exerciseId: row.exerciseId,
       weight: Number(row.weight),
       reps: Number(row.reps),
     })
+
+    loggingExerciseIdsRef.current.delete(row.exerciseId)
+    setLoggingExerciseIds((current) => {
+      const next = new Set(current)
+      next.delete(row.exerciseId)
+      return next
+    })
+
     if (error) {
       onError(error.message)
       return
@@ -102,6 +123,8 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
               </span>
               <input
                 type="number"
+                min="0"
+                step="any"
                 value={row.weight}
                 onChange={(e) => updateRow(row.exerciseId, 'weight', e.target.value)}
                 placeholder="Wt"
@@ -118,6 +141,8 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
               <span className="text-chalk-dim/60">×</span>
               <input
                 type="number"
+                min="1"
+                step="1"
                 value={row.reps}
                 onChange={(e) => updateRow(row.exerciseId, 'reps', e.target.value)}
                 placeholder="Reps"
@@ -126,7 +151,7 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
               <button
                 type="button"
                 onClick={() => handleLog(row)}
-                disabled={!row.weight || !row.reps}
+                disabled={!isRowLoggable(row) || loggingExerciseIds.has(row.exerciseId)}
                 className="shrink-0 rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
               >
                 Log

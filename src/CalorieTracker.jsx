@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Card, { SectionLabel } from './Card'
 import { groupByUser } from './groupByUser'
@@ -13,6 +13,8 @@ function CalorieTracker({ profiles, userId, target, onError }) {
   const [inputValue, setInputValue] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [chartGroup, setChartGroup] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   useEffect(() => {
     async function fetchEntries() {
@@ -34,15 +36,22 @@ function CalorieTracker({ profiles, userId, target, onError }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    onError('')
+    if (submittingRef.current) return
 
     const numeric = Number(inputValue)
     if (!numeric || numeric <= 0) return
+
+    submittingRef.current = true
+    onError('')
+    setSubmitting(true)
 
     const { error } = await supabase.from('calorie_logs').upsert(
       { user_id: userId, date: getTodayDateString(), calories: numeric },
       { onConflict: 'user_id,date' }
     )
+
+    submittingRef.current = false
+    setSubmitting(false)
 
     if (error) {
       onError(error.message)
@@ -109,9 +118,10 @@ function CalorieTracker({ profiles, userId, target, onError }) {
           />
           <button
             type="submit"
-            className="shrink-0 rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600"
+            disabled={submitting}
+            className="shrink-0 rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
           >
-            Log
+            {submitting ? 'Logging…' : 'Log'}
           </button>
         </form>
       </Card>

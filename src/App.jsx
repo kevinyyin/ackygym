@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
+import { Routes, Route, NavLink, Link, useLocation } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import Auth from './Auth'
 import Home from './Home'
@@ -45,6 +45,7 @@ const TABS = [
 
 function App() {
   const [session, setSession] = useState(null)
+  const [sessionChecked, setSessionChecked] = useState(false)
   const [profiles, setProfiles] = useState([])
   const [schedule, setSchedule] = useState([])
   const [error, setError] = useState('')
@@ -108,6 +109,7 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session)
+        setSessionChecked(true)
       }
     )
 
@@ -146,6 +148,10 @@ function App() {
 
     fetchSchedule()
   }, [session, scheduleVersion])
+
+  if (!sessionChecked) {
+    return <div className="min-h-svh bg-ink" />
+  }
 
   if (!session) {
     return <Auth />
@@ -274,6 +280,23 @@ function App() {
                 onPause={restTimer.pause}
                 onReset={restTimer.reset}
               />
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <p className="font-display text-2xl leading-none tracking-tight text-chalk uppercase">
+                  Page not found
+                </p>
+                <p className="text-sm text-chalk-dim">There's nothing at this address.</p>
+                <Link
+                  to="/"
+                  className="mt-2 rounded-md bg-blue-500 px-4 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600"
+                >
+                  Go home
+                </Link>
+              </div>
             }
           />
         </Routes>
