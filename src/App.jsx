@@ -11,6 +11,7 @@ import TimerPage from './TimerPage'
 import SettingsModal from './SettingsModal'
 import { displayName } from './displayName'
 import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
+import { useRestTimer } from './useRestTimer'
 import {
   GridIcon,
   CalendarIcon,
@@ -52,12 +53,48 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
   const [cardVisibility, setCardVisibility] = useState(loadCardVisibility)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine)
   const location = useLocation()
+  const restTimer = useRestTimer()
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    function handleOnline() {
+      setIsOnline(true)
+    }
+    function handleOffline() {
+      setIsOnline(false)
+    }
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  // Route every page's onError through here so a dropped connection reads
+  // as "you're offline," not as whatever raw fetch/Supabase error surfaces —
+  // `navigator.onLine` catches a device with no network at all, and the
+  // message pattern catches the common case of a flaky connection where the
+  // browser still thinks it's online but the request itself failed to reach
+  // the server.
+  function handleError(message) {
+    if (!message) {
+      setError('')
+      return
+    }
+    const looksLikeNetworkFailure = /failed to fetch|network ?error|load failed/i.test(message)
+    setError(
+      !navigator.onLine || looksLikeNetworkFailure
+        ? "You're offline — check your connection and try again."
+        : message
+    )
+  }
 
   function toggleCardVisibility(key) {
     setCardVisibility((current) => {
@@ -83,7 +120,7 @@ function App() {
     async function fetchProfiles() {
       const { data, error } = await supabase.from('profiles').select('id, email, username')
       if (error) {
-        setError(error.message)
+        handleError(error.message)
         return
       }
       setProfiles(data)
@@ -101,7 +138,7 @@ function App() {
         .select('id, user_id, day_of_week, routine_id, routines(name)')
 
       if (error) {
-        setError(error.message)
+        handleError(error.message)
         return
       }
       setSchedule(data)
@@ -157,6 +194,12 @@ function App() {
           </div>
         </header>
 
+        {!isOnline && (
+          <p className="rounded-md border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-amber">
+            You're offline. Changes won't save until your connection is back.
+          </p>
+        )}
+
         {error && (
           <p className="rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
@@ -172,7 +215,7 @@ function App() {
                 profiles={profiles}
                 schedule={schedule}
                 onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
-                onError={setError}
+                onError={handleError}
                 showWaterTracker={cardVisibility.water}
               />
             }
@@ -183,7 +226,7 @@ function App() {
               <CalendarPage
                 profiles={profiles}
                 userId={session.user.id}
-                onError={setError}
+                onError={handleError}
               />
             }
           />
@@ -193,7 +236,7 @@ function App() {
               <LiftsPage
                 profiles={profiles}
                 userId={session.user.id}
-                onError={setError}
+                onError={handleError}
               />
             }
           />
@@ -203,7 +246,7 @@ function App() {
               <BodyWeightPage
                 profiles={profiles}
                 userId={session.user.id}
-                onError={setError}
+                onError={handleError}
                 showCalorieTracker={cardVisibility.calorie}
                 showCalorieTracking={cardVisibility.calorieTracker}
               />
@@ -215,11 +258,24 @@ function App() {
               <ProgressPhotosPage
                 profiles={profiles}
                 userId={session.user.id}
-                onError={setError}
+                onError={handleError}
               />
             }
           />
-          <Route path="/timer" element={<TimerPage />} />
+          <Route
+            path="/timer"
+            element={
+              <TimerPage
+                duration={restTimer.duration}
+                remaining={restTimer.remaining}
+                status={restTimer.status}
+                selectDuration={restTimer.selectDuration}
+                onStart={restTimer.start}
+                onPause={restTimer.pause}
+                onReset={restTimer.reset}
+              />
+            }
+          />
         </Routes>
       </div>
 
@@ -229,11 +285,17 @@ function App() {
             <NavLink key={to} to={to} end={end} aria-label={label} className="px-3 pt-2.5 pb-3">
               {({ isActive }) => (
                 <span
-                  className={`flex flex-col items-center gap-2 transition-colors ${
+                  className={`relative flex flex-col items-center gap-2 transition-colors ${
                     isActive ? 'text-blue-400' : 'text-chalk-dim'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
+                  {to === '/timer' && restTimer.status === 'running' && !isActive && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -top-0.5 -right-1 h-1.5 w-1.5 rounded-full bg-blue-500 motion-safe:animate-pulse"
+                    />
+                  )}
                   <span
                     className={`h-[2px] w-4 rounded-full transition-colors ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}
                   />
@@ -252,7 +314,7 @@ function App() {
         profile={currentProfile}
         userId={session.user.id}
         onProfileSaved={() => setProfilesVersion((v) => v + 1)}
-        onError={setError}
+        onError={handleError}
       />
     </div>
   )

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import Card from './Card'
 
 const PRESETS = [
@@ -37,101 +37,13 @@ function formatTime(totalSeconds) {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
-function playAlertSound() {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext
-  if (!AudioContextClass) return
-
-  const ctx = new AudioContextClass()
-  const beepCount = 3
-  const beepDuration = 0.15
-  const gap = 0.15
-
-  for (let i = 0; i < beepCount; i++) {
-    const startTime = ctx.currentTime + i * (beepDuration + gap)
-    const oscillator = ctx.createOscillator()
-    const gainNode = ctx.createGain()
-    oscillator.type = 'sine'
-    oscillator.frequency.value = 880
-    gainNode.gain.setValueAtTime(0.0001, startTime)
-    gainNode.gain.exponentialRampToValueAtTime(0.3, startTime + 0.01)
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + beepDuration)
-    oscillator.connect(gainNode)
-    gainNode.connect(ctx.destination)
-    oscillator.start(startTime)
-    oscillator.stop(startTime + beepDuration)
-  }
-
-  setTimeout(() => ctx.close(), (beepCount * (beepDuration + gap) + 0.2) * 1000)
-}
-
-function TimerPage() {
-  const [duration, setDuration] = useState(60)
-  const [remaining, setRemaining] = useState(60)
-  const [status, setStatus] = useState('idle')
+function TimerPage({ duration, remaining, status, selectDuration, onStart, onPause, onReset }) {
   const [customValue, setCustomValue] = useState('')
-  const endTimeRef = useRef(null)
-
-  useEffect(() => {
-    if (status !== 'running') return
-
-    function tick() {
-      const secondsLeft = (endTimeRef.current - Date.now()) / 1000
-      if (secondsLeft <= 0) {
-        setRemaining(0)
-        setStatus('finished')
-        playAlertSound()
-        return
-      }
-      setRemaining(Math.ceil(secondsLeft))
-    }
-
-    tick()
-    const intervalId = setInterval(tick, 250)
-
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'visible') tick()
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    return () => {
-      clearInterval(intervalId)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [status])
-
-  function selectDuration(seconds) {
-    if (!Number.isFinite(seconds) || seconds <= 0) return
-    endTimeRef.current = null
-    setDuration(seconds)
-    setRemaining(seconds)
-    setStatus('idle')
-  }
 
   function handleCustomSubmit(e) {
     e.preventDefault()
     selectDuration(Math.round(Number(customValue)))
     setCustomValue('')
-  }
-
-  function handleStart() {
-    const secondsToRun = status === 'paused' ? remaining : duration
-    endTimeRef.current = Date.now() + secondsToRun * 1000
-    setRemaining(secondsToRun)
-    setStatus('running')
-  }
-
-  function handlePause() {
-    if (status !== 'running') return
-    const secondsLeft = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000))
-    endTimeRef.current = null
-    setRemaining(secondsLeft)
-    setStatus('paused')
-  }
-
-  function handleReset() {
-    endTimeRef.current = null
-    setRemaining(duration)
-    setStatus('idle')
   }
 
   const isFinished = status === 'finished'
@@ -239,7 +151,7 @@ function TimerPage() {
       <div className="grid grid-cols-3 gap-2">
         <button
           type="button"
-          onClick={handleStart}
+          onClick={onStart}
           disabled={status === 'running'}
           className="rounded-md bg-blue-500 py-4 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:pointer-events-none disabled:opacity-40"
         >
@@ -247,7 +159,7 @@ function TimerPage() {
         </button>
         <button
           type="button"
-          onClick={handlePause}
+          onClick={onPause}
           disabled={status !== 'running'}
           className="rounded-md border border-line bg-surface py-4 font-body text-base font-semibold text-chalk active:border-blue-500 disabled:pointer-events-none disabled:opacity-40"
         >
@@ -255,7 +167,7 @@ function TimerPage() {
         </button>
         <button
           type="button"
-          onClick={handleReset}
+          onClick={onReset}
           className="rounded-md border border-line bg-surface py-4 font-body text-base font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400"
         >
           Reset
