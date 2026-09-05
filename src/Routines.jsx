@@ -265,6 +265,8 @@ function Routines({
   onError,
 }) {
   const [newRoutineName, setNewRoutineName] = useState('')
+  const [creating, setCreating] = useState(false)
+  const creatingRef = useRef(false)
   const [collapsedIds, setCollapsedIds] = useState(() => new Set())
   const appliedInitialCollapse = useRef(false)
 
@@ -288,11 +290,17 @@ function Routines({
 
   async function handleCreate(e) {
     e.preventDefault()
-    onError('')
+    if (creatingRef.current) return
     const trimmed = newRoutineName.trim()
     if (!trimmed) return
 
+    creatingRef.current = true
+    onError('')
+    setCreating(true)
     const { error } = await supabase.from('routines').insert({ name: trimmed })
+    creatingRef.current = false
+    setCreating(false)
+
     if (error) {
       onError(error.message)
       return
@@ -442,9 +450,10 @@ function Routines({
         />
         <button
           type="submit"
-          className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600"
+          disabled={creating}
+          className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
         >
-          Create
+          {creating ? 'Creating…' : 'Create'}
         </button>
       </form>
     </div>

@@ -169,7 +169,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
     if (error) {
       onError(
         error.code === '23503'
-          ? 'Can’t delete an exercise that has logged sets.'
+          ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
           : error.message
       )
       return

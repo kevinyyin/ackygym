@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { logSet } from './logSet'
 import { fetchLastSet } from './lastSet'
 import { groupByMuscle } from './exerciseGrouping'
@@ -12,6 +12,13 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [showCalculator, setShowCalculator] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  // Guards re-entrancy for rapid double-taps that land inside the same
+  // event-loop tick, before React has re-rendered with `submitting: true` —
+  // the `submitting` state alone isn't enough because both clicks read the
+  // stale value captured by the render they were dispatched from. A ref
+  // updates synchronously, so the second call sees it immediately.
+  const submittingRef = useRef(false)
 
   const selectedRoutine = routineId ? routines.find((r) => r.id === Number(routineId)) : null
   const availableExercises = selectedRoutine
@@ -54,8 +61,10 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!selectedExerciseId) return
+    if (!selectedExerciseId || submittingRef.current) return
+    submittingRef.current = true
     onError('')
+    setSubmitting(true)
 
     const { error } = await logSet({
       userId,
@@ -63,6 +72,9 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
       weight: Number(weight),
       reps: Number(reps),
     })
+
+    submittingRef.current = false
+    setSubmitting(false)
 
     if (error) {
       onError(error.message)
@@ -104,6 +116,8 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
       <div className="flex gap-3">
         <input
           type="number"
+          min="0"
+          step="any"
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
           placeholder="Weight"
@@ -120,6 +134,8 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
         </button>
         <input
           type="number"
+          min="1"
+          step="1"
           value={reps}
           onChange={(e) => setReps(e.target.value)}
           placeholder="Reps"
@@ -129,10 +145,10 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
       </div>
       <button
         type="submit"
-        disabled={!selectedExerciseId}
+        disabled={!selectedExerciseId || submitting}
         className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
       >
-        Log set
+        {submitting ? 'Logging…' : 'Log set'}
       </button>
 
       {showCalculator && (
