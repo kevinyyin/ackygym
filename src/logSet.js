@@ -46,7 +46,7 @@ export async function logSet({ userId, exerciseId, weight, reps }) {
   )
   if (maxWeightError) return { error: maxWeightError }
 
-  const isPr = priorMaxWeight !== null && weight > priorMaxWeight
+  const isPr = priorMaxWeight === null || weight > priorMaxWeight
 
   const { error: setInsertError } = await supabase.from('sets').insert({
     workout_id: workoutId,

@@ -5,6 +5,7 @@ import { displayName } from './displayName'
 import { getTodayDateString } from './dateUtils'
 import { DropletIcon } from './icons'
 import WaterBottle from './WaterBottle'
+import ConfirmDeleteButton from './ConfirmDeleteButton'
 
 const GOAL_ML = 2000
 const QUICK_ADD_ML = [250, 500, 750]
@@ -159,14 +160,18 @@ function WaterTracker({ session, profiles, onError }) {
             >
               Undo
             </button>
-            <button
-              onClick={handleClear}
+            <ConfirmDeleteButton
+              onConfirm={handleClear}
               disabled={ownTotalMl === 0}
-              aria-label="Clear today's water"
-              className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk-dim active:border-danger active:text-danger disabled:opacity-40"
+              idleLabel="Clear today's water"
+              armedLabel="Tap again to confirm clearing today's water"
+              armedChildren="Confirm?"
+              className="rounded-full border px-3 py-1.5 font-mono text-xs font-semibold disabled:opacity-40"
+              idleClassName="border-line bg-surface-2 text-chalk-dim active:border-danger active:text-danger"
+              armedClassName="border-danger bg-surface-2"
             >
               Clear
-            </button>
+            </ConfirmDeleteButton>
           </div>
 
           <form onSubmit={handleCustomAdd} className="mt-3 flex gap-2">

@@ -4,6 +4,7 @@ import Card, { SectionLabel } from './Card'
 import { displayName } from './displayName'
 import { getTodayDateString, formatDate } from './dateUtils'
 import { CameraIcon } from './icons'
+import ConfirmDeleteButton from './ConfirmDeleteButton'
 
 const BUCKET = 'progress-photos'
 const SIGNED_URL_TTL = 60 * 60
@@ -17,6 +18,7 @@ function captionFor(photo, userId, profileByUserId) {
 
 function ProgressPhotosPage({ profiles, userId, onError }) {
   const [photos, setPhotos] = useState([])
+  const [photosLoaded, setPhotosLoaded] = useState(false)
   const [signedUrlByPath, setSignedUrlByPath] = useState({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [uploading, setUploading] = useState(false)
@@ -37,6 +39,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
         return
       }
       setPhotos(data)
+      setPhotosLoaded(true)
     }
 
     fetchPhotos()
@@ -175,7 +178,11 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
         </p>
       </Card>
 
-      {photos.length === 0 ? (
+      {!photosLoaded ? (
+        <Card className="p-4">
+          <p className="text-sm text-chalk-dim">Loading…</p>
+        </Card>
+      ) : photos.length === 0 ? (
         <Card className="p-4">
           <p className="text-sm text-chalk-dim">No progress photos yet.</p>
         </Card>
@@ -210,13 +217,13 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                     </button>
                   )}
                   {isOwn && (
-                    <button
-                      onClick={() => handleDelete(photo)}
-                      aria-label={`Delete photo from ${formatDate(photo.date, { year: true })}`}
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur active:text-danger"
-                    >
-                      ✕
-                    </button>
+                    <ConfirmDeleteButton
+                      onConfirm={() => handleDelete(photo)}
+                      label={`photo from ${formatDate(photo.date, { year: true })}`}
+                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 backdrop-blur"
+                      idleClassName="text-chalk hover:text-danger"
+                      armedClassName="bg-ink/70"
+                    />
                   )}
                 </div>
                 <p className="px-3 py-2 text-center font-mono text-xs text-chalk-dim">

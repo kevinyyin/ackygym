@@ -8,8 +8,8 @@ import LiftsPage from './LiftsPage'
 import BodyWeightPage from './BodyWeightPage'
 import ProgressPhotosPage from './ProgressPhotosPage'
 import TimerPage from './TimerPage'
-import UsernameField from './UsernameField'
 import SettingsModal from './SettingsModal'
+import { displayName } from './displayName'
 import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
 import {
   GridIcon,
@@ -115,6 +115,7 @@ function App() {
   }
 
   const pageTitle = PAGE_TITLES[location.pathname] ?? 'Gym Tracker'
+  const currentProfile = profiles.find((p) => p.id === session.user.id)
 
   return (
     <div className="min-h-svh bg-ink text-chalk">
@@ -127,12 +128,9 @@ function App() {
             <h1 className="font-display text-4xl leading-none tracking-tight text-chalk uppercase">
               {pageTitle}
             </h1>
-            <UsernameField
-              profile={profiles.find((p) => p.id === session.user.id)}
-              userId={session.user.id}
-              onSaved={() => setProfilesVersion((v) => v + 1)}
-              onError={setError}
-            />
+            <p className="truncate font-mono text-xs text-chalk-dim">
+              {currentProfile ? displayName(currentProfile) : ''}
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button
@@ -251,6 +249,10 @@ function App() {
         visibility={cardVisibility}
         onToggle={toggleCardVisibility}
         onClose={() => setSettingsOpen(false)}
+        profile={currentProfile}
+        userId={session.user.id}
+        onProfileSaved={() => setProfilesVersion((v) => v + 1)}
+        onError={setError}
       />
     </div>
   )

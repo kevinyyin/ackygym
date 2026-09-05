@@ -9,6 +9,7 @@ import { calculateCalorieTargets, inToCm, loadStoredProfile } from './calorieMat
 import MuscleVolume from './MuscleVolume'
 import WeightHistoryModal from './WeightHistoryModal'
 import CalorieTracker from './CalorieTracker'
+import ConfirmDeleteButton from './ConfirmDeleteButton'
 
 const UNIT_STORAGE_KEY = 'gym-tracker:body-weight-unit'
 
@@ -20,6 +21,7 @@ function getStoredUnit() {
 function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCalorieTracking }) {
   const [unit, setUnit] = useState(getStoredUnit)
   const [entries, setEntries] = useState([])
+  const [entriesLoaded, setEntriesLoaded] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [chartGroup, setChartGroup] = useState(null)
@@ -36,6 +38,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
         return
       }
       setEntries(data)
+      setEntriesLoaded(true)
     }
 
     fetchEntries()
@@ -148,7 +151,11 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
           <span className="ml-2 font-body text-lg font-normal text-chalk-dim">{unit}</span>
         </p>
         <p className="mt-1 text-xs text-chalk-dim">
-          {latestOwnEntry ? formatDate(latestOwnEntry.date, { year: true }) : 'Nothing logged yet'}
+          {!entriesLoaded
+            ? 'Loading…'
+            : latestOwnEntry
+              ? formatDate(latestOwnEntry.date, { year: true })
+              : 'Nothing logged yet'}
         </p>
       </Card>
 
@@ -185,7 +192,11 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
 
       <div className="flex flex-col gap-3">
         <SectionLabel>History</SectionLabel>
-        {groupedEntries.length === 0 ? (
+        {!entriesLoaded ? (
+          <Card className="p-4">
+            <p className="text-sm text-chalk-dim">Loading…</p>
+          </Card>
+        ) : groupedEntries.length === 0 ? (
           <Card className="p-4">
             <p className="text-sm text-chalk-dim">No body weight logged yet.</p>
           </Card>
@@ -213,13 +224,11 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
                         {roundWeight(convertWeight(entry.weight_kg, 'kg', unit))} {unit}
                       </span>
                       {entry.user_id === userId && (
-                        <button
-                          onClick={() => handleDelete(entry.id)}
-                          aria-label={`Delete ${formatDate(entry.date, { year: true })} weight entry`}
-                          className="shrink-0 text-chalk-dim hover:text-danger"
-                        >
-                          ✕
-                        </button>
+                        <ConfirmDeleteButton
+                          onConfirm={() => handleDelete(entry.id)}
+                          label={`${formatDate(entry.date, { year: true })} weight entry`}
+                          className="shrink-0"
+                        />
                       )}
                     </span>
                   </li>

@@ -6,6 +6,11 @@
   --color-surface-2: #202024;
   --color-line: #2c2c32;
 
+  /* Darkened from Tailwind's default blue-500 (#2b7fff) so white CTA text
+     (text-onblue) clears the WCAG AA 4.5:1 contrast floor; blue-500 was
+     measuring 3.8:1. */
+  --color-blue-500: #1a5fdb;
+
   --color-chalk: #e9eaee;
   --color-chalk-dim: #a5a7b2;
 

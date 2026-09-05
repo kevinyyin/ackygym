@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { WEEKDAY_SHORT } from './weekdays'
 import { toDateString, formatDate } from './dateUtils'
@@ -11,7 +11,7 @@ const STREAK_WINDOW_DAYS = 90
 
 const WEEKS_COUNT = 53
 const DAYS_COUNT = WEEKS_COUNT * 7
-const CELL_PX = 10
+const CELL_PX = 13
 const GAP_PX = 3
 const COLUMN_PITCH_PX = CELL_PX + GAP_PX
 const LEVEL_COUNT = 4
@@ -124,6 +124,15 @@ function computeStreak(workoutDates) {
 
 function ContributionGraph({ weeks, monthLabels }) {
   const gridWidth = WEEKS_COUNT * COLUMN_PITCH_PX - GAP_PX
+  const scrollRef = useRef(null)
+
+  // The grid always ends on the current week (see getContributionRange), so
+  // land scrolled all the way right on mount — otherwise the graph opens on
+  // last year's data, which is never what someone opens this page to check.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollLeft = el.scrollWidth
+  }, [])
 
   return (
     <div className="flex gap-1.5">
@@ -132,21 +141,21 @@ function ContributionGraph({ weeks, monthLabels }) {
           <div
             key={dayOfWeek}
             style={{ height: CELL_PX }}
-            className="flex items-center font-mono text-[9px] text-chalk-dim"
+            className="flex items-center font-mono text-[11px] leading-none text-chalk-dim"
           >
             {LABELED_WEEKDAYS.has(dayOfWeek) ? WEEKDAY_SHORT[dayOfWeek] : ''}
           </div>
         ))}
       </div>
 
-      <div className="overflow-x-auto pb-1">
+      <div ref={scrollRef} className="overflow-x-auto pb-1">
         <div style={{ width: gridWidth }}>
-          <div className="relative" style={{ height: 14 }}>
+          <div className="relative" style={{ height: 16 }}>
             {monthLabels.map(({ weekIndex, label }) => (
               <span
                 key={weekIndex}
                 style={{ left: weekIndex * COLUMN_PITCH_PX }}
-                className="absolute font-mono text-[9px] text-chalk-dim"
+                className="absolute font-mono text-[11px] leading-none text-chalk-dim"
               >
                 {label}
               </span>
@@ -183,6 +192,7 @@ function ContributionGraph({ weeks, monthLabels }) {
 
 function CalendarPage({ profiles, userId, onError }) {
   const [dayDataByUser, setDayDataByUser] = useState(new Map())
+  const [setsLoaded, setSetsLoaded] = useState(false)
   const [scheduleMap, setScheduleMap] = useState(new Map())
 
   useEffect(() => {
@@ -232,6 +242,7 @@ function CalendarPage({ profiles, userId, onError }) {
         byDate.set(set.workouts.date, entry)
       }
       setDayDataByUser(byUser)
+      setSetsLoaded(true)
     }
 
     fetchSets()
@@ -249,6 +260,14 @@ function CalendarPage({ profiles, userId, onError }) {
       return [profile.id, computeStreak(dates)]
     })
   )
+
+  if (!setsLoaded) {
+    return (
+      <Card className="p-4">
+        <p className="text-sm text-chalk-dim">Loading…</p>
+      </Card>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -311,7 +330,7 @@ function CalendarPage({ profiles, userId, onError }) {
               <ContributionGraph weeks={weeks} monthLabels={monthLabels} />
 
               <div className="mt-1 flex items-center justify-end gap-1">
-                <span className="font-mono text-[9px] text-chalk-dim">Less</span>
+                <span className="font-mono text-[11px] text-chalk-dim">Less</span>
                 {Array.from({ length: LEVEL_COUNT + 1 }, (_, level) => (
                   <span
                     key={level}
@@ -323,7 +342,7 @@ function CalendarPage({ profiles, userId, onError }) {
                     className="rounded-[2px]"
                   />
                 ))}
-                <span className="font-mono text-[9px] text-chalk-dim">More</span>
+                <span className="font-mono text-[11px] text-chalk-dim">More</span>
               </div>
             </Card>
           )

@@ -5,9 +5,11 @@ import { groupByUser } from './groupByUser'
 import { getTodayDateString, formatDate } from './dateUtils'
 import { FlameIcon } from './icons'
 import CalorieHistoryModal from './CalorieHistoryModal'
+import ConfirmDeleteButton from './ConfirmDeleteButton'
 
 function CalorieTracker({ profiles, userId, target, onError }) {
   const [entries, setEntries] = useState([])
+  const [entriesLoaded, setEntriesLoaded] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [chartGroup, setChartGroup] = useState(null)
@@ -24,6 +26,7 @@ function CalorieTracker({ profiles, userId, target, onError }) {
         return
       }
       setEntries(data)
+      setEntriesLoaded(true)
     }
 
     fetchEntries()
@@ -83,7 +86,11 @@ function CalorieTracker({ profiles, userId, target, onError }) {
           </span>
         </p>
         <p className="mt-1 text-xs text-chalk-dim">
-          {latestOwnEntry ? formatDate(latestOwnEntry.date, { year: true }) : 'Nothing logged yet'}
+          {!entriesLoaded
+            ? 'Loading…'
+            : latestOwnEntry
+              ? formatDate(latestOwnEntry.date, { year: true })
+              : 'Nothing logged yet'}
         </p>
       </Card>
 
@@ -111,7 +118,11 @@ function CalorieTracker({ profiles, userId, target, onError }) {
 
       <div className="flex flex-col gap-3">
         <SectionLabel>History</SectionLabel>
-        {groupedEntries.length === 0 ? (
+        {!entriesLoaded ? (
+          <Card className="p-4">
+            <p className="text-sm text-chalk-dim">Loading…</p>
+          </Card>
+        ) : groupedEntries.length === 0 ? (
           <Card className="p-4">
             <p className="text-sm text-chalk-dim">No calories logged yet.</p>
           </Card>
@@ -139,13 +150,11 @@ function CalorieTracker({ profiles, userId, target, onError }) {
                         {Math.round(Number(entry.calories))} kcal
                       </span>
                       {entry.user_id === userId && (
-                        <button
-                          onClick={() => handleDelete(entry.id)}
-                          aria-label={`Delete ${formatDate(entry.date, { year: true })} calorie entry`}
-                          className="shrink-0 text-chalk-dim hover:text-danger"
-                        >
-                          ✕
-                        </button>
+                        <ConfirmDeleteButton
+                          onConfirm={() => handleDelete(entry.id)}
+                          label={`${formatDate(entry.date, { year: true })} calorie entry`}
+                          className="shrink-0"
+                        />
                       )}
                     </span>
                   </li>
