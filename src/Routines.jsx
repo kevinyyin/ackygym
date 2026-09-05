@@ -4,6 +4,7 @@ import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
 import { primaryMuscleGroup, groupByMuscle } from './exerciseGrouping'
 import { GripIcon, ChevronRightIcon } from './icons'
 import ExercisePicker from './ExercisePicker'
+import ConfirmDeleteButton from './ConfirmDeleteButton'
 
 function GroupHeader({ children }) {
   return (
@@ -189,14 +190,12 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
                 <span className="min-w-0 flex-1 truncate font-mono text-[10px] tracking-wide text-chalk uppercase">
                   {re.exercises.name}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => onRemove(re.id)}
-                  aria-label={`Remove ${re.exercises.name} from ${routine.name}`}
-                  className="shrink-0 text-chalk-dim hover:text-danger"
-                >
-                  ✕
-                </button>
+                <ConfirmDeleteButton
+                  onConfirm={() => onRemove(re.id)}
+                  idleLabel={`Remove ${re.exercises.name} from ${routine.name}`}
+                  armedLabel={`Tap again to confirm removing ${re.exercises.name} from ${routine.name}`}
+                  className="shrink-0"
+                />
               </li>
             ))}
           </ul>
@@ -256,6 +255,7 @@ function DayToggles({ routine, schedule, userId, onChanged, onError }) {
 
 function Routines({
   routines,
+  loaded = true,
   exercises,
   schedule,
   userId,
@@ -323,7 +323,9 @@ function Routines({
 
   return (
     <div className="mt-3 flex flex-col gap-3">
-      {routines.length === 0 ? (
+      {!loaded ? (
+        <p className="text-sm text-chalk-dim">Loading…</p>
+      ) : routines.length === 0 ? (
         <p className="text-sm text-chalk-dim">No routines yet.</p>
       ) : (
         routines.map((routine) => {
@@ -362,14 +364,11 @@ function Routines({
                     Start
                   </button>
                   {isOwn && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRoutine(routine.id)}
-                      aria-label={`Delete ${routine.name}`}
-                      className="text-chalk-dim hover:text-danger"
-                    >
-                      ✕
-                    </button>
+                    <ConfirmDeleteButton
+                      onConfirm={() => handleDeleteRoutine(routine.id)}
+                      label={routine.name}
+                      className="rounded px-1 py-0.5"
+                    />
                   )}
                 </div>
               </div>

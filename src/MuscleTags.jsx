@@ -14,8 +14,8 @@ function MuscleTags({ muscles }) {
           key={m.name}
           className={
             m.role === 'primary'
-              ? 'rounded-full bg-blue-500/20 px-2 py-0.5 font-mono text-[10px] tracking-wide text-blue-300 uppercase'
-              : 'rounded-full bg-surface-2 px-2 py-0.5 font-mono text-[10px] tracking-wide text-chalk-dim uppercase'
+              ? 'rounded-full bg-blue-500/20 px-2 py-0.5 font-mono text-[11px] tracking-wide text-blue-300 uppercase'
+              : 'rounded-full bg-surface-2 px-2 py-0.5 font-mono text-[11px] tracking-wide text-chalk-dim uppercase'
           }
         >
           {m.label}

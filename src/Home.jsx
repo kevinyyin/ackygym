@@ -13,6 +13,7 @@ import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
 import { NoteIcon, TrophyIcon } from './icons'
+import ConfirmDeleteButton from './ConfirmDeleteButton'
 
 function groupSetsByExercise(sets) {
   const order = []
@@ -31,7 +32,9 @@ function groupSetsByExercise(sets) {
 
 function Home({ session, profiles, schedule, onScheduleSaved, onError, showWaterTracker }) {
   const [exercises, setExercises] = useState([])
+  const [exercisesLoaded, setExercisesLoaded] = useState(false)
   const [todaysSets, setTodaysSets] = useState([])
+  const [todaysSetsLoaded, setTodaysSetsLoaded] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [exercisesVersion, setExercisesVersion] = useState(0)
   const [selectedExercise, setSelectedExercise] = useState(null)
@@ -40,6 +43,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
   const [showLogSet, setShowLogSet] = useState(false)
   const [showExercises, setShowExercises] = useState(false)
   const [routines, setRoutines] = useState([])
+  const [routinesLoaded, setRoutinesLoaded] = useState(false)
   const [routinesVersion, setRoutinesVersion] = useState(0)
   const [activeRoutine, setActiveRoutine] = useState(null)
 
@@ -54,6 +58,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
         return
       }
       setExercises(data)
+      setExercisesLoaded(true)
     }
 
     fetchExercises()
@@ -79,6 +84,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
           routine_exercises: [...routine.routine_exercises].sort((a, b) => a.position - b.position),
         }))
       )
+      setRoutinesLoaded(true)
     }
 
     fetchRoutines()
@@ -99,6 +105,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
         return
       }
       setTodaysSets(data)
+      setTodaysSetsLoaded(true)
     }
 
     fetchTodaysSets()
@@ -241,7 +248,11 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
 
       <div className="flex flex-col gap-3">
         <SectionLabel>Today&apos;s sets</SectionLabel>
-        {groupedSets.length === 0 ? (
+        {!todaysSetsLoaded ? (
+          <Card className="p-4">
+            <p className="text-sm text-chalk-dim">Loading…</p>
+          </Card>
+        ) : groupedSets.length === 0 ? (
           <Card className="p-4">
             <p className="text-sm text-chalk-dim">No sets logged yet today.</p>
           </Card>
@@ -295,13 +306,11 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
                                     >
                                       ↻
                                     </button>
-                                    <button
-                                      onClick={() => handleDeleteSet(set.id)}
-                                      aria-label={`Delete ${exerciseGroup.name} set`}
-                                      className="shrink-0 text-chalk-dim hover:text-danger"
-                                    >
-                                      ✕
-                                    </button>
+                                    <ConfirmDeleteButton
+                                      onConfirm={() => handleDeleteSet(set.id)}
+                                      label={`${exerciseGroup.name} set`}
+                                      className="shrink-0"
+                                    />
                                   </>
                                 )}
                               </span>
@@ -342,6 +351,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
         <SectionLabel>Routines</SectionLabel>
         <Routines
           routines={routines}
+          loaded={routinesLoaded}
           exercises={exercises}
           schedule={schedule}
           userId={session.user.id}
@@ -369,7 +379,10 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
           onAdded={() => setExercisesVersion((v) => v + 1)}
           onError={onError}
         />
-        {showExercises && (
+        {showExercises && !exercisesLoaded && (
+          <p className="mt-3 text-sm text-chalk-dim">Loading…</p>
+        )}
+        {showExercises && exercisesLoaded && (
           <ul className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto">
             {exercises.map((exercise) => (
               <li
@@ -384,13 +397,11 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
                   <span className="w-full truncate text-sm text-chalk">{exercise.name}</span>
                   <MuscleTags muscles={exercise.exercise_muscles} />
                 </button>
-                <button
-                  onClick={() => handleDeleteExercise(exercise.id)}
-                  aria-label={`Delete ${exercise.name}`}
-                  className="shrink-0 text-chalk-dim hover:text-danger"
-                >
-                  ✕
-                </button>
+                <ConfirmDeleteButton
+                  onConfirm={() => handleDeleteExercise(exercise.id)}
+                  label={exercise.name}
+                  className="shrink-0 rounded px-1 py-0.5"
+                />
               </li>
             ))}
           </ul>

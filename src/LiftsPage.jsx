@@ -46,6 +46,7 @@ const COLLAPSED_COUNT = 8
 
 function LiftsPage({ profiles, userId, onError }) {
   const [exercises, setExercises] = useState([])
+  const [exercisesLoaded, setExercisesLoaded] = useState(false)
   const [bestSets, setBestSets] = useState(new Map())
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [expandedUpper, setExpandedUpper] = useState(false)
@@ -63,6 +64,7 @@ function LiftsPage({ profiles, userId, onError }) {
         return
       }
       setExercises(data)
+      setExercisesLoaded(true)
     }
 
     fetchExercises()
@@ -195,7 +197,11 @@ function LiftsPage({ profiles, userId, onError }) {
 
   return (
     <>
-      {exercises.length === 0 ? (
+      {!exercisesLoaded ? (
+        <Card className="p-4">
+          <p className="text-sm text-chalk-dim">Loading…</p>
+        </Card>
+      ) : exercises.length === 0 ? (
         <Card className="p-4">
           <p className="text-sm text-chalk-dim">No exercises yet.</p>
         </Card>

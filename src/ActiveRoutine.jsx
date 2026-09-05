@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import Card from './Card'
 import { fetchLastSet } from './lastSet'
 import { logSet } from './logSet'
-import { BarbellIcon } from './icons'
+import { BarbellIcon, TrophyIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 
 function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
   const [rows, setRows] = useState(null)
   const [calculatorRowId, setCalculatorRowId] = useState(null)
+  const [prExerciseIds, setPrExerciseIds] = useState(() => new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -37,11 +38,17 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
     setRows((current) =>
       current.map((row) => (row.exerciseId === exerciseId ? { ...row, [field]: value } : row))
     )
+    setPrExerciseIds((current) => {
+      if (!current.has(exerciseId)) return current
+      const next = new Set(current)
+      next.delete(exerciseId)
+      return next
+    })
   }
 
   async function handleLog(row) {
     onError('')
-    const { error } = await logSet({
+    const { error, isPr } = await logSet({
       userId,
       exerciseId: row.exerciseId,
       weight: Number(row.weight),
@@ -51,6 +58,12 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
       onError(error.message)
       return
     }
+    setPrExerciseIds((current) => {
+      const next = new Set(current)
+      if (isPr) next.add(row.exerciseId)
+      else next.delete(row.exerciseId)
+      return next
+    })
     onLogged()
   }
 
@@ -81,7 +94,12 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
               key={row.exerciseId}
               className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3 py-2"
             >
-              <span className="min-w-0 flex-1 truncate text-sm text-chalk">{row.name}</span>
+              <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-chalk">
+                <span className="truncate">{row.name}</span>
+                {prExerciseIds.has(row.exerciseId) && (
+                  <TrophyIcon className="h-3.5 w-3.5 shrink-0 text-amber" aria-label="New PR" />
+                )}
+              </span>
               <input
                 type="number"
                 value={row.weight}
