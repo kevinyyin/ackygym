@@ -3,12 +3,14 @@ import { Routes, Route, NavLink, Link, useLocation } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import Auth from './Auth'
 import Home from './Home'
+import RoutinesPage from './RoutinesPage'
 import CalendarPage from './CalendarPage'
 import LiftsPage from './LiftsPage'
 import BodyWeightPage from './BodyWeightPage'
 import ProgressPhotosPage from './ProgressPhotosPage'
 import TimerPage from './TimerPage'
 import SettingsModal from './SettingsModal'
+import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { displayName } from './displayName'
 import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
 import { loadWaterSettings, saveWaterSettings } from './waterSettings'
@@ -33,6 +35,7 @@ const PAGE_TITLES = {
   '/weight': 'Weight',
   '/photos': 'Photos',
   '/timer': 'Timer',
+  '/routines': 'Routines',
 }
 
 const TABS = [
@@ -204,13 +207,16 @@ function App() {
             >
               {theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
             </button>
-            <button
-              onClick={() => supabase.auth.signOut()}
-              aria-label="Sign out"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
-            >
-              <LogOutIcon className="h-5 w-5" />
-            </button>
+            <span className="mx-0.5 h-6 w-px shrink-0 bg-line" aria-hidden="true" />
+            <ConfirmDeleteButton
+              onConfirm={() => supabase.auth.signOut()}
+              idleLabel="Sign out"
+              armedLabel="Tap again to sign out"
+              children={<LogOutIcon className="h-5 w-5" />}
+              armedChildren={<LogOutIcon className="h-5 w-5" />}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface"
+              idleClassName="text-chalk-dim active:border-blue-500 active:text-blue-400"
+            />
           </div>
         </header>
 
@@ -234,11 +240,22 @@ function App() {
                 session={session}
                 profiles={profiles}
                 schedule={schedule}
-                onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
                 onError={handleError}
                 showWaterTracker={cardVisibility.water}
                 waterSettings={waterSettings}
                 activeRoutine={activeRoutine}
+                onActiveRoutineChange={setActiveRoutine}
+              />
+            }
+          />
+          <Route
+            path="/routines"
+            element={
+              <RoutinesPage
+                session={session}
+                schedule={schedule}
+                onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
+                onError={handleError}
                 onActiveRoutineChange={setActiveRoutine}
               />
             }

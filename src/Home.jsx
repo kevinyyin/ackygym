@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import WorkoutForm from './WorkoutForm'
-import AddExerciseForm from './AddExerciseForm'
 import Card, { SectionLabel } from './Card'
-import MuscleTags from './MuscleTags'
-import ExerciseDetailModal from './ExerciseDetailModal'
 import ActiveRoutine from './ActiveRoutine'
-import Routines from './Routines'
 import WaterTracker from './WaterTracker'
 import { groupByUser } from './groupByUser'
 import { WEEKDAY_NAME } from './weekdays'
@@ -37,7 +34,6 @@ function Home({
   session,
   profiles,
   schedule,
-  onScheduleSaved,
   onError,
   showWaterTracker,
   waterSettings,
@@ -45,21 +41,13 @@ function Home({
   onActiveRoutineChange,
 }) {
   const [exercises, setExercises] = useState([])
-  const [exercisesLoaded, setExercisesLoaded] = useState(false)
   const [todaysSets, setTodaysSets] = useState([])
   const [todaysSetsLoaded, setTodaysSetsLoaded] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
-  const [exercisesVersion, setExercisesVersion] = useState(0)
-  const [selectedExercise, setSelectedExercise] = useState(null)
-  const [exerciseToDelete, setExerciseToDelete] = useState(null)
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [showLogSet, setShowLogSet] = useState(false)
-  const [showExercises, setShowExercises] = useState(false)
-  const [showRoutines, setShowRoutines] = useState(false)
   const [routines, setRoutines] = useState([])
-  const [routinesLoaded, setRoutinesLoaded] = useState(false)
-  const [routinesVersion, setRoutinesVersion] = useState(0)
   const [expandedTodaysUserIds, setExpandedTodaysUserIds] = useState(() => new Set())
   const [selectMode, setSelectMode] = useState(false)
   const [selectedSetIds, setSelectedSetIds] = useState(() => new Set())
@@ -76,11 +64,10 @@ function Home({
         return
       }
       setExercises(data)
-      setExercisesLoaded(true)
     }
 
     fetchExercises()
-  }, [exercisesVersion, onError])
+  }, [onError])
 
   useEffect(() => {
     async function fetchRoutines() {
@@ -102,11 +89,10 @@ function Home({
           routine_exercises: [...routine.routine_exercises].sort((a, b) => a.position - b.position),
         }))
       )
-      setRoutinesLoaded(true)
     }
 
     fetchRoutines()
-  }, [routinesVersion, onError])
+  }, [onError])
 
   useEffect(() => {
     async function fetchTodaysSets() {
@@ -130,6 +116,7 @@ function Home({
   }, [refreshKey, onError])
 
   const groupedSets = groupByUser(todaysSets, profiles, session.user.id, 'sets')
+  const ownSetIds = todaysSets.filter((s) => s.user_id === session.user.id).map((s) => s.id)
 
   const todayDayOfWeek = new Date().getDay()
   const todaysScheduleEntry = schedule.find(
@@ -178,9 +165,19 @@ function Home({
     })
   }
 
+  function toggleSelectAll(ownSetIds) {
+    setSelectedSetIds((current) =>
+      current.size === ownSetIds.length ? new Set() : new Set(ownSetIds)
+    )
+  }
+
   async function handleBulkDelete() {
     onError('')
-    const { error } = await supabase.from('sets').delete().in('id', [...selectedSetIds])
+    const { error } = await supabase
+      .from('sets')
+      .delete()
+      .in('id', [...selectedSetIds])
+      .eq('user_id', session.user.id)
     setConfirmBulkDelete(false)
     if (error) {
       onError(error.message)
@@ -215,21 +212,6 @@ function Home({
     }
     setEditingNoteId(null)
     setRefreshKey((key) => key + 1)
-  }
-
-  async function handleDeleteExercise(exerciseId) {
-    onError('')
-    const { error } = await supabase.from('exercises').delete().eq('id', exerciseId)
-    setExerciseToDelete(null)
-    if (error) {
-      onError(
-        error.code === '23503'
-          ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
-          : error.message
-      )
-      return
-    }
-    setExercisesVersion((v) => v + 1)
   }
 
   return (
@@ -304,14 +286,25 @@ function Home({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <SectionLabel>Today&apos;s sets</SectionLabel>
-          {todaysSets.some((s) => s.user_id === session.user.id) && (
-            <button
-              type="button"
-              onClick={toggleSelectMode}
-              className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-            >
-              {selectMode ? 'Cancel' : 'Select'}
-            </button>
+          {ownSetIds.length > 0 && (
+            <span className="flex shrink-0 items-center gap-3">
+              {selectMode && (
+                <button
+                  type="button"
+                  onClick={() => toggleSelectAll(ownSetIds)}
+                  className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                >
+                  {selectedSetIds.size === ownSetIds.length ? 'Select none' : 'Select all'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={toggleSelectMode}
+                className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+              >
+                {selectMode ? 'Cancel' : 'Select'}
+              </button>
+            </span>
           )}
         </div>
         {!todaysSetsLoaded ? (
@@ -448,80 +441,15 @@ function Home({
         )}
       </div>
 
-      <Card className="p-4">
-        <div className="flex items-center justify-between gap-2">
-          <SectionLabel>Routines</SectionLabel>
-          <button
-            type="button"
-            onClick={() => setShowRoutines((v) => !v)}
-            className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-          >
-            {showRoutines ? 'Hide' : 'Show'}
-          </button>
-        </div>
-        {showRoutines && (
-          <Routines
-            routines={routines}
-            loaded={routinesLoaded}
-            exercises={exercises}
-            schedule={schedule}
-            userId={session.user.id}
-            onRoutinesChanged={() => setRoutinesVersion((v) => v + 1)}
-            onScheduleChanged={onScheduleSaved}
-            onStart={onActiveRoutineChange}
-            onError={onError}
-          />
-        )}
-      </Card>
-
-      <Card className="p-4">
-        <div className="flex items-center justify-between gap-2">
-          <SectionLabel>Exercises</SectionLabel>
-          <button
-            type="button"
-            onClick={() => setShowExercises((v) => !v)}
-            className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-          >
-            {showExercises ? 'Hide' : 'Show'}
-          </button>
-        </div>
-        <AddExerciseForm
-          exercises={exercises}
-          showMuscleGroups={showExercises}
-          onAdded={() => setExercisesVersion((v) => v + 1)}
-          onError={onError}
-        />
-        {showExercises && !exercisesLoaded && (
-          <p className="mt-3 text-sm text-chalk-dim">Loading…</p>
-        )}
-        {showExercises && exercisesLoaded && (
-          <ul className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto">
-            {exercises.map((exercise) => (
-              <li
-                key={exercise.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface-2 py-1.5 pl-3 pr-2"
-              >
-                <button
-                  type="button"
-                  onClick={() => setSelectedExercise(exercise)}
-                  className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left"
-                >
-                  <span className="w-full truncate text-sm text-chalk">{exercise.name}</span>
-                  <MuscleTags muscles={exercise.exercise_muscles} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExerciseToDelete(exercise)}
-                  aria-label={`Delete ${exercise.name}`}
-                  className="shrink-0 rounded px-1 py-0.5 text-chalk-dim hover:text-danger"
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      <Link
+        to="/routines"
+        className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 shadow-[inset_0_1px_0_var(--card-highlight)] active:border-blue-500"
+      >
+        <span className="text-sm font-medium text-chalk">Manage routines &amp; exercises</span>
+        <span className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+          Open →
+        </span>
+      </Link>
 
       {showWaterTracker && (
         <WaterTracker
@@ -532,22 +460,6 @@ function Home({
           bottleSizeMl={waterSettings.bottleSizeMl}
         />
       )}
-
-      <ExerciseDetailModal
-        exercise={selectedExercise}
-        userId={session.user.id}
-        onClose={() => setSelectedExercise(null)}
-        onError={onError}
-        onChanged={() => setRefreshKey((key) => key + 1)}
-      />
-
-      <ConfirmModal
-        open={exerciseToDelete !== null}
-        title="Delete exercise?"
-        message={`"${exerciseToDelete?.name}" will be removed from your exercise library. This can't be undone.`}
-        onConfirm={() => handleDeleteExercise(exerciseToDelete.id)}
-        onCancel={() => setExerciseToDelete(null)}
-      />
 
       <ConfirmModal
         open={confirmBulkDelete}
