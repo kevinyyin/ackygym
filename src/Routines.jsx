@@ -5,6 +5,7 @@ import { primaryMuscleGroup, groupByMuscle } from './exerciseGrouping'
 import { GripIcon, ChevronRightIcon } from './icons'
 import ExercisePicker from './ExercisePicker'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
+import ConfirmModal from './ConfirmModal'
 
 function GroupHeader({ children }) {
   return (
@@ -133,13 +134,9 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
     setItems(routine.routine_exercises)
   }
 
-  async function handlePointerUp() {
-    const draggingId = draggingIdRef.current
-    draggingIdRef.current = null
-    if (draggingId === null || !orderChangedRef.current) return
-
+  async function persistOrder(nextItems) {
     onError('')
-    const finalOrder = groupByMuscle(items, (re) => re.exercises).flatMap((g) => g.items)
+    const finalOrder = groupByMuscle(nextItems, (re) => re.exercises).flatMap((g) => g.items)
     const results = await Promise.all(
       finalOrder.map((item, index) =>
         supabase.from('routine_exercises').update({ position: index }).eq('id', item.id)
@@ -151,6 +148,34 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
       return
     }
     onReordered()
+  }
+
+  async function handlePointerUp() {
+    const draggingId = draggingIdRef.current
+    draggingIdRef.current = null
+    if (draggingId === null || !orderChangedRef.current) return
+    await persistOrder(items)
+  }
+
+  // Keyboard/pointer-free alternative to drag-to-reorder — moves an item one
+  // slot within its own muscle-group boundary, same constraint the drag
+  // handler enforces above.
+  async function moveItem(id, direction) {
+    const groupKeyById = new Map(
+      items.map((it) => [it.id, primaryMuscleGroup(it.exercises).name ?? '__other__'])
+    )
+    const groupItems = items.filter((it) => groupKeyById.get(it.id) === groupKeyById.get(id))
+    const indexInGroup = groupItems.findIndex((it) => it.id === id)
+    const targetIndexInGroup = indexInGroup + direction
+    if (targetIndexInGroup < 0 || targetIndexInGroup >= groupItems.length) return
+
+    const targetId = groupItems[targetIndexInGroup].id
+    const fromIndex = items.findIndex((it) => it.id === id)
+    const toIndex = items.findIndex((it) => it.id === targetId)
+    const next = [...items]
+    ;[next[fromIndex], next[toIndex]] = [next[toIndex], next[fromIndex]]
+    setItems(next)
+    await persistOrder(next)
   }
 
   if (items.length === 0) {
@@ -167,7 +192,7 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
         <div key={group.key}>
           <GroupHeader>{group.label}</GroupHeader>
           <ul className="flex flex-col gap-1.5">
-            {group.items.map((re) => (
+            {group.items.map((re, indexInGroup) => (
               <li
                 key={re.id}
                 data-reorder-id={re.id}
@@ -187,6 +212,26 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
                 >
                   <GripIcon className="h-4 w-4" />
                 </button>
+                <div className="flex shrink-0 flex-col">
+                  <button
+                    type="button"
+                    onClick={() => moveItem(re.id, -1)}
+                    disabled={indexInGroup === 0}
+                    aria-label={`Move ${re.exercises.name} up`}
+                    className="text-chalk-dim hover:text-blue-400 disabled:opacity-30"
+                  >
+                    <ChevronRightIcon className="h-3 w-3 -rotate-90" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveItem(re.id, 1)}
+                    disabled={indexInGroup === group.items.length - 1}
+                    aria-label={`Move ${re.exercises.name} down`}
+                    className="text-chalk-dim hover:text-blue-400 disabled:opacity-30"
+                  >
+                    <ChevronRightIcon className="h-3 w-3 rotate-90" />
+                  </button>
+                </div>
                 <span className="min-w-0 flex-1 truncate font-mono text-[10px] tracking-wide text-chalk uppercase">
                   {re.exercises.name}
                 </span>
@@ -269,6 +314,7 @@ function Routines({
   const creatingRef = useRef(false)
   const [collapsedIds, setCollapsedIds] = useState(() => new Set())
   const appliedInitialCollapse = useRef(false)
+  const [routineToDelete, setRoutineToDelete] = useState(null)
 
   // Routines start collapsed on each fresh load of the app. Once applied,
   // later routine list changes (add/delete/reorder) don't reset the user's
@@ -312,6 +358,7 @@ function Routines({
   async function handleDeleteRoutine(routineId) {
     onError('')
     const { error } = await supabase.from('routines').delete().eq('id', routineId)
+    setRoutineToDelete(null)
     if (error) {
       onError(error.message)
       return
@@ -330,6 +377,7 @@ function Routines({
   }
 
   return (
+    <>
     <div className="mt-3 flex flex-col gap-3">
       {!loaded ? (
         <p className="text-sm text-chalk-dim">Loading…</p>
@@ -372,11 +420,14 @@ function Routines({
                     Start
                   </button>
                   {isOwn && (
-                    <ConfirmDeleteButton
-                      onConfirm={() => handleDeleteRoutine(routine.id)}
-                      label={routine.name}
-                      className="rounded px-1 py-0.5"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setRoutineToDelete(routine)}
+                      aria-label={`Delete ${routine.name}`}
+                      className="rounded px-1 py-0.5 text-chalk-dim hover:text-danger"
+                    >
+                      ✕
+                    </button>
                   )}
                 </div>
               </div>
@@ -457,6 +508,15 @@ function Routines({
         </button>
       </form>
     </div>
+
+    <ConfirmModal
+      open={routineToDelete !== null}
+      title="Delete routine?"
+      message={`"${routineToDelete?.name}" and its exercise list will be removed. This can't be undone.`}
+      onConfirm={() => handleDeleteRoutine(routineToDelete.id)}
+      onCancel={() => setRoutineToDelete(null)}
+    />
+    </>
   )
 }
 

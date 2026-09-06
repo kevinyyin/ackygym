@@ -4,6 +4,7 @@ import { fetchLastSet } from './lastSet'
 import { logSet } from './logSet'
 import { BarbellIcon, TrophyIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
+import { isValidSet } from './validation'
 
 function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
   const [rows, setRows] = useState(null)
@@ -51,12 +52,8 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
     })
   }
 
-  function isRowLoggable(row) {
-    return Number(row.weight) >= 0 && Number(row.reps) >= 1
-  }
-
   async function handleLog(row) {
-    if (loggingExerciseIdsRef.current.has(row.exerciseId) || !isRowLoggable(row)) return
+    if (loggingExerciseIdsRef.current.has(row.exerciseId) || !isValidSet(row)) return
     loggingExerciseIdsRef.current.add(row.exerciseId)
     onError('')
     setLoggingExerciseIds((current) => new Set(current).add(row.exerciseId))
@@ -151,7 +148,7 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
               <button
                 type="button"
                 onClick={() => handleLog(row)}
-                disabled={!isRowLoggable(row) || loggingExerciseIds.has(row.exerciseId)}
+                disabled={!isValidSet(row) || loggingExerciseIds.has(row.exerciseId)}
                 className="shrink-0 rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
               >
                 Log

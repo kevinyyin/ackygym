@@ -325,7 +325,7 @@ function App() {
             <NavLink key={to} to={to} end={end} aria-label={label} className="px-3 pt-2.5 pb-3">
               {({ isActive }) => (
                 <span
-                  className={`relative flex flex-col items-center gap-2 transition-colors ${
+                  className={`relative flex flex-col items-center gap-1 transition-colors ${
                     isActive ? 'text-blue-400' : 'text-chalk-dim'
                   }`}
                 >
@@ -336,6 +336,7 @@ function App() {
                       className="absolute -top-0.5 -right-1 h-1.5 w-1.5 rounded-full bg-blue-500 motion-safe:animate-pulse"
                     />
                   )}
+                  <span className="font-mono text-[9px] tracking-wide uppercase">{label}</span>
                   <span
                     className={`h-[2px] w-4 rounded-full transition-colors ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}
                   />

@@ -5,6 +5,7 @@ import { groupByMuscle } from './exerciseGrouping'
 import { BarbellIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 import ExercisePicker from './ExercisePicker'
+import { isValidSet } from './validation'
 
 function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
   const [routineId, setRoutineId] = useState('')
@@ -61,7 +62,7 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!selectedExerciseId || submittingRef.current) return
+    if (!selectedExerciseId || submittingRef.current || !isValidSet({ weight, reps })) return
     submittingRef.current = true
     onError('')
     setSubmitting(true)
@@ -145,7 +146,7 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
       </div>
       <button
         type="submit"
-        disabled={!selectedExerciseId || submitting}
+        disabled={!selectedExerciseId || submitting || !isValidSet({ weight, reps })}
         className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
       >
         {submitting ? 'Logging…' : 'Log set'}

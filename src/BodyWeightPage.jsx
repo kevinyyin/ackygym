@@ -10,6 +10,7 @@ import MuscleVolume from './MuscleVolume'
 import WeightHistoryModal from './WeightHistoryModal'
 import CalorieTracker from './CalorieTracker'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
+import { isPositiveNumber } from './validation'
 
 const UNIT_STORAGE_KEY = 'gym-tracker:body-weight-unit'
 
@@ -66,7 +67,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
     if (submittingRef.current) return
 
     const numeric = Number(inputValue)
-    if (!numeric || numeric <= 0) return
+    if (!isPositiveNumber(numeric)) return
 
     submittingRef.current = true
     onError('')
@@ -111,7 +112,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
 
   async function saveEdit(entryId) {
     const numeric = Number(draftWeightValue)
-    if (!numeric || numeric <= 0) return
+    if (!isPositiveNumber(numeric)) return
 
     onError('')
     const weightKg = unit === 'kg' ? numeric : convertWeight(numeric, 'lb', 'kg')
@@ -277,7 +278,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
                           <button
                             type="button"
                             onClick={() => saveEdit(entry.id)}
-                            disabled={!Number(draftWeightValue) || Number(draftWeightValue) <= 0}
+                            disabled={!isPositiveNumber(draftWeightValue)}
                             className="shrink-0 text-blue-400 disabled:opacity-40"
                             aria-label="Save weight entry"
                           >

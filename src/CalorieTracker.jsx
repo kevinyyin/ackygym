@@ -6,6 +6,7 @@ import { getTodayDateString, formatDate } from './dateUtils'
 import { FlameIcon } from './icons'
 import CalorieHistoryModal from './CalorieHistoryModal'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
+import { isPositiveNumber } from './validation'
 
 function CalorieTracker({ profiles, userId, target, onError }) {
   const [entries, setEntries] = useState([])
@@ -41,7 +42,7 @@ function CalorieTracker({ profiles, userId, target, onError }) {
     if (submittingRef.current) return
 
     const numeric = Number(inputValue)
-    if (!numeric || numeric <= 0) return
+    if (!isPositiveNumber(numeric)) return
 
     submittingRef.current = true
     onError('')
@@ -85,7 +86,7 @@ function CalorieTracker({ profiles, userId, target, onError }) {
 
   async function saveEdit(entryId) {
     const numeric = Number(draftCalories)
-    if (!numeric || numeric <= 0) return
+    if (!isPositiveNumber(numeric)) return
 
     onError('')
     const { error } = await supabase
@@ -200,7 +201,7 @@ function CalorieTracker({ profiles, userId, target, onError }) {
                           <button
                             type="button"
                             onClick={() => saveEdit(entry.id)}
-                            disabled={!Number(draftCalories) || Number(draftCalories) <= 0}
+                            disabled={!isPositiveNumber(draftCalories)}
                             className="shrink-0 text-blue-400 disabled:opacity-40"
                             aria-label="Save calorie entry"
                           >

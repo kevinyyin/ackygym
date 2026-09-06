@@ -14,6 +14,7 @@ import { estimatedOneRepMax } from './oneRepMax'
 import { formatDate } from './dateUtils'
 import { recomputeIsPr } from './logSet'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
+import { isValidSet } from './validation'
 
 function groupSetsBySession(sets) {
   const order = []
@@ -82,7 +83,7 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
   }
 
   function isDraftValid() {
-    return Number(draftWeight) >= 0 && Number(draftReps) >= 1
+    return isValidSet({ weight: draftWeight, reps: draftReps })
   }
 
   async function saveEdit(setId) {

@@ -11,6 +11,12 @@
      measuring 3.8:1. */
   --color-blue-500: #1a5fdb;
 
+  /* Tailwind defaults — fine as accent text on this app's dark surfaces.
+     Declared here (rather than left as Tailwind's own internal default) so
+     the light theme below can override them; see that block for why. */
+  --color-blue-400: #60a5fa;
+  --color-blue-300: #93c5fd;
+
   --color-chalk: #e9eaee;
   --color-chalk-dim: #a5a7b2;
 
@@ -61,6 +67,15 @@ html[data-theme="light"] {
     --color-line: #dcdfe4;
     --color-chalk: #16171b;
     --color-chalk-dim: #52545c;
+    /* blue-400/300 are Tailwind's light accent shades — legible on this
+       app's dark surfaces but only ~2.5:1 / 1.8:1 against a white card,
+       well under the 4.5:1 (normal text) / 3:1 (large text) AA floor.
+       blue-400 is the app's primary "hero number" color (stats, weight,
+       calories, streaks, leaderboards) so it gets the full 4.5:1 treatment;
+       blue-300 is only ever used for TimerPage's large finished-state
+       digits, so 3:1 is the correct bar there. */
+    --color-blue-400: #1d4ed8;
+    --color-blue-300: #3b82f6;
     --color-danger: #d0353d;
     --color-amber: #d97706;
     --color-emerald: #059669;
