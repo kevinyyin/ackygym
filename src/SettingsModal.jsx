@@ -3,6 +3,8 @@ import Card from './Card'
 import { supabase } from './supabaseClient'
 import { TOGGLEABLE_CARDS } from './cardVisibility'
 import { useEscapeToClose } from './useEscapeToClose'
+import ConfirmDeleteButton from './ConfirmDeleteButton'
+import { CloseIcon } from './icons'
 
 const WATER_MODES = [
   { key: 'volume', label: 'Volume' },
@@ -88,7 +90,7 @@ function SettingsModal({
             aria-label="Close"
             className="shrink-0 text-chalk-dim hover:text-danger"
           >
-            ✕
+            <CloseIcon className="h-5 w-5" />
           </button>
         </div>
 
@@ -173,6 +175,17 @@ function SettingsModal({
             />
           </div>
         )}
+
+        <ConfirmDeleteButton
+          onConfirm={() => supabase.auth.signOut()}
+          idleLabel="Sign out"
+          armedLabel="Tap again to sign out"
+          children="Sign out"
+          armedChildren="Tap again to sign out"
+          className="mt-5 w-full rounded-md border px-4 py-2.5 font-body text-sm font-semibold"
+          idleClassName="border-line text-chalk-dim active:border-danger active:text-danger"
+          armedClassName="border-danger"
+        />
       </Card>
     </div>
   )

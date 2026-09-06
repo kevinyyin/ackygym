@@ -8,6 +8,7 @@ import {
   STANDARD_BAR_LB,
 } from './plateCalculator'
 import { convertWeight, roundWeight } from './weightUnits'
+import { CloseIcon } from './icons'
 
 const UNIT_STORAGE_KEY = 'gym-tracker:plate-calc-unit'
 
@@ -104,7 +105,7 @@ function PlateCalculatorModal({ initialWeight, onClose }) {
             aria-label="Close"
             className="shrink-0 text-chalk-dim hover:text-danger"
           >
-            ✕
+            <CloseIcon className="h-5 w-5" />
           </button>
         </div>
 

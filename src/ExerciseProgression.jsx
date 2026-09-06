@@ -9,7 +9,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { supabase } from './supabaseClient'
-import { TrophyIcon } from './icons'
+import { TrophyIcon, CheckIcon, CloseIcon } from './icons'
 import { estimatedOneRepMax } from './oneRepMax'
 import { formatDate } from './dateUtils'
 import { recomputeIsPr } from './logSet'
@@ -252,7 +252,7 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
                         className="ml-auto shrink-0 text-blue-400 disabled:opacity-40"
                         aria-label="Save set"
                       >
-                        ✓
+                        <CheckIcon className="h-4 w-4" />
                       </button>
                       <button
                         type="button"
@@ -260,7 +260,7 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
                         className="shrink-0 text-chalk-dim hover:text-danger"
                         aria-label="Cancel editing set"
                       >
-                        ✕
+                        <CloseIcon className="h-4 w-4" />
                       </button>
                     </li>
                   )

@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient'
 import Card, { SectionLabel } from './Card'
 import { groupByUser } from './groupByUser'
 import { getTodayDateString, formatDate } from './dateUtils'
-import { FlameIcon } from './icons'
+import { FlameIcon, CheckIcon, CloseIcon } from './icons'
 import CalorieHistoryModal from './CalorieHistoryModal'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { isPositiveNumber } from './validation'
@@ -205,7 +205,7 @@ function CalorieTracker({ profiles, userId, target, onError }) {
                             className="shrink-0 text-blue-400 disabled:opacity-40"
                             aria-label="Save calorie entry"
                           >
-                            ✓
+                            <CheckIcon className="h-4 w-4" />
                           </button>
                           <button
                             type="button"
@@ -213,7 +213,7 @@ function CalorieTracker({ profiles, userId, target, onError }) {
                             className="shrink-0 text-chalk-dim hover:text-danger"
                             aria-label="Cancel editing calorie entry"
                           >
-                            ✕
+                            <CloseIcon className="h-4 w-4" />
                           </button>
                         </span>
                       ) : (

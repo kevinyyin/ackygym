@@ -10,7 +10,6 @@ import BodyWeightPage from './BodyWeightPage'
 import ProgressPhotosPage from './ProgressPhotosPage'
 import TimerPage from './TimerPage'
 import SettingsModal from './SettingsModal'
-import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { displayName } from './displayName'
 import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
 import { loadWaterSettings, saveWaterSettings } from './waterSettings'
@@ -22,7 +21,6 @@ import {
   ScaleIcon,
   CameraIcon,
   TimerIcon,
-  LogOutIcon,
   SunIcon,
   MoonIcon,
   SettingsIcon,
@@ -207,16 +205,6 @@ function App() {
             >
               {theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
             </button>
-            <span className="mx-0.5 h-6 w-px shrink-0 bg-line" aria-hidden="true" />
-            <ConfirmDeleteButton
-              onConfirm={() => supabase.auth.signOut()}
-              idleLabel="Sign out"
-              armedLabel="Tap again to sign out"
-              children={<LogOutIcon className="h-5 w-5" />}
-              armedChildren={<LogOutIcon className="h-5 w-5" />}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface"
-              idleClassName="text-chalk-dim active:border-blue-500 active:text-blue-400"
-            />
           </div>
         </header>
 

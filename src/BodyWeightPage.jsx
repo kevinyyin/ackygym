@@ -11,6 +11,7 @@ import WeightHistoryModal from './WeightHistoryModal'
 import CalorieTracker from './CalorieTracker'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { isPositiveNumber } from './validation'
+import { CheckIcon, CloseIcon } from './icons'
 
 const UNIT_STORAGE_KEY = 'gym-tracker:body-weight-unit'
 
@@ -282,7 +283,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
                             className="shrink-0 text-blue-400 disabled:opacity-40"
                             aria-label="Save weight entry"
                           >
-                            ✓
+                            <CheckIcon className="h-4 w-4" />
                           </button>
                           <button
                             type="button"
@@ -290,7 +291,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
                             className="shrink-0 text-chalk-dim hover:text-danger"
                             aria-label="Cancel editing weight entry"
                           >
-                            ✕
+                            <CloseIcon className="h-4 w-4" />
                           </button>
                         </span>
                       ) : (

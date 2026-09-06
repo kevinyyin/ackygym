@@ -9,7 +9,7 @@ import { groupByUser } from './groupByUser'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
-import { NoteIcon, TrophyIcon } from './icons'
+import { NoteIcon, TrophyIcon, RepeatIcon } from './icons'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import ConfirmModal from './ConfirmModal'
 
@@ -47,6 +47,7 @@ function Home({
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [showLogSet, setShowLogSet] = useState(false)
+  const [showTodaysSets, setShowTodaysSets] = useState(false)
   const [routines, setRoutines] = useState([])
   const [expandedTodaysUserIds, setExpandedTodaysUserIds] = useState(() => new Set())
   const [selectMode, setSelectMode] = useState(false)
@@ -153,6 +154,12 @@ function Home({
 
   function toggleSelectMode() {
     setSelectMode((v) => !v)
+    setSelectedSetIds(new Set())
+  }
+
+  function toggleShowTodaysSets() {
+    setShowTodaysSets((v) => !v)
+    setSelectMode(false)
     setSelectedSetIds(new Set())
   }
 
@@ -286,28 +293,35 @@ function Home({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <SectionLabel>Today&apos;s sets</SectionLabel>
-          {ownSetIds.length > 0 && (
-            <span className="flex shrink-0 items-center gap-3">
-              {selectMode && (
-                <button
-                  type="button"
-                  onClick={() => toggleSelectAll(ownSetIds)}
-                  className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-                >
-                  {selectedSetIds.size === ownSetIds.length ? 'Select none' : 'Select all'}
-                </button>
-              )}
+          <button
+            type="button"
+            onClick={toggleShowTodaysSets}
+            className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+          >
+            {showTodaysSets ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showTodaysSets && ownSetIds.length > 0 && (
+          <div className="flex justify-end gap-3">
+            {selectMode && (
               <button
                 type="button"
-                onClick={toggleSelectMode}
+                onClick={() => toggleSelectAll(ownSetIds)}
                 className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
               >
-                {selectMode ? 'Cancel' : 'Select'}
+                {selectedSetIds.size === ownSetIds.length ? 'Select none' : 'Select all'}
               </button>
-            </span>
-          )}
-        </div>
-        {!todaysSetsLoaded ? (
+            )}
+            <button
+              type="button"
+              onClick={toggleSelectMode}
+              className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+            >
+              {selectMode ? 'Cancel' : 'Select'}
+            </button>
+          </div>
+        )}
+        {!showTodaysSets ? null : !todaysSetsLoaded ? (
           <Card className="p-4">
             <p className="text-sm text-chalk-dim">Loading…</p>
           </Card>
@@ -379,7 +393,7 @@ function Home({
                                           aria-label={`Repeat ${exerciseGroup.name} set`}
                                           className="shrink-0 text-chalk-dim hover:text-blue-400"
                                         >
-                                          ↻
+                                          <RepeatIcon className="h-4 w-4" />
                                         </button>
                                         <ConfirmDeleteButton
                                           onConfirm={() => handleDeleteSet(set.id)}
