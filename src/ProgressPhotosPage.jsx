@@ -5,6 +5,8 @@ import { displayName } from './displayName'
 import { getTodayDateString, formatDate } from './dateUtils'
 import { CameraIcon, CloseIcon } from './icons'
 import ConfirmModal from './ConfirmModal'
+import UndoToast from './UndoToast'
+import { useDeferredDelete } from './useDeferredDelete'
 
 const BUCKET = 'progress-photos'
 const SIGNED_URL_TTL = 60 * 60
@@ -28,9 +30,11 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedPhotoIds, setSelectedPhotoIds] = useState(() => new Set())
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
+  const { isPending, message, stageDelete, undo } = useDeferredDelete()
 
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
-  const ownPhotoIds = photos.filter((p) => p.user_id === userId).map((p) => p.id)
+  const visiblePhotos = photos.filter((p) => !isPending(p.id))
+  const ownPhotoIds = visiblePhotos.filter((p) => p.user_id === userId).map((p) => p.id)
 
   useEffect(() => {
     async function fetchPhotos() {
@@ -150,28 +154,29 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     setRefreshKey((k) => k + 1)
   }
 
-  async function handleDelete(photo) {
-    onError('')
-
-    const { error: removeError } = await supabase.storage.from(BUCKET).remove([photo.path])
-    if (removeError) {
-      onError(removeError.message)
-      setPhotoToDelete(null)
-      return
-    }
-
-    const { error: deleteError } = await supabase
-      .from('progress_photos')
-      .delete()
-      .eq('id', photo.id)
-
+  function handleDelete(photo) {
     setPhotoToDelete(null)
-    if (deleteError) {
-      onError(deleteError.message)
-      return
-    }
+    stageDelete({
+      ids: [photo.id],
+      message: 'Photo deleted',
+      commit: async () => {
+        onError('')
 
-    setRefreshKey((k) => k + 1)
+        const { error: removeError } = await supabase.storage.from(BUCKET).remove([photo.path])
+        if (removeError) {
+          onError(removeError.message)
+          return
+        }
+
+        const { error: deleteError } = await supabase.from('progress_photos').delete().eq('id', photo.id)
+        if (deleteError) {
+          onError(deleteError.message)
+          return
+        }
+
+        setRefreshKey((k) => k + 1)
+      },
+    })
   }
 
   function toggleSelectMode() {
@@ -212,32 +217,39 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     setRefreshKey((k) => k + 1)
   }
 
-  async function handleBulkDelete() {
-    onError('')
+  function handleBulkDelete() {
+    const ids = [...selectedPhotoIds]
     const paths = photos.filter((p) => selectedPhotoIds.has(p.id)).map((p) => p.path)
-
-    const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths)
-    if (removeError) {
-      onError(removeError.message)
-      setConfirmBulkDelete(false)
-      return
-    }
-
-    const { error: deleteError } = await supabase
-      .from('progress_photos')
-      .delete()
-      .in('id', [...selectedPhotoIds])
-      .eq('user_id', userId)
-
     setConfirmBulkDelete(false)
-    if (deleteError) {
-      onError(deleteError.message)
-      return
-    }
-
     setSelectMode(false)
     setSelectedPhotoIds(new Set())
-    setRefreshKey((k) => k + 1)
+
+    stageDelete({
+      ids,
+      message: `${ids.length} photo${ids.length === 1 ? '' : 's'} deleted`,
+      commit: async () => {
+        onError('')
+
+        const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths)
+        if (removeError) {
+          onError(removeError.message)
+          return
+        }
+
+        const { error: deleteError } = await supabase
+          .from('progress_photos')
+          .delete()
+          .in('id', ids)
+          .eq('user_id', userId)
+
+        if (deleteError) {
+          onError(deleteError.message)
+          return
+        }
+
+        setRefreshKey((k) => k + 1)
+      },
+    })
   }
 
   return (
@@ -288,13 +300,13 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
         <Card className="p-4">
           <p className="text-sm text-chalk-dim">Loading…</p>
         </Card>
-      ) : photos.length === 0 ? (
+      ) : visiblePhotos.length === 0 ? (
         <Card className="p-4">
           <p className="text-sm text-chalk-dim">No progress photos yet.</p>
         </Card>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {photos.map((photo) => {
+          {visiblePhotos.map((photo) => {
             const isOwn = photo.user_id === userId
             return (
               <Card key={photo.id} className="overflow-hidden">
@@ -404,7 +416,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     <ConfirmModal
       open={photoToDelete !== null}
       title="Delete photo?"
-      message={`This photo from ${photoToDelete ? formatDate(photoToDelete.date, { year: true }) : ''} will be permanently removed. This can't be undone.`}
+      message={`This photo from ${photoToDelete ? formatDate(photoToDelete.date, { year: true }) : ''} will be permanently removed.`}
       onConfirm={() => handleDelete(photoToDelete)}
       onCancel={() => setPhotoToDelete(null)}
     />
@@ -412,10 +424,12 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     <ConfirmModal
       open={confirmBulkDelete}
       title="Delete selected photos?"
-      message={`${selectedPhotoIds.size} photo${selectedPhotoIds.size === 1 ? '' : 's'} will be permanently removed. This can't be undone.`}
+      message={`${selectedPhotoIds.size} photo${selectedPhotoIds.size === 1 ? '' : 's'} will be permanently removed.`}
       onConfirm={handleBulkDelete}
       onCancel={() => setConfirmBulkDelete(false)}
     />
+
+    <UndoToast message={message} onUndo={undo} />
     </>
   )
 }

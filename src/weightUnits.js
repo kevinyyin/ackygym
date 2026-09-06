@@ -16,3 +16,12 @@ export function convertWeight(value, fromUnit, toUnit) {
 export function roundWeight(value) {
   return Math.round(value * 10) / 10
 }
+
+export function toDisplayWeight(weightKg, unit) {
+  return roundWeight(convertWeight(weightKg, 'kg', unit))
+}
+
+export function toStorageWeightKg(displayValue, unit) {
+  const numeric = Number(displayValue)
+  return unit === 'kg' ? numeric : convertWeight(numeric, 'lb', 'kg')
+}

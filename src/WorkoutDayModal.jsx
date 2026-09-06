@@ -6,6 +6,7 @@ import Card from './Card'
 import ConfirmModal from './ConfirmModal'
 import { useEscapeToClose } from './useEscapeToClose'
 import { useModalFocusTrap } from './useModalFocusTrap'
+import { toDisplayWeight } from './weightUnits'
 import { CloseIcon } from './icons'
 
 function groupSetsByExercise(sets) {
@@ -26,7 +27,7 @@ function groupSetsByExercise(sets) {
 // Shows one past day's logged sets and offers to re-log all of them as
 // today's sets — a whole-session repeat, distinct from the existing
 // per-set repeat (RepeatIcon) on Home, which only replays one set at a time.
-function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
+function WorkoutDayModal({ date, userId, weightUnit, onClose, onError, onRepeated }) {
   const [sets, setSets] = useState(null)
   const [repeating, setRepeating] = useState(false)
   const [confirmRepeat, setConfirmRepeat] = useState(false)
@@ -139,7 +140,9 @@ function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
               <li key={group.exerciseId}>
                 <p className="font-medium text-chalk">{group.name}</p>
                 <p className="mt-1 font-mono text-sm text-chalk-dim">
-                  {group.sets.map((s) => `${s.weight}×${s.reps}`).join(', ')}
+                  {group.sets
+                    .map((s) => `${toDisplayWeight(s.weight, weightUnit)}${weightUnit}×${s.reps}`)
+                    .join(', ')}
                 </p>
               </li>
             ))}

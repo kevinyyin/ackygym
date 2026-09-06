@@ -7,16 +7,8 @@ import {
   STANDARD_PLATES_LB,
   STANDARD_BAR_LB,
 } from './plateCalculator'
-import { convertWeight, roundWeight } from './weightUnits'
 import { useModalFocusTrap } from './useModalFocusTrap'
 import { CloseIcon } from './icons'
-
-const UNIT_STORAGE_KEY = 'gym-tracker:plate-calc-unit'
-
-function getStoredUnit() {
-  const stored = localStorage.getItem(UNIT_STORAGE_KEY)
-  return stored === 'lb' ? 'lb' : 'kg'
-}
 
 function standardBarFor(unit) {
   return unit === 'kg' ? STANDARD_BAR_KG : STANDARD_BAR_LB
@@ -38,28 +30,11 @@ function Plate({ weight }) {
   )
 }
 
-function PlateCalculatorModal({ initialWeight, onClose }) {
+function PlateCalculatorModal({ initialWeight, unit, onClose }) {
   const containerRef = useModalFocusTrap(true)
   const titleId = useId()
-  const [unit, setUnit] = useState(getStoredUnit)
   const [weight, setWeight] = useState(String(initialWeight || ''))
   const [barWeight, setBarWeight] = useState(String(standardBarFor(unit)))
-
-  function handleUnitChange(newUnit) {
-    if (newUnit === unit) return
-
-    setWeight((prev) => {
-      if (prev === '') return prev
-      const numeric = Number(prev)
-      if (Number.isNaN(numeric)) return prev
-      return String(roundWeight(convertWeight(numeric, unit, newUnit)))
-    })
-    // Bar weights are fixed real-world standards (20kg / 45lb), not a
-    // conversion of one another, so reset rather than convert.
-    setBarWeight(String(standardBarFor(newUnit)))
-    setUnit(newUnit)
-    localStorage.setItem(UNIT_STORAGE_KEY, newUnit)
-  }
 
   const targetWeight = Number(weight) || 0
   const bar = Number(barWeight) || 0
@@ -71,23 +46,6 @@ function PlateCalculatorModal({ initialWeight, onClose }) {
   )
 
   const leftSide = [...platesPerSide].reverse()
-
-  const unitToggle = (
-    <div className="inline-flex rounded-full border border-line bg-surface-2 p-0.5">
-      {['kg', 'lb'].map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => handleUnitChange(option)}
-          className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
-            unit === option ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
-          }`}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  )
 
   return (
     <div
@@ -116,8 +74,6 @@ function PlateCalculatorModal({ initialWeight, onClose }) {
             <CloseIcon className="h-5 w-5" />
           </button>
         </div>
-
-        <div className="mt-3 flex justify-end">{unitToggle}</div>
 
         <div className="mt-3 flex gap-3">
           <label className="flex-1">

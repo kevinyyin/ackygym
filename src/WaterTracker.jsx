@@ -9,7 +9,6 @@ import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { formatBottles } from './waterUnits'
 
 const SHOW_WATER_KEY = 'gym-tracker:home-show-water'
-const GOAL_ML = 2000
 const QUICK_ADD_ML = [250, 500, 750]
 const QUICK_ADD_BOTTLE_FRACTIONS = [
   { fraction: 0.5, label: '+½ bottle' },
@@ -17,7 +16,7 @@ const QUICK_ADD_BOTTLE_FRACTIONS = [
   { fraction: 2, label: '+2 bottles' },
 ]
 
-function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl }) {
+function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goalMl }) {
   const isBottles = waterMode === 'bottles'
   const [logs, setLogs] = useState([])
   const [refreshKey, setRefreshKey] = useState(0)
@@ -107,7 +106,7 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl }) {
   }
 
   const ownTotalMl = totalsByUserId.get(session.user.id) || 0
-  const ownProgress = Math.min(ownTotalMl / GOAL_ML, 1)
+  const ownProgress = Math.min(ownTotalMl / goalMl, 1)
 
   const otherTotals = [...totalsByUserId.entries()]
     .filter(([userId]) => userId !== session.user.id)
@@ -142,7 +141,7 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl }) {
               <p className="font-mono text-4xl font-bold text-blue-400">
                 {isBottles ? formatBottles(ownTotalMl, bottleSizeMl) : ownTotalMl}
                 <span className="ml-1 font-body text-lg font-normal text-chalk-dim">
-                  / {isBottles ? `${formatBottles(GOAL_ML, bottleSizeMl)} bottles` : `${GOAL_ML} ml`}
+                  / {isBottles ? `${formatBottles(goalMl, bottleSizeMl)} bottles` : `${goalMl} ml`}
                 </span>
               </p>
               <p className="mt-1 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
@@ -222,8 +221,8 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl }) {
                   <span className="text-sm text-chalk-dim">{entry.name}</span>
                   <span className="font-mono text-sm text-chalk">
                     {isBottles
-                      ? `${formatBottles(entry.totalMl, bottleSizeMl)} / ${formatBottles(GOAL_ML, bottleSizeMl)} bottles`
-                      : `${entry.totalMl} / ${GOAL_ML} ml`}
+                      ? `${formatBottles(entry.totalMl, bottleSizeMl)} / ${formatBottles(goalMl, bottleSizeMl)} bottles`
+                      : `${entry.totalMl} / ${goalMl} ml`}
                   </span>
                 </li>
               ))}

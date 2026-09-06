@@ -15,6 +15,7 @@ import { formatDate } from './dateUtils'
 import { recomputeIsPr } from './logSet'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { isValidSet } from './validation'
+import { toDisplayWeight, toStorageWeightKg } from './weightUnits'
 
 function groupSetsBySession(sets) {
   const order = []
@@ -32,7 +33,7 @@ function groupSetsBySession(sets) {
   return order.map((date) => byDate.get(date))
 }
 
-function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
+function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChanged }) {
   const [sets, setSets] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [editingSetId, setEditingSetId] = useState(null)
@@ -74,7 +75,7 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
 
   function startEdit(set) {
     setEditingSetId(set.id)
-    setDraftWeight(String(set.weight))
+    setDraftWeight(String(toDisplayWeight(set.weight, weightUnit)))
     setDraftReps(String(set.reps))
   }
 
@@ -92,7 +93,7 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
     onError('')
     const { error } = await supabase
       .from('sets')
-      .update({ weight: Number(draftWeight), reps: Number(draftReps) })
+      .update({ weight: toStorageWeightKg(draftWeight, weightUnit), reps: Number(draftReps) })
       .eq('id', setId)
 
     if (error) {
@@ -141,20 +142,24 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
 
   const chartData = sessions.map((session) => ({
     date: formatDate(session.date),
-    weight: Math.max(...session.sets.map((s) => s.weight)),
+    weight: toDisplayWeight(Math.max(...session.sets.map((s) => s.weight)), weightUnit),
   }))
 
-  let bestE1rm = 0
+  // Computed from raw stored (kg) weights — estimatedOneRepMax is a physical
+  // formula and must stay unit-consistent regardless of display unit; only
+  // the final number is converted for display below.
+  let bestE1rmKg = 0
   let bestE1rmDate = null
   for (const session of sessions) {
     for (const set of session.sets) {
       const e1rm = estimatedOneRepMax(set.weight, set.reps)
-      if (e1rm > bestE1rm) {
-        bestE1rm = e1rm
+      if (e1rm > bestE1rmKg) {
+        bestE1rmKg = e1rm
         bestE1rmDate = session.date
       }
     }
   }
+  const bestE1rm = toDisplayWeight(bestE1rmKg, weightUnit)
 
   const sessionsNewestFirst = [...sessions].reverse()
 
@@ -163,7 +168,9 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
       <div className="flex items-baseline justify-between rounded-md border border-line bg-surface-2 px-3 py-2">
         <div>
           <p className="text-[11px] tracking-wide text-chalk-dim uppercase">Est. 1RM</p>
-          <p className="font-mono text-2xl font-bold text-blue-400">{bestE1rm}</p>
+          <p className="font-mono text-2xl font-bold text-blue-400">
+            {bestE1rm} <span className="text-base font-normal text-chalk-dim">{weightUnit}</span>
+          </p>
         </div>
         {bestE1rmDate && (
           <p className="font-mono text-[11px] text-chalk-dim/70">{formatDate(bestE1rmDate)}</p>
@@ -201,12 +208,12 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
                   fontSize: 12,
                 }}
                 labelStyle={{ color: 'var(--color-chalk-dim)' }}
-                formatter={(value) => [value, 'Weight']}
+                formatter={(value) => [`${value} ${weightUnit}`, 'Weight']}
               />
               <Line
                 type="monotone"
                 dataKey="weight"
-                name="Weight"
+                name={`Weight (${weightUnit})`}
                 stroke="var(--color-blue-500)"
                 strokeWidth={2}
                 dot={{ r: 3, fill: 'var(--color-blue-500)' }}
@@ -239,7 +246,7 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
                         onChange={(e) => setDraftWeight(e.target.value)}
                         className="w-14 rounded-md border border-line bg-surface-2 px-1.5 py-1 text-center text-chalk focus:border-blue-500 focus:outline-none"
                       />
-                      <span className="text-chalk-dim/60">×</span>
+                      <span className="text-chalk-dim/60">{weightUnit} ×</span>
                       <input
                         type="number"
                         min="1"
@@ -274,7 +281,8 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
                     <span className="inline-flex items-center gap-1.5">
                       {showWeight && (
                         <>
-                          {set.weight}
+                          {toDisplayWeight(set.weight, weightUnit)}
+                          {weightUnit}
                           <span className="text-chalk-dim/60">×</span>
                         </>
                       )}

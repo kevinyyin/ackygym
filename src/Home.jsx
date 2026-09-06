@@ -9,6 +9,7 @@ import { groupByUser } from './groupByUser'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
+import { toDisplayWeight } from './weightUnits'
 import { NoteIcon, TrophyIcon, RepeatIcon } from './icons'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import ConfirmModal from './ConfirmModal'
@@ -48,6 +49,7 @@ function Home({
   onError,
   showWaterTracker,
   waterSettings,
+  weightUnit,
   activeRoutine,
   onActiveRoutineChange,
 }) {
@@ -295,6 +297,7 @@ function Home({
               exercises={exercises}
               routines={routines}
               userId={session.user.id}
+              weightUnit={weightUnit}
               onLogged={() => {
                 setRefreshKey((key) => key + 1)
                 setShowTodaysSets(true)
@@ -309,6 +312,7 @@ function Home({
         <ActiveRoutine
           routine={activeRoutine}
           userId={session.user.id}
+          weightUnit={weightUnit}
           onExit={() => onActiveRoutineChange(null)}
           onLogged={() => {
             setRefreshKey((key) => key + 1)
@@ -385,7 +389,8 @@ function Home({
                                 <span className="inline-flex items-center gap-1.5 font-mono text-sm text-chalk-dim">
                                   {showWeight && (
                                     <>
-                                      {set.weight}
+                                      {toDisplayWeight(set.weight, weightUnit)}
+                                      {weightUnit}
                                       <span className="text-chalk-dim/60">×</span>
                                     </>
                                   )}
@@ -500,6 +505,7 @@ function Home({
           onError={onError}
           waterMode={waterSettings.mode}
           bottleSizeMl={waterSettings.bottleSizeMl}
+          goalMl={waterSettings.goalMl}
         />
       )}
 

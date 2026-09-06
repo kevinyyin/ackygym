@@ -7,6 +7,8 @@ import { GripIcon, ChevronRightIcon, CloseIcon } from './icons'
 import ExercisePicker from './ExercisePicker'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import ConfirmModal from './ConfirmModal'
+import UndoToast from './UndoToast'
+import { useDeferredDelete } from './useDeferredDelete'
 
 function GroupHeader({ children }) {
   return (
@@ -325,6 +327,7 @@ function Routines({
   const [routineToDelete, setRoutineToDelete] = useState(null)
   const [duplicatingId, setDuplicatingId] = useState(null)
   const [addExerciseOpenIds, setAddExerciseOpenIds] = useState(() => new Set())
+  const { isPending, message, stageDelete, undo } = useDeferredDelete()
 
   function toggleAddExerciseOpen(routineId) {
     setAddExerciseOpenIds((current) => {
@@ -374,15 +377,21 @@ function Routines({
     onRoutinesChanged()
   }
 
-  async function handleDeleteRoutine(routineId) {
-    onError('')
-    const { error } = await supabase.from('routines').delete().eq('id', routineId)
+  function handleDeleteRoutine(routine) {
     setRoutineToDelete(null)
-    if (error) {
-      onError(error.message)
-      return
-    }
-    onRoutinesChanged()
+    stageDelete({
+      ids: [routine.id],
+      message: `"${routine.name}" deleted`,
+      commit: async () => {
+        onError('')
+        const { error } = await supabase.from('routines').delete().eq('id', routine.id)
+        if (error) {
+          onError(error.message)
+          return
+        }
+        onRoutinesChanged()
+      },
+    })
   }
 
   // Copies the exercise list, not the schedule assignment — the copy is a
@@ -434,15 +443,17 @@ function Routines({
     onRoutinesChanged()
   }
 
+  const visibleRoutines = routines.filter((r) => !isPending(r.id))
+
   return (
     <>
     <div className="mt-3 flex flex-col gap-3">
       {!loaded ? (
         <p className="text-sm text-chalk-dim">Loading…</p>
-      ) : routines.length === 0 ? (
+      ) : visibleRoutines.length === 0 ? (
         <p className="text-sm text-chalk-dim">No routines yet.</p>
       ) : (
-        routines.map((routine) => {
+        visibleRoutines.map((routine) => {
           const isOwn = routine.user_id === userId
           const availableExercises = exercises.filter(
             (ex) => !routine.routine_exercises.some((re) => re.exercise_id === ex.id)
@@ -597,10 +608,12 @@ function Routines({
     <ConfirmModal
       open={routineToDelete !== null}
       title="Delete routine?"
-      message={`"${routineToDelete?.name}" and its exercise list will be removed. This can't be undone.`}
-      onConfirm={() => handleDeleteRoutine(routineToDelete.id)}
+      message={`"${routineToDelete?.name}" and its exercise list will be removed.`}
+      onConfirm={() => handleDeleteRoutine(routineToDelete)}
       onCancel={() => setRoutineToDelete(null)}
     />
+
+    <UndoToast message={message} onUndo={undo} />
     </>
   )
 }

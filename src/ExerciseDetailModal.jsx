@@ -7,7 +7,7 @@ import { useEscapeToClose } from './useEscapeToClose'
 import { useModalFocusTrap } from './useModalFocusTrap'
 import { CloseIcon } from './icons'
 
-function ExerciseDetailModal({ exercise, userId, onClose, onError, onChanged }) {
+function ExerciseDetailModal({ exercise, userId, weightUnit, onClose, onError, onChanged }) {
   useEscapeToClose(!!exercise, onClose)
   const containerRef = useModalFocusTrap(!!exercise)
   const titleId = useId()
@@ -57,6 +57,7 @@ function ExerciseDetailModal({ exercise, userId, onClose, onError, onChanged }) 
           <ExerciseProgression
             exerciseId={exercise.id}
             userId={userId}
+            weightUnit={weightUnit}
             onError={onError}
             onChanged={onChanged}
           />
