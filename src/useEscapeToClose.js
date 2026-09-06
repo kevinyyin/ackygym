@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 
 // Shared by every modal that isn't already handling this itself (see
 // ProgressPhotosPage's lightbox) — Escape should close a modal the same way
-// clicking the backdrop or the ✕ button already does.
+// clicking the backdrop or the CloseIcon button already does.
 export function useEscapeToClose(active, onClose) {
   useEffect(() => {
     if (!active) return

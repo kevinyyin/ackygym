@@ -182,9 +182,10 @@ function SettingsModal({
           armedLabel="Tap again to sign out"
           children="Sign out"
           armedChildren="Tap again to sign out"
+          danger={false}
           className="mt-5 w-full rounded-md border px-4 py-2.5 font-body text-sm font-semibold"
-          idleClassName="border-line text-chalk-dim active:border-danger active:text-danger"
-          armedClassName="border-danger"
+          idleClassName="border-line text-chalk-dim active:border-blue-500 active:text-blue-400"
+          armedClassName="border-blue-500"
         />
       </Card>
     </div>
