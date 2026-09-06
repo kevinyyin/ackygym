@@ -5,6 +5,7 @@ import { toDateString, formatDate } from './dateUtils'
 import { displayName } from './displayName'
 import { sortProfilesSelfFirst } from './groupByUser'
 import Card from './Card'
+import WorkoutDayModal from './WorkoutDayModal'
 
 const DOT_COLORS = ['bg-blue-400', 'bg-emerald', 'bg-amber', 'bg-purple']
 const STREAK_WINDOW_DAYS = 90
@@ -122,7 +123,7 @@ function computeStreak(workoutDates) {
   return streak
 }
 
-function ContributionGraph({ weeks, monthLabels }) {
+function ContributionGraph({ weeks, monthLabels, onDayClick }) {
   const gridWidth = WEEKS_COUNT * COLUMN_PITCH_PX - GAP_PX
   const scrollRef = useRef(null)
 
@@ -168,6 +169,19 @@ function ContributionGraph({ weeks, monthLabels }) {
                 {week.map((day) =>
                   day.isFuture ? (
                     <div key={day.dateStr} style={{ height: CELL_PX, width: CELL_PX }} />
+                  ) : onDayClick && day.level > 0 ? (
+                    <button
+                      key={day.dateStr}
+                      type="button"
+                      onClick={() => onDayClick(day.dateStr)}
+                      title={`${day.label ?? 'No sets'} · ${formatDate(day.dateStr)} — tap to view or repeat`}
+                      style={{
+                        height: CELL_PX,
+                        width: CELL_PX,
+                        backgroundColor: `var(--color-heat-${day.level})`,
+                      }}
+                      className="cursor-pointer rounded-[2px]"
+                    />
                   ) : (
                     <div
                       key={day.dateStr}
@@ -194,6 +208,8 @@ function CalendarPage({ profiles, userId, onError }) {
   const [dayDataByUser, setDayDataByUser] = useState(new Map())
   const [setsLoaded, setSetsLoaded] = useState(false)
   const [scheduleMap, setScheduleMap] = useState(new Map())
+  const [setsVersion, setSetsVersion] = useState(0)
+  const [viewingDate, setViewingDate] = useState(null)
 
   useEffect(() => {
     async function fetchSchedule() {
@@ -246,7 +262,7 @@ function CalendarPage({ profiles, userId, onError }) {
     }
 
     fetchSets()
-  }, [onError])
+  }, [setsVersion, onError])
 
   const rows = sortProfilesSelfFirst(profiles, userId)
 
@@ -270,6 +286,7 @@ function CalendarPage({ profiles, userId, onError }) {
   }
 
   return (
+    <>
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
         {rows.map((profile, i) => {
@@ -327,7 +344,11 @@ function CalendarPage({ profiles, userId, onError }) {
                 </p>
               </div>
 
-              <ContributionGraph weeks={weeks} monthLabels={monthLabels} />
+              <ContributionGraph
+                weeks={weeks}
+                monthLabels={monthLabels}
+                onDayClick={profile.id === userId ? setViewingDate : undefined}
+              />
 
               <div className="mt-1 flex items-center justify-end gap-1">
                 <span className="font-mono text-[11px] text-chalk-dim">Less</span>
@@ -349,6 +370,15 @@ function CalendarPage({ profiles, userId, onError }) {
         })}
       </div>
     </div>
+
+    <WorkoutDayModal
+      date={viewingDate}
+      userId={userId}
+      onClose={() => setViewingDate(null)}
+      onError={onError}
+      onRepeated={() => setSetsVersion((v) => v + 1)}
+    />
+    </>
   )
 }
 

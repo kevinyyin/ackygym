@@ -315,6 +315,7 @@ function Routines({
   const [collapsedIds, setCollapsedIds] = useState(() => new Set())
   const appliedInitialCollapse = useRef(false)
   const [routineToDelete, setRoutineToDelete] = useState(null)
+  const [duplicatingId, setDuplicatingId] = useState(null)
 
   // Routines start collapsed on each fresh load of the app. Once applied,
   // later routine list changes (add/delete/reorder) don't reset the user's
@@ -363,6 +364,45 @@ function Routines({
       onError(error.message)
       return
     }
+    onRoutinesChanged()
+  }
+
+  // Copies the exercise list, not the schedule assignment — the copy is a
+  // starting point the user will deliberately assign a day to, not an
+  // instant second instance of an already-scheduled routine.
+  async function handleDuplicateRoutine(routine) {
+    if (duplicatingId !== null) return
+    setDuplicatingId(routine.id)
+    onError('')
+
+    const { data: newRoutine, error: insertError } = await supabase
+      .from('routines')
+      .insert({ name: `${routine.name} (copy)` })
+      .select('id')
+      .single()
+
+    if (insertError) {
+      onError(insertError.message)
+      setDuplicatingId(null)
+      return
+    }
+
+    if (routine.routine_exercises.length > 0) {
+      const { error: exercisesError } = await supabase.from('routine_exercises').insert(
+        routine.routine_exercises.map((re) => ({
+          routine_id: newRoutine.id,
+          exercise_id: re.exercise_id,
+          position: re.position,
+        }))
+      )
+      if (exercisesError) {
+        onError(exercisesError.message)
+        setDuplicatingId(null)
+        return
+      }
+    }
+
+    setDuplicatingId(null)
     onRoutinesChanged()
   }
 
@@ -419,6 +459,17 @@ function Routines({
                   >
                     Start
                   </button>
+                  {isOwn && (
+                    <button
+                      type="button"
+                      onClick={() => handleDuplicateRoutine(routine)}
+                      disabled={duplicatingId === routine.id}
+                      aria-label={`Duplicate ${routine.name}`}
+                      className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400 disabled:opacity-40"
+                    >
+                      {duplicatingId === routine.id ? 'Duplicating…' : 'Duplicate'}
+                    </button>
+                  )}
                   {isOwn && (
                     <button
                       type="button"
