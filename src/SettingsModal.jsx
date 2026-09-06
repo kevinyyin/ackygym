@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Card from './Card'
 import { supabase } from './supabaseClient'
 import { TOGGLEABLE_CARDS } from './cardVisibility'
+import { useEscapeToClose } from './useEscapeToClose'
 
 const WATER_MODES = [
   { key: 'volume', label: 'Volume' },
@@ -45,6 +46,8 @@ function SettingsModal({
       onWaterSettingsChange({ bottleSizeMl: numeric })
     }
   }
+
+  useEscapeToClose(open, onClose)
 
   if (!open) return null
 

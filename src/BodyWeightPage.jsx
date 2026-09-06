@@ -27,6 +27,8 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
   const [chartGroup, setChartGroup] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
+  const [editingEntryId, setEditingEntryId] = useState(null)
+  const [draftWeightValue, setDraftWeightValue] = useState('')
 
   useEffect(() => {
     async function fetchEntries() {
@@ -95,6 +97,34 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
       onError(error.message)
       return
     }
+    setRefreshKey((k) => k + 1)
+  }
+
+  function startEdit(entry) {
+    setEditingEntryId(entry.id)
+    setDraftWeightValue(String(roundWeight(convertWeight(entry.weight_kg, 'kg', unit))))
+  }
+
+  function cancelEdit() {
+    setEditingEntryId(null)
+  }
+
+  async function saveEdit(entryId) {
+    const numeric = Number(draftWeightValue)
+    if (!numeric || numeric <= 0) return
+
+    onError('')
+    const weightKg = unit === 'kg' ? numeric : convertWeight(numeric, 'lb', 'kg')
+    const { error } = await supabase
+      .from('body_weights')
+      .update({ weight_kg: weightKg })
+      .eq('id', entryId)
+
+    if (error) {
+      onError(error.message)
+      return
+    }
+    setEditingEntryId(null)
     setRefreshKey((k) => k + 1)
   }
 
@@ -222,28 +252,73 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
                 {group.name}
               </button>
               <ul className="divide-y divide-line">
-                {group.entries.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="flex items-center justify-between gap-2 px-4 py-3"
-                  >
-                    <span className="font-mono text-sm text-chalk-dim">
-                      {formatDate(entry.date, { year: true })}
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span className="font-mono font-medium text-chalk">
-                        {roundWeight(convertWeight(entry.weight_kg, 'kg', unit))} {unit}
+                {group.entries.map((entry) => {
+                  const isEditing = editingEntryId === entry.id
+                  return (
+                    <li
+                      key={entry.id}
+                      className="flex items-center justify-between gap-2 px-4 py-3"
+                    >
+                      <span className="font-mono text-sm text-chalk-dim">
+                        {formatDate(entry.date, { year: true })}
                       </span>
-                      {entry.user_id === userId && (
-                        <ConfirmDeleteButton
-                          onConfirm={() => handleDelete(entry.id)}
-                          label={`${formatDate(entry.date, { year: true })} weight entry`}
-                          className="shrink-0"
-                        />
+                      {isEditing ? (
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            autoFocus
+                            value={draftWeightValue}
+                            onChange={(e) => setDraftWeightValue(e.target.value)}
+                            className="w-20 rounded-md border border-line bg-surface-2 px-2 py-1 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+                          />
+                          <span className="font-mono text-xs text-chalk-dim">{unit}</span>
+                          <button
+                            type="button"
+                            onClick={() => saveEdit(entry.id)}
+                            disabled={!Number(draftWeightValue) || Number(draftWeightValue) <= 0}
+                            className="shrink-0 text-blue-400 disabled:opacity-40"
+                            aria-label="Save weight entry"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            className="shrink-0 text-chalk-dim hover:text-danger"
+                            aria-label="Cancel editing weight entry"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-3">
+                          <span className="font-mono font-medium text-chalk">
+                            {roundWeight(convertWeight(entry.weight_kg, 'kg', unit))} {unit}
+                          </span>
+                          {entry.user_id === userId && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => startEdit(entry)}
+                                aria-label="Edit weight entry"
+                                className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                              >
+                                Edit
+                              </button>
+                              <ConfirmDeleteButton
+                                onConfirm={() => handleDelete(entry.id)}
+                                label={`${formatDate(entry.date, { year: true })} weight entry`}
+                                className="shrink-0"
+                              />
+                            </>
+                          )}
+                        </span>
                       )}
-                    </span>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             </Card>
           ))

@@ -15,6 +15,8 @@ function CalorieTracker({ profiles, userId, target, onError }) {
   const [chartGroup, setChartGroup] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
+  const [editingEntryId, setEditingEntryId] = useState(null)
+  const [draftCalories, setDraftCalories] = useState('')
 
   useEffect(() => {
     async function fetchEntries() {
@@ -69,6 +71,33 @@ function CalorieTracker({ profiles, userId, target, onError }) {
       onError(error.message)
       return
     }
+    setRefreshKey((k) => k + 1)
+  }
+
+  function startEdit(entry) {
+    setEditingEntryId(entry.id)
+    setDraftCalories(String(Math.round(Number(entry.calories))))
+  }
+
+  function cancelEdit() {
+    setEditingEntryId(null)
+  }
+
+  async function saveEdit(entryId) {
+    const numeric = Number(draftCalories)
+    if (!numeric || numeric <= 0) return
+
+    onError('')
+    const { error } = await supabase
+      .from('calorie_logs')
+      .update({ calories: numeric })
+      .eq('id', entryId)
+
+    if (error) {
+      onError(error.message)
+      return
+    }
+    setEditingEntryId(null)
     setRefreshKey((k) => k + 1)
   }
 
@@ -147,28 +176,72 @@ function CalorieTracker({ profiles, userId, target, onError }) {
                 {group.name}
               </button>
               <ul className="divide-y divide-line">
-                {group.entries.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="flex items-center justify-between gap-2 px-4 py-3"
-                  >
-                    <span className="font-mono text-sm text-chalk-dim">
-                      {formatDate(entry.date, { year: true })}
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span className="font-mono font-medium text-chalk">
-                        {Math.round(Number(entry.calories))} kcal
+                {group.entries.map((entry) => {
+                  const isEditing = editingEntryId === entry.id
+                  return (
+                    <li
+                      key={entry.id}
+                      className="flex items-center justify-between gap-2 px-4 py-3"
+                    >
+                      <span className="font-mono text-sm text-chalk-dim">
+                        {formatDate(entry.date, { year: true })}
                       </span>
-                      {entry.user_id === userId && (
-                        <ConfirmDeleteButton
-                          onConfirm={() => handleDelete(entry.id)}
-                          label={`${formatDate(entry.date, { year: true })} calorie entry`}
-                          className="shrink-0"
-                        />
+                      {isEditing ? (
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            autoFocus
+                            value={draftCalories}
+                            onChange={(e) => setDraftCalories(e.target.value)}
+                            className="w-20 rounded-md border border-line bg-surface-2 px-2 py-1 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => saveEdit(entry.id)}
+                            disabled={!Number(draftCalories) || Number(draftCalories) <= 0}
+                            className="shrink-0 text-blue-400 disabled:opacity-40"
+                            aria-label="Save calorie entry"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            className="shrink-0 text-chalk-dim hover:text-danger"
+                            aria-label="Cancel editing calorie entry"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-3">
+                          <span className="font-mono font-medium text-chalk">
+                            {Math.round(Number(entry.calories))} kcal
+                          </span>
+                          {entry.user_id === userId && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => startEdit(entry)}
+                                aria-label="Edit calorie entry"
+                                className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                              >
+                                Edit
+                              </button>
+                              <ConfirmDeleteButton
+                                onConfirm={() => handleDelete(entry.id)}
+                                label={`${formatDate(entry.date, { year: true })} calorie entry`}
+                                className="shrink-0"
+                              />
+                            </>
+                          )}
+                        </span>
                       )}
-                    </span>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             </Card>
           ))
