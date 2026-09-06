@@ -59,3 +59,42 @@ export async function logSet({ userId, exerciseId, weight, reps }) {
 
   return { error: setInsertError, isPr }
 }
+
+// Re-derives is_pr for every set of this user+exercise, in chronological
+// order — needed after an edit or delete, since is_pr is only ever computed
+// once at insert time above and would otherwise go stale (e.g. deleting the
+// PR set should promote the next-highest one).
+export async function recomputeIsPr(userId, exerciseId) {
+  const { data, error } = await supabase
+    .from('sets')
+    .select('id, weight, is_pr, workouts!inner(date)')
+    .eq('user_id', userId)
+    .eq('exercise_id', exerciseId)
+
+  if (error) return { error }
+
+  // Sorted client-side — `.order(col, { foreignTable })` is a no-op on
+  // this project's PostgREST version, see lastSet.js for details.
+  const sorted = [...data].sort((a, b) => {
+    if (a.workouts.date !== b.workouts.date) {
+      return a.workouts.date < b.workouts.date ? -1 : 1
+    }
+    return a.id - b.id
+  })
+
+  let maxWeight = null
+  for (const set of sorted) {
+    const isPr = maxWeight === null || set.weight > maxWeight
+    if (isPr) maxWeight = set.weight
+
+    if (set.is_pr !== isPr) {
+      const { error: updateError } = await supabase
+        .from('sets')
+        .update({ is_pr: isPr })
+        .eq('id', set.id)
+      if (updateError) return { error: updateError }
+    }
+  }
+
+  return { error: null }
+}

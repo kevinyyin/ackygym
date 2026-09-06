@@ -2,8 +2,11 @@ import Card from './Card'
 import MuscleTags from './MuscleTags'
 import MuscleBodyMap from './MuscleBodyMap'
 import ExerciseProgression from './ExerciseProgression'
+import { useEscapeToClose } from './useEscapeToClose'
 
-function ExerciseDetailModal({ exercise, userId, onClose, onError }) {
+function ExerciseDetailModal({ exercise, userId, onClose, onError, onChanged }) {
+  useEscapeToClose(!!exercise, onClose)
+
   if (!exercise) return null
 
   return (
@@ -41,7 +44,12 @@ function ExerciseDetailModal({ exercise, userId, onClose, onError }) {
           <p className="text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
             Progression
           </p>
-          <ExerciseProgression exerciseId={exercise.id} userId={userId} onError={onError} />
+          <ExerciseProgression
+            exerciseId={exercise.id}
+            userId={userId}
+            onError={onError}
+            onChanged={onChanged}
+          />
         </div>
       </Card>
     </div>

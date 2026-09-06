@@ -52,6 +52,7 @@ function LiftsPage({ profiles, userId, onError }) {
   const [expandedUpper, setExpandedUpper] = useState(false)
   const [expandedLower, setExpandedLower] = useState(false)
   const [search, setSearch] = useState('')
+  const [setsVersion, setSetsVersion] = useState(0)
 
   useEffect(() => {
     async function fetchExercises() {
@@ -108,7 +109,7 @@ function LiftsPage({ profiles, userId, onError }) {
     }
 
     fetchBestSets()
-  }, [onError])
+  }, [setsVersion, onError])
 
   const rows = sortProfilesSelfFirst(profiles, userId)
 
@@ -242,6 +243,7 @@ function LiftsPage({ profiles, userId, onError }) {
         userId={userId}
         onClose={() => setSelectedExercise(null)}
         onError={onError}
+        onChanged={() => setSetsVersion((v) => v + 1)}
       />
     </>
   )

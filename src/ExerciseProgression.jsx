@@ -12,6 +12,8 @@ import { supabase } from './supabaseClient'
 import { TrophyIcon } from './icons'
 import { estimatedOneRepMax } from './oneRepMax'
 import { formatDate } from './dateUtils'
+import { recomputeIsPr } from './logSet'
+import ConfirmDeleteButton from './ConfirmDeleteButton'
 
 function groupSetsBySession(sets) {
   const order = []
@@ -29,8 +31,12 @@ function groupSetsBySession(sets) {
   return order.map((date) => byDate.get(date))
 }
 
-function ExerciseProgression({ exerciseId, userId, onError }) {
+function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
   const [sets, setSets] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [editingSetId, setEditingSetId] = useState(null)
+  const [draftWeight, setDraftWeight] = useState('')
+  const [draftReps, setDraftReps] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -63,7 +69,64 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
     return () => {
       cancelled = true
     }
-  }, [exerciseId, userId, onError])
+  }, [exerciseId, userId, refreshKey, onError])
+
+  function startEdit(set) {
+    setEditingSetId(set.id)
+    setDraftWeight(String(set.weight))
+    setDraftReps(String(set.reps))
+  }
+
+  function cancelEdit() {
+    setEditingSetId(null)
+  }
+
+  function isDraftValid() {
+    return Number(draftWeight) >= 0 && Number(draftReps) >= 1
+  }
+
+  async function saveEdit(setId) {
+    if (!isDraftValid()) return
+
+    onError('')
+    const { error } = await supabase
+      .from('sets')
+      .update({ weight: Number(draftWeight), reps: Number(draftReps) })
+      .eq('id', setId)
+
+    if (error) {
+      onError(error.message)
+      return
+    }
+
+    const { error: recomputeError } = await recomputeIsPr(userId, exerciseId)
+    if (recomputeError) {
+      onError(recomputeError.message)
+      return
+    }
+
+    setEditingSetId(null)
+    setRefreshKey((k) => k + 1)
+    onChanged?.()
+  }
+
+  async function handleDelete(setId) {
+    onError('')
+    const { error } = await supabase.from('sets').delete().eq('id', setId)
+    if (error) {
+      onError(error.message)
+      return
+    }
+
+    const { error: recomputeError } = await recomputeIsPr(userId, exerciseId)
+    if (recomputeError) {
+      onError(recomputeError.message)
+      return
+    }
+
+    setRefreshKey((k) => k + 1)
+    onChanged?.()
+  }
 
   if (sets === null) {
     return <p className="mt-4 text-sm text-chalk-dim">Loading…</p>
@@ -159,18 +222,74 @@ function ExerciseProgression({ exerciseId, userId, onError }) {
             <ul className="mt-1 flex flex-col gap-1">
               {session.sets.map((set, i) => {
                 const showWeight = i === 0 || set.weight !== session.sets[i - 1].weight
+                const isEditing = editingSetId === set.id
+
+                if (isEditing) {
+                  return (
+                    <li key={set.id} className="flex items-center gap-1.5 font-mono text-sm text-chalk-dim">
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={draftWeight}
+                        onChange={(e) => setDraftWeight(e.target.value)}
+                        className="w-14 rounded-md border border-line bg-surface-2 px-1.5 py-1 text-center text-chalk focus:border-blue-500 focus:outline-none"
+                      />
+                      <span className="text-chalk-dim/60">×</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={draftReps}
+                        onChange={(e) => setDraftReps(e.target.value)}
+                        className="w-14 rounded-md border border-line bg-surface-2 px-1.5 py-1 text-center text-chalk focus:border-blue-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => saveEdit(set.id)}
+                        disabled={!isDraftValid()}
+                        className="ml-auto shrink-0 text-blue-400 disabled:opacity-40"
+                        aria-label="Save set"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        className="shrink-0 text-chalk-dim hover:text-danger"
+                        aria-label="Cancel editing set"
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  )
+                }
+
                 return (
-                  <li className="inline-flex items-center gap-1.5 font-mono text-sm text-chalk-dim" key={set.id}>
-                    {showWeight && (
-                      <>
-                        {set.weight}
-                        <span className="text-chalk-dim/60">×</span>
-                      </>
-                    )}
-                    {set.reps}
-                    {set.is_pr && (
-                      <TrophyIcon className="h-3 w-3 shrink-0 text-amber" aria-label="New PR" />
-                    )}
+                  <li key={set.id} className="flex items-center justify-between gap-2 font-mono text-sm text-chalk-dim">
+                    <span className="inline-flex items-center gap-1.5">
+                      {showWeight && (
+                        <>
+                          {set.weight}
+                          <span className="text-chalk-dim/60">×</span>
+                        </>
+                      )}
+                      {set.reps}
+                      {set.is_pr && (
+                        <TrophyIcon className="h-3 w-3 shrink-0 text-amber" aria-label="New PR" />
+                      )}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(set)}
+                        aria-label="Edit set"
+                        className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                      >
+                        Edit
+                      </button>
+                      <ConfirmDeleteButton onConfirm={() => handleDelete(set.id)} label="set" />
+                    </span>
                   </li>
                 )
               })}
