@@ -11,6 +11,7 @@ import TimerPage from './TimerPage'
 import SettingsModal from './SettingsModal'
 import { displayName } from './displayName'
 import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
+import { loadWaterSettings, saveWaterSettings } from './waterSettings'
 import { useRestTimer } from './useRestTimer'
 import {
   GridIcon,
@@ -53,6 +54,7 @@ function App() {
   const [profilesVersion, setProfilesVersion] = useState(0)
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
   const [cardVisibility, setCardVisibility] = useState(loadCardVisibility)
+  const [waterSettings, setWaterSettings] = useState(loadWaterSettings)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
   // Lifted out of Home so a started routine survives switching tabs — Home
@@ -105,6 +107,14 @@ function App() {
     setCardVisibility((current) => {
       const next = { ...current, [key]: !current[key] }
       saveCardVisibility(next)
+      return next
+    })
+  }
+
+  function updateWaterSettings(changes) {
+    setWaterSettings((current) => {
+      const next = { ...current, ...changes }
+      saveWaterSettings(next)
       return next
     })
   }
@@ -227,6 +237,7 @@ function App() {
                 onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
                 onError={handleError}
                 showWaterTracker={cardVisibility.water}
+                waterSettings={waterSettings}
                 activeRoutine={activeRoutine}
                 onActiveRoutineChange={setActiveRoutine}
               />
@@ -339,6 +350,8 @@ function App() {
         open={settingsOpen}
         visibility={cardVisibility}
         onToggle={toggleCardVisibility}
+        waterSettings={waterSettings}
+        onWaterSettingsChange={updateWaterSettings}
         onClose={() => setSettingsOpen(false)}
         profile={currentProfile}
         userId={session.user.id}

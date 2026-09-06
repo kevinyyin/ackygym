@@ -37,6 +37,7 @@ function Home({
   onScheduleSaved,
   onError,
   showWaterTracker,
+  waterSettings,
   activeRoutine,
   onActiveRoutineChange,
 }) {
@@ -417,7 +418,13 @@ function Home({
       </Card>
 
       {showWaterTracker && (
-        <WaterTracker session={session} profiles={profiles} onError={onError} />
+        <WaterTracker
+          session={session}
+          profiles={profiles}
+          onError={onError}
+          waterMode={waterSettings.mode}
+          bottleSizeMl={waterSettings.bottleSizeMl}
+        />
       )}
 
       <ExerciseDetailModal

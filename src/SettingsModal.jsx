@@ -3,20 +3,46 @@ import Card from './Card'
 import { supabase } from './supabaseClient'
 import { TOGGLEABLE_CARDS } from './cardVisibility'
 
-function SettingsModal({ open, visibility, onToggle, onClose, profile, userId, onProfileSaved, onError }) {
+const WATER_MODES = [
+  { key: 'volume', label: 'Volume' },
+  { key: 'bottles', label: 'Bottles' },
+]
+
+function SettingsModal({
+  open,
+  visibility,
+  onToggle,
+  waterSettings,
+  onWaterSettingsChange,
+  onClose,
+  profile,
+  userId,
+  onProfileSaved,
+  onError,
+}) {
   const [username, setUsername] = useState('')
   const [savingUsername, setSavingUsername] = useState(false)
   const [usernameStatus, setUsernameStatus] = useState('')
+  const [bottleSizeInput, setBottleSizeInput] = useState(String(waterSettings.bottleSizeMl))
   const [wasOpen, setWasOpen] = useState(open)
 
-  // Re-seed the input from the current username each time the modal opens
-  // (state adjustment during render, per React's guidance — not an effect —
-  // since this component stays mounted and just returns null while closed).
+  // Re-seed the inputs from current values each time the modal opens (state
+  // adjustment during render, per React's guidance — not an effect — since
+  // this component stays mounted and just returns null while closed).
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
       setUsername(profile?.username ?? '')
       setUsernameStatus('')
+      setBottleSizeInput(String(waterSettings.bottleSizeMl))
+    }
+  }
+
+  function handleBottleSizeChange(value) {
+    setBottleSizeInput(value)
+    const numeric = Number(value)
+    if (value !== '' && Number.isFinite(numeric) && numeric > 0) {
+      onWaterSettingsChange({ bottleSizeMl: numeric })
     }
   }
 
@@ -108,6 +134,42 @@ function SettingsModal({ open, visibility, onToggle, onClose, profile, userId, o
             </label>
           ))}
         </div>
+
+        <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+          Water tracking
+        </p>
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
+          <span className="text-sm text-chalk">Display as</span>
+          <div className="inline-flex rounded-full border border-line bg-surface p-0.5">
+            {WATER_MODES.map((mode) => (
+              <button
+                key={mode.key}
+                type="button"
+                onClick={() => onWaterSettingsChange({ mode: mode.key })}
+                className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
+                  waterSettings.mode === mode.key ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
+                }`}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {waterSettings.mode === 'bottles' && (
+          <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
+            <label htmlFor="water-bottle-size" className="text-sm text-chalk">
+              Bottle size (mL)
+            </label>
+            <input
+              id="water-bottle-size"
+              type="number"
+              min="1"
+              value={bottleSizeInput}
+              onChange={(e) => handleBottleSizeChange(e.target.value)}
+              className="w-24 rounded-md border border-line bg-surface px-2 py-1.5 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+        )}
       </Card>
     </div>
   )
