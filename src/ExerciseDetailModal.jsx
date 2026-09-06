@@ -1,12 +1,16 @@
+import { useId } from 'react'
 import Card from './Card'
 import MuscleTags from './MuscleTags'
 import MuscleBodyMap from './MuscleBodyMap'
 import ExerciseProgression from './ExerciseProgression'
 import { useEscapeToClose } from './useEscapeToClose'
+import { useModalFocusTrap } from './useModalFocusTrap'
 import { CloseIcon } from './icons'
 
 function ExerciseDetailModal({ exercise, userId, onClose, onError, onChanged }) {
   useEscapeToClose(!!exercise, onClose)
+  const containerRef = useModalFocusTrap(!!exercise)
+  const titleId = useId()
 
   if (!exercise) return null
 
@@ -16,11 +20,16 @@ function ExerciseDetailModal({ exercise, userId, onClose, onError, onChanged }) 
       onClick={onClose}
     >
       <Card
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className="max-h-[85vh] w-full max-w-md overflow-y-auto p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
-          <h2 className="font-display text-2xl leading-none tracking-tight text-chalk uppercase">
+          <h2 id={titleId} className="font-display text-2xl leading-none tracking-tight text-chalk uppercase">
             {exercise.name}
           </h2>
           <button

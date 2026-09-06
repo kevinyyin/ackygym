@@ -8,6 +8,7 @@ import WaterBottle from './WaterBottle'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { formatBottles } from './waterUnits'
 
+const SHOW_WATER_KEY = 'gym-tracker:home-show-water'
 const GOAL_ML = 2000
 const QUICK_ADD_ML = [250, 500, 750]
 const QUICK_ADD_BOTTLE_FRACTIONS = [
@@ -21,7 +22,12 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl }) {
   const [logs, setLogs] = useState([])
   const [refreshKey, setRefreshKey] = useState(0)
   const [customValue, setCustomValue] = useState('')
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpandedState] = useState(() => localStorage.getItem(SHOW_WATER_KEY) === 'true')
+
+  function setExpanded(next) {
+    setExpandedState(next)
+    localStorage.setItem(SHOW_WATER_KEY, String(next))
+  }
 
   useEffect(() => {
     async function fetchLogs() {
@@ -120,7 +126,7 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl }) {
           <DropletIcon className="h-4 w-4 text-blue-400" />
           <button
             type="button"
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => setExpanded(!expanded)}
             className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
           >
             {expanded ? 'Hide' : 'Show'}

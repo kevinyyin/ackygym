@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import Card from './Card'
 import { supabase } from './supabaseClient'
 import { TOGGLEABLE_CARDS } from './cardVisibility'
 import { useEscapeToClose } from './useEscapeToClose'
+import { useModalFocusTrap } from './useModalFocusTrap'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { CloseIcon } from './icons'
 
@@ -50,6 +51,8 @@ function SettingsModal({
   }
 
   useEscapeToClose(open, onClose)
+  const containerRef = useModalFocusTrap(open)
+  const titleId = useId()
 
   if (!open) return null
 
@@ -79,9 +82,17 @@ function SettingsModal({
       className="fixed inset-0 z-20 flex items-center justify-center bg-ink/80 p-4"
       onClick={onClose}
     >
-      <Card className="w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+      <Card
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-md p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between gap-3">
-          <h2 className="font-display text-2xl leading-none tracking-tight text-chalk uppercase">
+          <h2 id={titleId} className="font-display text-2xl leading-none tracking-tight text-chalk uppercase">
             Settings
           </h2>
           <button
@@ -142,6 +153,9 @@ function SettingsModal({
 
         <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
           Water tracking
+        </p>
+        <p className="mt-1 text-xs text-chalk-dim">
+          Show your water totals as a raw amount, or as a count of bottles of a size you set.
         </p>
         <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
           <span className="text-sm text-chalk">Display as</span>

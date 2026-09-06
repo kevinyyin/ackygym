@@ -169,6 +169,9 @@ function ExerciseProgression({ exerciseId, userId, onError, onChanged }) {
           <p className="font-mono text-[11px] text-chalk-dim/70">{formatDate(bestE1rmDate)}</p>
         )}
       </div>
+      <p className="-mt-2 text-xs text-chalk-dim">
+        Estimated one-rep max — the heaviest single lift your logged sets suggest you could do.
+      </p>
 
       {sessions.length === 1 ? (
         <p className="text-xs text-chalk-dim">Log another session to see a trend.</p>

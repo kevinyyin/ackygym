@@ -217,6 +217,9 @@ function LiftsPage({ profiles, userId, onError }) {
         </Card>
       ) : (
         <div className="flex flex-col gap-5">
+          <p className="text-xs text-chalk-dim">
+            Your all-time best set per exercise, and how it compares to everyone else's.
+          </p>
           <input
             type="text"
             value={search}

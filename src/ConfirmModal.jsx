@@ -1,5 +1,7 @@
+import { useId } from 'react'
 import Card from './Card'
 import { useEscapeToClose } from './useEscapeToClose'
+import { useModalFocusTrap } from './useModalFocusTrap'
 
 // A real confirmation dialog for hard-to-reverse deletes (a whole routine,
 // a library exercise, a photo) — as opposed to ConfirmDeleteButton's
@@ -7,6 +9,10 @@ import { useEscapeToClose } from './useEscapeToClose'
 // notes, water/weight/calorie entries) it's still used for everywhere else.
 function ConfirmModal({ open, title, message, confirmLabel = 'Delete', onConfirm, onCancel }) {
   useEscapeToClose(open, onCancel)
+  const containerRef = useModalFocusTrap(open)
+  // useId, not a static string — some pages (e.g. RoutinesPage) mount two
+  // ConfirmModal instances at once, and a static id would collide.
+  const titleId = useId()
 
   if (!open) return null
 
@@ -15,8 +21,16 @@ function ConfirmModal({ open, title, message, confirmLabel = 'Delete', onConfirm
       className="fixed inset-0 z-20 flex items-center justify-center bg-ink/80 p-4"
       onClick={onCancel}
     >
-      <Card className="w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
-        <h2 className="font-display text-xl leading-none tracking-tight text-chalk uppercase">
+      <Card
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-sm p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id={titleId} className="font-display text-xl leading-none tracking-tight text-chalk uppercase">
           {title}
         </h2>
         <p className="mt-2 text-sm text-chalk-dim">{message}</p>

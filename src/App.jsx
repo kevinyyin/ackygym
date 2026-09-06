@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Routes, Route, NavLink, Link, useLocation } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import Auth from './Auth'
@@ -58,6 +58,7 @@ function App() {
   const [waterSettings, setWaterSettings] = useState(loadWaterSettings)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
+  const errorRef = useRef(null)
   // Lifted out of Home so a started routine survives switching tabs — Home
   // unmounts on route change, which would otherwise wipe this like any other
   // component-local state.
@@ -69,6 +70,13 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
+
+  // A failed action can happen anywhere on a tall page (a form at the
+  // bottom, mid-workout) while this banner always renders at the top —
+  // scroll it into view so it's not silently missed below the fold.
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [error])
 
   useEffect(() => {
     function handleOnline() {
@@ -215,7 +223,12 @@ function App() {
         )}
 
         {error && (
-          <p className="rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <p
+            ref={errorRef}
+            role="alert"
+            aria-live="assertive"
+            className="rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
+          >
             {error}
           </p>
         )}
