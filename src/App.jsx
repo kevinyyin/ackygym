@@ -55,6 +55,10 @@ function App() {
   const [cardVisibility, setCardVisibility] = useState(loadCardVisibility)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
+  // Lifted out of Home so a started routine survives switching tabs — Home
+  // unmounts on route change, which would otherwise wipe this like any other
+  // component-local state.
+  const [activeRoutine, setActiveRoutine] = useState(null)
   const location = useLocation()
   const restTimer = useRestTimer()
 
@@ -223,6 +227,8 @@ function App() {
                 onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
                 onError={handleError}
                 showWaterTracker={cardVisibility.water}
+                activeRoutine={activeRoutine}
+                onActiveRoutineChange={setActiveRoutine}
               />
             }
           />
