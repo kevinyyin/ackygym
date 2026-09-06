@@ -15,6 +15,8 @@ import { logSet } from './logSet'
 import { NoteIcon, TrophyIcon } from './icons'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 
+const TODAYS_SETS_COLLAPSED_COUNT = 8
+
 function groupSetsByExercise(sets) {
   const order = []
   const byExerciseId = new Map()
@@ -52,9 +54,11 @@ function Home({
   const [noteDraft, setNoteDraft] = useState('')
   const [showLogSet, setShowLogSet] = useState(false)
   const [showExercises, setShowExercises] = useState(false)
+  const [showRoutines, setShowRoutines] = useState(false)
   const [routines, setRoutines] = useState([])
   const [routinesLoaded, setRoutinesLoaded] = useState(false)
   const [routinesVersion, setRoutinesVersion] = useState(0)
+  const [expandedTodaysUserIds, setExpandedTodaysUserIds] = useState(() => new Set())
 
   useEffect(() => {
     async function fetchExercises() {
@@ -153,6 +157,15 @@ function Home({
       return
     }
     setRefreshKey((key) => key + 1)
+  }
+
+  function toggleTodaysExpanded(userId) {
+    setExpandedTodaysUserIds((current) => {
+      const next = new Set(current)
+      if (next.has(userId)) next.delete(userId)
+      else next.add(userId)
+      return next
+    })
   }
 
   function openNoteEditor(set) {
@@ -266,109 +279,137 @@ function Home({
             <p className="text-sm text-chalk-dim">No sets logged yet today.</p>
           </Card>
         ) : (
-          groupedSets.map((group) => (
-            <Card key={group.userId} className="overflow-hidden">
-              <h3 className="border-b border-line px-4 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-                {group.name}
-              </h3>
-              <div className="divide-y divide-line">
-                {groupSetsByExercise(group.sets).map((exerciseGroup) => (
-                  <div key={exerciseGroup.exerciseId} className="px-4 py-3">
-                    <p className="font-medium text-chalk">{exerciseGroup.name}</p>
-                    <ul className="mt-1.5 flex flex-col gap-1.5">
-                      {exerciseGroup.sets.map((set, i) => {
-                        const showWeight =
-                          i === 0 || set.weight !== exerciseGroup.sets[i - 1].weight
+          groupedSets.map((group) => {
+            const exerciseGroups = groupSetsByExercise(group.sets)
+            const todaysExpanded = expandedTodaysUserIds.has(group.userId)
+            const visibleExerciseGroups = todaysExpanded
+              ? exerciseGroups
+              : exerciseGroups.slice(0, TODAYS_SETS_COLLAPSED_COUNT)
 
-                        return (
-                          <li key={set.id} className="flex flex-col gap-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="inline-flex items-center gap-1.5 font-mono text-sm text-chalk-dim">
-                                {showWeight && (
-                                  <>
-                                    {set.weight}
-                                    <span className="text-chalk-dim/60">×</span>
-                                  </>
-                                )}
-                                {set.reps}
-                                {set.is_pr && (
-                                  <TrophyIcon
-                                    className="h-3.5 w-3.5 shrink-0 text-amber"
-                                    aria-label="New PR"
-                                  />
-                                )}
-                              </span>
-                              <span className="flex items-center gap-3">
-                                {set.user_id === session.user.id && (
-                                  <>
-                                    <button
-                                      onClick={() => openNoteEditor(set)}
-                                      aria-label={`Note for ${exerciseGroup.name} set`}
-                                      className="shrink-0 text-chalk-dim hover:text-blue-400"
-                                    >
-                                      <NoteIcon className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleRepeatSet(set)}
-                                      aria-label={`Repeat ${exerciseGroup.name} set`}
-                                      className="shrink-0 text-chalk-dim hover:text-blue-400"
-                                    >
-                                      ↻
-                                    </button>
-                                    <ConfirmDeleteButton
-                                      onConfirm={() => handleDeleteSet(set.id)}
-                                      label={`${exerciseGroup.name} set`}
-                                      className="shrink-0"
+            return (
+              <Card key={group.userId} className="overflow-hidden">
+                <h3 className="border-b border-line px-4 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+                  {group.name}
+                </h3>
+                <div className="divide-y divide-line">
+                  {visibleExerciseGroups.map((exerciseGroup) => (
+                    <div key={exerciseGroup.exerciseId} className="px-4 py-3">
+                      <p className="font-medium text-chalk">{exerciseGroup.name}</p>
+                      <ul className="mt-1.5 flex flex-col gap-1.5">
+                        {exerciseGroup.sets.map((set, i) => {
+                          const showWeight =
+                            i === 0 || set.weight !== exerciseGroup.sets[i - 1].weight
+
+                          return (
+                            <li key={set.id} className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="inline-flex items-center gap-1.5 font-mono text-sm text-chalk-dim">
+                                  {showWeight && (
+                                    <>
+                                      {set.weight}
+                                      <span className="text-chalk-dim/60">×</span>
+                                    </>
+                                  )}
+                                  {set.reps}
+                                  {set.is_pr && (
+                                    <TrophyIcon
+                                      className="h-3.5 w-3.5 shrink-0 text-amber"
+                                      aria-label="New PR"
                                     />
-                                  </>
-                                )}
-                              </span>
-                            </div>
+                                  )}
+                                </span>
+                                <span className="flex items-center gap-3">
+                                  {set.user_id === session.user.id && (
+                                    <>
+                                      <button
+                                        onClick={() => openNoteEditor(set)}
+                                        aria-label={`Note for ${exerciseGroup.name} set`}
+                                        className="shrink-0 text-chalk-dim hover:text-blue-400"
+                                      >
+                                        <NoteIcon className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleRepeatSet(set)}
+                                        aria-label={`Repeat ${exerciseGroup.name} set`}
+                                        className="shrink-0 text-chalk-dim hover:text-blue-400"
+                                      >
+                                        ↻
+                                      </button>
+                                      <ConfirmDeleteButton
+                                        onConfirm={() => handleDeleteSet(set.id)}
+                                        label={`${exerciseGroup.name} set`}
+                                        className="shrink-0"
+                                      />
+                                    </>
+                                  )}
+                                </span>
+                              </div>
 
-                            {editingNoteId === set.id ? (
-                              <input
-                                autoFocus
-                                type="text"
-                                value={noteDraft}
-                                onChange={(e) => setNoteDraft(e.target.value)}
-                                onBlur={() => handleSaveNote(set.id, noteDraft)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') e.currentTarget.blur()
-                                  if (e.key === 'Escape') setEditingNoteId(null)
-                                }}
-                                placeholder="Add a note…"
-                                className="w-full rounded-md border border-line bg-surface-2 px-2 py-1 font-body text-xs text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
-                              />
-                            ) : (
-                              set.note && (
-                                <p className="truncate text-xs text-chalk-dim italic">{set.note}</p>
-                              )
-                            )}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ))
+                              {editingNoteId === set.id ? (
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  value={noteDraft}
+                                  onChange={(e) => setNoteDraft(e.target.value)}
+                                  onBlur={() => handleSaveNote(set.id, noteDraft)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') e.currentTarget.blur()
+                                    if (e.key === 'Escape') setEditingNoteId(null)
+                                  }}
+                                  placeholder="Add a note…"
+                                  className="w-full rounded-md border border-line bg-surface-2 px-2 py-1 font-body text-xs text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+                                />
+                              ) : (
+                                set.note && (
+                                  <p className="truncate text-xs text-chalk-dim italic">{set.note}</p>
+                                )
+                              )}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                {exerciseGroups.length > TODAYS_SETS_COLLAPSED_COUNT && (
+                  <button
+                    type="button"
+                    onClick={() => toggleTodaysExpanded(group.userId)}
+                    className="w-full border-t border-line bg-surface-2 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase active:border-blue-500 active:text-blue-400"
+                  >
+                    {todaysExpanded ? 'Show less' : `Show all (${exerciseGroups.length})`}
+                  </button>
+                )}
+              </Card>
+            )
+          })
         )}
       </div>
 
       <Card className="p-4">
-        <SectionLabel>Routines</SectionLabel>
-        <Routines
-          routines={routines}
-          loaded={routinesLoaded}
-          exercises={exercises}
-          schedule={schedule}
-          userId={session.user.id}
-          onRoutinesChanged={() => setRoutinesVersion((v) => v + 1)}
-          onScheduleChanged={onScheduleSaved}
-          onStart={onActiveRoutineChange}
-          onError={onError}
-        />
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel>Routines</SectionLabel>
+          <button
+            type="button"
+            onClick={() => setShowRoutines((v) => !v)}
+            className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+          >
+            {showRoutines ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showRoutines && (
+          <Routines
+            routines={routines}
+            loaded={routinesLoaded}
+            exercises={exercises}
+            schedule={schedule}
+            userId={session.user.id}
+            onRoutinesChanged={() => setRoutinesVersion((v) => v + 1)}
+            onScheduleChanged={onScheduleSaved}
+            onStart={onActiveRoutineChange}
+            onError={onError}
+          />
+        )}
       </Card>
 
       <Card className="p-4">
