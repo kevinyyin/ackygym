@@ -10,8 +10,11 @@ import {
 } from 'recharts'
 import Card from './Card'
 import { formatDate } from './dateUtils'
+import { useEscapeToClose } from './useEscapeToClose'
 
 function HistoryChartModal({ group, valueKey, getValue, formatTooltip, emptyLabel, referenceValue, onClose }) {
+  useEscapeToClose(!!group, onClose)
+
   if (!group) return null
 
   const sorted = [...group.entries].sort((a, b) => (a.date < b.date ? -1 : 1))
