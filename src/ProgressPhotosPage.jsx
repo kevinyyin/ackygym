@@ -4,7 +4,7 @@ import Card, { SectionLabel } from './Card'
 import { displayName } from './displayName'
 import { getTodayDateString, formatDate } from './dateUtils'
 import { CameraIcon } from './icons'
-import ConfirmDeleteButton from './ConfirmDeleteButton'
+import ConfirmModal from './ConfirmModal'
 
 const BUCKET = 'progress-photos'
 const SIGNED_URL_TTL = 60 * 60
@@ -24,6 +24,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   const [refreshKey, setRefreshKey] = useState(0)
   const [uploading, setUploading] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState(null)
+  const [photoToDelete, setPhotoToDelete] = useState(null)
 
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
 
@@ -151,6 +152,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     const { error: removeError } = await supabase.storage.from(BUCKET).remove([photo.path])
     if (removeError) {
       onError(removeError.message)
+      setPhotoToDelete(null)
       return
     }
 
@@ -159,6 +161,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
       .delete()
       .eq('id', photo.id)
 
+    setPhotoToDelete(null)
     if (deleteError) {
       onError(deleteError.message)
       return
@@ -168,6 +171,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   }
 
   return (
+    <>
     <div className="flex flex-col gap-4">
       <Card className="p-4">
         <div className="flex items-center justify-between gap-3">
@@ -227,13 +231,14 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                     </button>
                   )}
                   {isOwn && (
-                    <ConfirmDeleteButton
-                      onConfirm={() => handleDelete(photo)}
-                      label={`photo from ${formatDate(photo.date, { year: true })}`}
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 backdrop-blur"
-                      idleClassName="text-chalk hover:text-danger"
-                      armedClassName="bg-ink/70"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setPhotoToDelete(photo)}
+                      aria-label={`Delete photo from ${formatDate(photo.date, { year: true })}`}
+                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur hover:text-danger"
+                    >
+                      ✕
+                    </button>
                   )}
                 </div>
                 <p className="px-3 py-2 text-center font-mono text-xs text-chalk-dim">
@@ -271,6 +276,15 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
         </div>
       )}
     </div>
+
+    <ConfirmModal
+      open={photoToDelete !== null}
+      title="Delete photo?"
+      message={`This photo from ${photoToDelete ? formatDate(photoToDelete.date, { year: true }) : ''} will be permanently removed. This can't be undone.`}
+      onConfirm={() => handleDelete(photoToDelete)}
+      onCancel={() => setPhotoToDelete(null)}
+    />
+    </>
   )
 }
 

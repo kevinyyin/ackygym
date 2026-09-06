@@ -14,6 +14,7 @@ import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
 import { NoteIcon, TrophyIcon } from './icons'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
+import ConfirmModal from './ConfirmModal'
 
 const TODAYS_SETS_COLLAPSED_COUNT = 8
 
@@ -50,6 +51,7 @@ function Home({
   const [refreshKey, setRefreshKey] = useState(0)
   const [exercisesVersion, setExercisesVersion] = useState(0)
   const [selectedExercise, setSelectedExercise] = useState(null)
+  const [exerciseToDelete, setExerciseToDelete] = useState(null)
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [showLogSet, setShowLogSet] = useState(false)
@@ -188,6 +190,7 @@ function Home({
   async function handleDeleteExercise(exerciseId) {
     onError('')
     const { error } = await supabase.from('exercises').delete().eq('id', exerciseId)
+    setExerciseToDelete(null)
     if (error) {
       onError(
         error.code === '23503'
@@ -447,11 +450,14 @@ function Home({
                   <span className="w-full truncate text-sm text-chalk">{exercise.name}</span>
                   <MuscleTags muscles={exercise.exercise_muscles} />
                 </button>
-                <ConfirmDeleteButton
-                  onConfirm={() => handleDeleteExercise(exercise.id)}
-                  label={exercise.name}
-                  className="shrink-0 rounded px-1 py-0.5"
-                />
+                <button
+                  type="button"
+                  onClick={() => setExerciseToDelete(exercise)}
+                  aria-label={`Delete ${exercise.name}`}
+                  className="shrink-0 rounded px-1 py-0.5 text-chalk-dim hover:text-danger"
+                >
+                  ✕
+                </button>
               </li>
             ))}
           </ul>
@@ -474,6 +480,14 @@ function Home({
         onClose={() => setSelectedExercise(null)}
         onError={onError}
         onChanged={() => setRefreshKey((key) => key + 1)}
+      />
+
+      <ConfirmModal
+        open={exerciseToDelete !== null}
+        title="Delete exercise?"
+        message={`"${exerciseToDelete?.name}" will be removed from your exercise library. This can't be undone.`}
+        onConfirm={() => handleDeleteExercise(exerciseToDelete.id)}
+        onCancel={() => setExerciseToDelete(null)}
       />
     </div>
   )
