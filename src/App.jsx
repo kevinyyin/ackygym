@@ -8,11 +8,13 @@ import CalendarPage from './CalendarPage'
 import LiftsPage from './LiftsPage'
 import BodyWeightPage from './BodyWeightPage'
 import ProgressPhotosPage from './ProgressPhotosPage'
+import SetsHistoryPage from './SetsHistoryPage'
 import TimerPage from './TimerPage'
 import SettingsModal from './SettingsModal'
 import { displayName } from './displayName'
 import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
 import { loadWaterSettings, saveWaterSettings } from './waterSettings'
+import { loadWeightUnit, saveWeightUnit } from './weightUnitSettings'
 import { useRestTimer } from './useRestTimer'
 import {
   GridIcon,
@@ -34,6 +36,7 @@ const PAGE_TITLES = {
   '/photos': 'Photos',
   '/timer': 'Timer',
   '/routines': 'Routines',
+  '/history': 'History',
 }
 
 const TABS = [
@@ -56,6 +59,7 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
   const [cardVisibility, setCardVisibility] = useState(loadCardVisibility)
   const [waterSettings, setWaterSettings] = useState(loadWaterSettings)
+  const [weightUnit, setWeightUnitState] = useState(loadWeightUnit)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
   const errorRef = useRef(null)
@@ -126,6 +130,11 @@ function App() {
       saveWaterSettings(next)
       return next
     })
+  }
+
+  function setWeightUnit(next) {
+    setWeightUnitState(next)
+    saveWeightUnit(next)
   }
 
   useEffect(() => {
@@ -244,6 +253,7 @@ function App() {
                 onError={handleError}
                 showWaterTracker={cardVisibility.water}
                 waterSettings={waterSettings}
+                weightUnit={weightUnit}
                 activeRoutine={activeRoutine}
                 onActiveRoutineChange={setActiveRoutine}
               />
@@ -258,6 +268,7 @@ function App() {
                 onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
                 onError={handleError}
                 onActiveRoutineChange={setActiveRoutine}
+                weightUnit={weightUnit}
               />
             }
           />
@@ -268,6 +279,7 @@ function App() {
                 profiles={profiles}
                 userId={session.user.id}
                 onError={handleError}
+                weightUnit={weightUnit}
               />
             }
           />
@@ -278,6 +290,7 @@ function App() {
                 profiles={profiles}
                 userId={session.user.id}
                 onError={handleError}
+                weightUnit={weightUnit}
               />
             }
           />
@@ -290,6 +303,7 @@ function App() {
                 onError={handleError}
                 showCalorieTracker={cardVisibility.calorie}
                 showCalorieTracking={cardVisibility.calorieTracker}
+                weightUnit={weightUnit}
               />
             }
           />
@@ -314,6 +328,16 @@ function App() {
                 onStart={restTimer.start}
                 onPause={restTimer.pause}
                 onReset={restTimer.reset}
+              />
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <SetsHistoryPage
+                userId={session.user.id}
+                weightUnit={weightUnit}
+                onError={handleError}
               />
             }
           />
@@ -371,6 +395,8 @@ function App() {
         onToggle={toggleCardVisibility}
         waterSettings={waterSettings}
         onWaterSettingsChange={updateWaterSettings}
+        weightUnit={weightUnit}
+        onWeightUnitChange={setWeightUnit}
         onClose={() => setSettingsOpen(false)}
         profile={currentProfile}
         userId={session.user.id}

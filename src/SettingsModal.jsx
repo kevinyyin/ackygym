@@ -12,12 +12,16 @@ const WATER_MODES = [
   { key: 'bottles', label: 'Bottles' },
 ]
 
+const WEIGHT_UNITS = ['kg', 'lb']
+
 function SettingsModal({
   open,
   visibility,
   onToggle,
   waterSettings,
   onWaterSettingsChange,
+  weightUnit,
+  onWeightUnitChange,
   onClose,
   profile,
   userId,
@@ -28,6 +32,7 @@ function SettingsModal({
   const [savingUsername, setSavingUsername] = useState(false)
   const [usernameStatus, setUsernameStatus] = useState('')
   const [bottleSizeInput, setBottleSizeInput] = useState(String(waterSettings.bottleSizeMl))
+  const [goalInput, setGoalInput] = useState(String(waterSettings.goalMl))
   const [wasOpen, setWasOpen] = useState(open)
 
   // Re-seed the inputs from current values each time the modal opens (state
@@ -39,6 +44,7 @@ function SettingsModal({
       setUsername(profile?.username ?? '')
       setUsernameStatus('')
       setBottleSizeInput(String(waterSettings.bottleSizeMl))
+      setGoalInput(String(waterSettings.goalMl))
     }
   }
 
@@ -47,6 +53,14 @@ function SettingsModal({
     const numeric = Number(value)
     if (value !== '' && Number.isFinite(numeric) && numeric > 0) {
       onWaterSettingsChange({ bottleSizeMl: numeric })
+    }
+  }
+
+  function handleGoalChange(value) {
+    setGoalInput(value)
+    const numeric = Number(value)
+    if (value !== '' && Number.isFinite(numeric) && numeric > 0) {
+      onWaterSettingsChange({ goalMl: numeric })
     }
   }
 
@@ -152,6 +166,27 @@ function SettingsModal({
         </div>
 
         <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+          Weight unit
+        </p>
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
+          <span className="text-sm text-chalk">Display as</span>
+          <div className="inline-flex rounded-full border border-line bg-surface p-0.5">
+            {WEIGHT_UNITS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onWeightUnitChange(option)}
+                className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
+                  weightUnit === option ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
           Water tracking
         </p>
         <p className="mt-1 text-xs text-chalk-dim">
@@ -173,6 +208,19 @@ function SettingsModal({
               </button>
             ))}
           </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
+          <label htmlFor="water-goal" className="text-sm text-chalk">
+            Daily goal (mL)
+          </label>
+          <input
+            id="water-goal"
+            type="number"
+            min="1"
+            value={goalInput}
+            onChange={(e) => handleGoalChange(e.target.value)}
+            className="w-24 rounded-md border border-line bg-surface px-2 py-1.5 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+          />
         </div>
         {waterSettings.mode === 'bottles' && (
           <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">

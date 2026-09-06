@@ -6,14 +6,27 @@ import { BarbellIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 import ExercisePicker from './ExercisePicker'
 import { isValidSet } from './validation'
+import { toDisplayWeight, toStorageWeightKg, convertWeight, roundWeight } from './weightUnits'
 
-function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
+function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onError }) {
   const [routineId, setRoutineId] = useState('')
   const [exerciseId, setExerciseId] = useState('')
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [showCalculator, setShowCalculator] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  // Re-converts an in-progress weight value if the global unit is flipped in
+  // Settings while this form stays mounted underneath it — "adjust state
+  // during render" (React's recommended pattern), matching CalorieCalculator.jsx.
+  const [prevWeightUnit, setPrevWeightUnit] = useState(weightUnit)
+  if (prevWeightUnit !== weightUnit) {
+    setPrevWeightUnit(weightUnit)
+    setWeight((current) => {
+      if (current === '') return current
+      const numeric = Number(current)
+      return Number.isNaN(numeric) ? current : String(roundWeight(convertWeight(numeric, prevWeightUnit, weightUnit)))
+    })
+  }
   // Guards re-entrancy for rapid double-taps that land inside the same
   // event-loop tick, before React has re-rendered with `submitting: true` —
   // the `submitting` state alone isn't enough because both clicks read the
@@ -50,7 +63,7 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
         return
       }
 
-      setWeight(data ? String(data.weight) : '')
+      setWeight(data ? String(toDisplayWeight(data.weight, weightUnit)) : '')
       setReps(data ? String(data.reps) : '')
     }
 
@@ -58,6 +71,11 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
     return () => {
       cancelled = true
     }
+    // weightUnit is read but deliberately excluded: this effect should only
+    // re-fetch when the selected exercise changes, not re-run (and discard
+    // any in-progress typed value) when the unit is flipped — that case is
+    // handled separately above by re-converting the current `weight` state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExerciseId, userId, onError])
 
   async function handleSubmit(e) {
@@ -70,7 +88,7 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
     const { error } = await logSet({
       userId,
       exerciseId: Number(selectedExerciseId),
-      weight: Number(weight),
+      weight: toStorageWeightKg(weight, weightUnit),
       reps: Number(reps),
     })
 
@@ -121,7 +139,7 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
           step="any"
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
-          placeholder="Weight"
+          placeholder={`Weight (${weightUnit})`}
           required
           className={inputClasses}
         />
@@ -155,6 +173,7 @@ function WorkoutForm({ exercises, routines, userId, onLogged, onError }) {
       {showCalculator && (
         <PlateCalculatorModal
           initialWeight={Number(weight) || 0}
+          unit={weightUnit}
           onClose={() => setShowCalculator(false)}
         />
       )}

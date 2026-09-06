@@ -7,6 +7,7 @@ import MuscleTags from './MuscleTags'
 import ExerciseDetailModal from './ExerciseDetailModal'
 import { MedalIcon } from './icons'
 import { formatDate } from './dateUtils'
+import { toDisplayWeight } from './weightUnits'
 
 // Which muscle_groups.name values count as "lower body" for the purpose of
 // this grouping — everything else (including core) is bucketed as upper body.
@@ -44,7 +45,7 @@ function bodyRegionFor(exercise) {
 
 const COLLAPSED_COUNT = 8
 
-function LiftsPage({ profiles, userId, onError }) {
+function LiftsPage({ profiles, userId, weightUnit, onError }) {
   const [exercises, setExercises] = useState([])
   const [exercisesLoaded, setExercisesLoaded] = useState(false)
   const [bestSets, setBestSets] = useState(new Map())
@@ -144,8 +145,10 @@ function LiftsPage({ profiles, userId, onError }) {
                 {entry ? (
                   <>
                     <p className="font-mono text-xl font-bold text-blue-400">
-                      {entry.weight}
-                      <span className="ml-1 text-sm font-normal text-chalk-dim">×{entry.reps}</span>
+                      {toDisplayWeight(entry.weight, weightUnit)}
+                      <span className="ml-1 text-sm font-normal text-chalk-dim">
+                        {weightUnit} ×{entry.reps}
+                      </span>
                     </p>
                     <p className="font-mono text-[11px] text-chalk-dim/70">{formatDate(entry.date)}</p>
                   </>
@@ -244,6 +247,7 @@ function LiftsPage({ profiles, userId, onError }) {
       <ExerciseDetailModal
         exercise={selectedExercise}
         userId={userId}
+        weightUnit={weightUnit}
         onClose={() => setSelectedExercise(null)}
         onError={onError}
         onChanged={() => setSetsVersion((v) => v + 1)}

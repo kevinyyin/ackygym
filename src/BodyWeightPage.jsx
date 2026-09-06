@@ -1,136 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
-import { supabase } from './supabaseClient'
-import Card, { SectionLabel } from './Card'
-import { groupByUser } from './groupByUser'
-import { getTodayDateString, formatDate } from './dateUtils'
-import { convertWeight, roundWeight } from './weightUnits'
+import { useState } from 'react'
+import Card from './Card'
+import { formatDate } from './dateUtils'
+import { toDisplayWeight, toStorageWeightKg } from './weightUnits'
 import CalorieCalculator from './CalorieCalculator'
 import { calculateCalorieTargets, inToCm, loadStoredProfile } from './calorieMath'
 import MuscleVolume from './MuscleVolume'
 import WeightHistoryModal from './WeightHistoryModal'
 import CalorieTracker from './CalorieTracker'
-import ConfirmDeleteButton from './ConfirmDeleteButton'
-import { isPositiveNumber } from './validation'
-import { CheckIcon, CloseIcon } from './icons'
+import HistoryLogSection from './HistoryLogSection'
 
-const UNIT_STORAGE_KEY = 'gym-tracker:body-weight-unit'
-
-function getStoredUnit() {
-  const stored = localStorage.getItem(UNIT_STORAGE_KEY)
-  return stored === 'lb' ? 'lb' : 'kg'
-}
-
-function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCalorieTracking }) {
-  const [unit, setUnit] = useState(getStoredUnit)
+function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCalorieTracking, weightUnit: unit }) {
   const [entries, setEntries] = useState([])
   const [entriesLoaded, setEntriesLoaded] = useState(false)
-  const [inputValue, setInputValue] = useState('')
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [chartGroup, setChartGroup] = useState(null)
-  const [submitting, setSubmitting] = useState(false)
-  const submittingRef = useRef(false)
-  const [editingEntryId, setEditingEntryId] = useState(null)
-  const [draftWeightValue, setDraftWeightValue] = useState('')
-
-  useEffect(() => {
-    async function fetchEntries() {
-      const { data, error } = await supabase
-        .from('body_weights')
-        .select('id, user_id, date, weight_kg')
-        .order('date', { ascending: false })
-
-      if (error) {
-        onError(error.message)
-        return
-      }
-      setEntries(data)
-      setEntriesLoaded(true)
-    }
-
-    fetchEntries()
-  }, [refreshKey, onError])
-
-  function handleUnitChange(newUnit) {
-    if (newUnit === unit) return
-
-    setInputValue((prev) => {
-      if (prev === '') return prev
-      const numeric = Number(prev)
-      if (Number.isNaN(numeric)) return prev
-      return String(roundWeight(convertWeight(numeric, unit, newUnit)))
-    })
-    setUnit(newUnit)
-    localStorage.setItem(UNIT_STORAGE_KEY, newUnit)
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (submittingRef.current) return
-
-    const numeric = Number(inputValue)
-    if (!isPositiveNumber(numeric)) return
-
-    submittingRef.current = true
-    onError('')
-    setSubmitting(true)
-    const weightKg = unit === 'kg' ? numeric : convertWeight(numeric, 'lb', 'kg')
-
-    const { error } = await supabase.from('body_weights').upsert(
-      { user_id: userId, date: getTodayDateString(), weight_kg: weightKg },
-      { onConflict: 'user_id,date' }
-    )
-
-    submittingRef.current = false
-    setSubmitting(false)
-
-    if (error) {
-      onError(error.message)
-      return
-    }
-
-    setInputValue('')
-    setRefreshKey((k) => k + 1)
-  }
-
-  async function handleDelete(entryId) {
-    onError('')
-    const { error } = await supabase.from('body_weights').delete().eq('id', entryId)
-    if (error) {
-      onError(error.message)
-      return
-    }
-    setRefreshKey((k) => k + 1)
-  }
-
-  function startEdit(entry) {
-    setEditingEntryId(entry.id)
-    setDraftWeightValue(String(roundWeight(convertWeight(entry.weight_kg, 'kg', unit))))
-  }
-
-  function cancelEdit() {
-    setEditingEntryId(null)
-  }
-
-  async function saveEdit(entryId) {
-    const numeric = Number(draftWeightValue)
-    if (!isPositiveNumber(numeric)) return
-
-    onError('')
-    const weightKg = unit === 'kg' ? numeric : convertWeight(numeric, 'lb', 'kg')
-    const { error } = await supabase
-      .from('body_weights')
-      .update({ weight_kg: weightKg })
-      .eq('id', entryId)
-
-    if (error) {
-      onError(error.message)
-      return
-    }
-    setEditingEntryId(null)
-    setRefreshKey((k) => k + 1)
-  }
-
-  const groupedEntries = groupByUser(entries, profiles, userId, 'entries')
 
   const latestOwnEntry = entries.find((entry) => entry.user_id === userId)
 
@@ -156,39 +37,12 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
     }
   }
 
-  const inputClasses =
-    'w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none'
-
-  const unitToggle = (
-    <div className="inline-flex rounded-full border border-line bg-surface-2 p-0.5">
-      {['kg', 'lb'].map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => handleUnitChange(option)}
-          className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
-            unit === option ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
-          }`}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  )
-
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-4">
-        <div className="flex items-center justify-between">
-          <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-            Body weight
-          </p>
-          {unitToggle}
-        </div>
+        <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">Body weight</p>
         <p className="mt-3 font-mono text-5xl font-bold text-blue-400">
-          {latestOwnEntry
-            ? `${roundWeight(convertWeight(latestOwnEntry.weight_kg, 'kg', unit))}`
-            : '—'}
+          {latestOwnEntry ? `${toDisplayWeight(latestOwnEntry.weight_kg, unit)}` : '—'}
           <span className="ml-2 font-body text-lg font-normal text-chalk-dim">{unit}</span>
         </p>
         <p className="mt-1 text-xs text-chalk-dim">
@@ -202,28 +56,26 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
 
       <MuscleVolume userId={userId} onError={onError} />
 
-      <Card className="p-4">
-        <SectionLabel>Log today&apos;s weight</SectionLabel>
-        <form onSubmit={handleSubmit} className="mt-3 flex gap-3">
-          <input
-            type="number"
-            min="0"
-            step="0.1"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder={`Weight (${unit})`}
-            required
-            className={inputClasses}
-          />
-          <button
-            type="submit"
-            disabled={submitting}
-            className="shrink-0 rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
-          >
-            {submitting ? 'Logging…' : 'Log'}
-          </button>
-        </form>
-      </Card>
+      <HistoryLogSection
+        profiles={profiles}
+        userId={userId}
+        onError={onError}
+        tableName="body_weights"
+        selectColumns="id, user_id, date, weight_kg"
+        valueColumn="weight_kg"
+        logLabel="Log today's weight"
+        placeholder={`Weight (${unit})`}
+        inputProps={{ min: 0, step: 0.1 }}
+        parseInput={(v) => toStorageWeightKg(v, unit)}
+        formatValue={(raw) => toDisplayWeight(raw, unit)}
+        unitSuffix={unit}
+        emptyLogMessage="No body weight logged yet."
+        onEntriesChange={(data) => {
+          setEntries(data)
+          setEntriesLoaded(true)
+        }}
+        renderChartModal={(group, onClose) => <WeightHistoryModal group={group} unit={unit} onClose={onClose} />}
+      />
 
       {showCalorieTracker && (
         <CalorieCalculator userId={userId} latestWeightKg={latestOwnEntry?.weight_kg} unit={unit} />
@@ -232,102 +84,6 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
       {showCalorieTracking && (
         <CalorieTracker profiles={profiles} userId={userId} target={calorieTarget} onError={onError} />
       )}
-
-      <div className="flex flex-col gap-3">
-        <SectionLabel>History</SectionLabel>
-        {!entriesLoaded ? (
-          <Card className="p-4">
-            <p className="text-sm text-chalk-dim">Loading…</p>
-          </Card>
-        ) : groupedEntries.length === 0 ? (
-          <Card className="p-4">
-            <p className="text-sm text-chalk-dim">No body weight logged yet.</p>
-          </Card>
-        ) : (
-          groupedEntries.map((group) => (
-            <Card key={group.userId} className="overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setChartGroup(group)}
-                className="w-full border-b border-line px-4 py-2 text-left font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-              >
-                {group.name}
-              </button>
-              <ul className="divide-y divide-line">
-                {group.entries.map((entry) => {
-                  const isEditing = editingEntryId === entry.id
-                  return (
-                    <li
-                      key={entry.id}
-                      className="flex items-center justify-between gap-2 px-4 py-3"
-                    >
-                      <span className="font-mono text-sm text-chalk-dim">
-                        {formatDate(entry.date, { year: true })}
-                      </span>
-                      {isEditing ? (
-                        <span className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            autoFocus
-                            value={draftWeightValue}
-                            onChange={(e) => setDraftWeightValue(e.target.value)}
-                            className="w-20 rounded-md border border-line bg-surface-2 px-2 py-1 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
-                          />
-                          <span className="font-mono text-xs text-chalk-dim">{unit}</span>
-                          <button
-                            type="button"
-                            onClick={() => saveEdit(entry.id)}
-                            disabled={!isPositiveNumber(draftWeightValue)}
-                            className="shrink-0 text-blue-400 disabled:opacity-40"
-                            aria-label="Save weight entry"
-                          >
-                            <CheckIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEdit}
-                            className="shrink-0 text-chalk-dim hover:text-danger"
-                            aria-label="Cancel editing weight entry"
-                          >
-                            <CloseIcon className="h-4 w-4" />
-                          </button>
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-3">
-                          <span className="font-mono font-medium text-chalk">
-                            {roundWeight(convertWeight(entry.weight_kg, 'kg', unit))} {unit}
-                          </span>
-                          {entry.user_id === userId && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => startEdit(entry)}
-                                aria-label="Edit weight entry"
-                                className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-                              >
-                                Edit
-                              </button>
-                              <ConfirmDeleteButton
-                                onConfirm={() => handleDelete(entry.id)}
-                                label={`${formatDate(entry.date, { year: true })} weight entry`}
-                                className="shrink-0"
-                              />
-                            </>
-                          )}
-                        </span>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </Card>
-          ))
-        )}
-      </div>
-
-      <WeightHistoryModal group={chartGroup} unit={unit} onClose={() => setChartGroup(null)} />
     </div>
   )
 }

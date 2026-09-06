@@ -7,12 +7,14 @@ import AddExerciseForm from './AddExerciseForm'
 import ExerciseDetailModal from './ExerciseDetailModal'
 import Routines from './Routines'
 import ConfirmModal from './ConfirmModal'
+import UndoToast from './UndoToast'
+import { useDeferredDelete } from './useDeferredDelete'
 import { CloseIcon } from './icons'
 
 // Routine and exercise-library management, split out of Home so that page
 // can stay focused on today's status/logging — this is occasional
 // housekeeping, not a "today" action.
-function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRoutineChange }) {
+function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRoutineChange, weightUnit }) {
   const navigate = useNavigate()
   const [exercises, setExercises] = useState([])
   const [exercisesLoaded, setExercisesLoaded] = useState(false)
@@ -25,6 +27,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
   const [selectMode, setSelectMode] = useState(false)
   const [selectedExerciseIds, setSelectedExerciseIds] = useState(() => new Set())
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
+  const { isPending, message, stageDelete, undo } = useDeferredDelete()
 
   useEffect(() => {
     async function fetchExercises() {
@@ -69,19 +72,25 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
     fetchRoutines()
   }, [routinesVersion, onError])
 
-  async function handleDeleteExercise(exerciseId) {
-    onError('')
-    const { error } = await supabase.from('exercises').delete().eq('id', exerciseId)
+  function handleDeleteExercise(exercise) {
     setExerciseToDelete(null)
-    if (error) {
-      onError(
-        error.code === '23503'
-          ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
-          : error.message
-      )
-      return
-    }
-    setExercisesVersion((v) => v + 1)
+    stageDelete({
+      ids: [exercise.id],
+      message: `"${exercise.name}" deleted`,
+      commit: async () => {
+        onError('')
+        const { error } = await supabase.from('exercises').delete().eq('id', exercise.id)
+        if (error) {
+          onError(
+            error.code === '23503'
+              ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
+              : error.message
+          )
+          return
+        }
+        setExercisesVersion((v) => v + 1)
+      },
+    })
   }
 
   function toggleSelectMode() {
@@ -104,27 +113,36 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
     )
   }
 
-  async function handleBulkDelete() {
-    onError('')
-    const { error } = await supabase.from('exercises').delete().in('id', [...selectedExerciseIds])
+  function handleBulkDelete() {
+    const ids = [...selectedExerciseIds]
     setConfirmBulkDelete(false)
-    if (error) {
-      onError(
-        error.code === '23503'
-          ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
-          : error.message
-      )
-      return
-    }
     setSelectMode(false)
     setSelectedExerciseIds(new Set())
-    setExercisesVersion((v) => v + 1)
+    stageDelete({
+      ids,
+      message: `${ids.length} exercise${ids.length === 1 ? '' : 's'} deleted`,
+      commit: async () => {
+        onError('')
+        const { error } = await supabase.from('exercises').delete().in('id', ids)
+        if (error) {
+          onError(
+            error.code === '23503'
+              ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
+              : error.message
+          )
+          return
+        }
+        setExercisesVersion((v) => v + 1)
+      },
+    })
   }
 
   function handleStart(routine) {
     onActiveRoutineChange(routine)
     navigate('/')
   }
+
+  const visibleExercises = exercises.filter((e) => !isPending(e.id))
 
   return (
     <div className="flex flex-col gap-5">
@@ -146,15 +164,15 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
       <Card className="p-4">
         <div className="flex items-center justify-between gap-2">
           <SectionLabel>Exercises</SectionLabel>
-          {exercises.length > 0 && (
+          {visibleExercises.length > 0 && (
             <div className="flex shrink-0 items-center gap-3">
               {selectMode && (
                 <button
                   type="button"
-                  onClick={() => toggleSelectAll(exercises.map((e) => e.id))}
+                  onClick={() => toggleSelectAll(visibleExercises.map((e) => e.id))}
                   className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
                 >
-                  {selectedExerciseIds.size === exercises.length ? 'Select none' : 'Select all'}
+                  {selectedExerciseIds.size === visibleExercises.length ? 'Select none' : 'Select all'}
                 </button>
               )}
               <button
@@ -177,7 +195,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
           <p className="mt-3 text-sm text-chalk-dim">Loading…</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
-            {exercises.map((exercise) => (
+            {visibleExercises.map((exercise) => (
               <li
                 key={exercise.id}
                 className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface-2 py-1.5 pl-3 pr-2"
@@ -228,6 +246,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
       <ExerciseDetailModal
         exercise={selectedExercise}
         userId={session.user.id}
+        weightUnit={weightUnit}
         onClose={() => setSelectedExercise(null)}
         onError={onError}
         onChanged={() => setExercisesVersion((v) => v + 1)}
@@ -236,18 +255,20 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
       <ConfirmModal
         open={exerciseToDelete !== null}
         title="Delete exercise?"
-        message={`"${exerciseToDelete?.name}" will be removed from your exercise library. This can't be undone.`}
-        onConfirm={() => handleDeleteExercise(exerciseToDelete.id)}
+        message={`"${exerciseToDelete?.name}" will be removed from your exercise library.`}
+        onConfirm={() => handleDeleteExercise(exerciseToDelete)}
         onCancel={() => setExerciseToDelete(null)}
       />
 
       <ConfirmModal
         open={confirmBulkDelete}
         title="Delete selected exercises?"
-        message={`${selectedExerciseIds.size} exercise${selectedExerciseIds.size === 1 ? '' : 's'} will be removed from your exercise library. This can't be undone.`}
+        message={`${selectedExerciseIds.size} exercise${selectedExerciseIds.size === 1 ? '' : 's'} will be removed from your exercise library.`}
         onConfirm={handleBulkDelete}
         onCancel={() => setConfirmBulkDelete(false)}
       />
+
+      <UndoToast message={message} onUndo={undo} />
     </div>
   )
 }

@@ -5,8 +5,9 @@ import { logSet } from './logSet'
 import { BarbellIcon, TrophyIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 import { isValidSet } from './validation'
+import { toDisplayWeight, toStorageWeightKg, convertWeight, roundWeight } from './weightUnits'
 
-function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
+function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError }) {
   const [rows, setRows] = useState(null)
   const [calculatorRowId, setCalculatorRowId] = useState(null)
   const [prExerciseIds, setPrExerciseIds] = useState(() => new Set())
@@ -15,6 +16,25 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
   // tap on the same row's Log button (both landing before React re-renders)
   // can't both slip past the guard — see the same note in WorkoutForm.jsx.
   const loggingExerciseIdsRef = useRef(new Set())
+
+  // Re-converts every row's in-progress weight if the global unit is
+  // flipped in Settings while this stays mounted underneath it — "adjust
+  // state during render" (React's recommended pattern), matching
+  // CalorieCalculator.jsx / the same block in WorkoutForm.jsx.
+  const [prevWeightUnit, setPrevWeightUnit] = useState(weightUnit)
+  if (prevWeightUnit !== weightUnit) {
+    setPrevWeightUnit(weightUnit)
+    setRows((current) =>
+      current === null
+        ? current
+        : current.map((row) => {
+            if (row.weight === '') return row
+            const numeric = Number(row.weight)
+            if (Number.isNaN(numeric)) return row
+            return { ...row, weight: String(roundWeight(convertWeight(numeric, prevWeightUnit, weightUnit))) }
+          })
+    )
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -26,7 +46,7 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
           return {
             exerciseId: re.exercise_id,
             name: re.exercises.name,
-            weight: error || !data ? '' : String(data.weight),
+            weight: error || !data ? '' : String(toDisplayWeight(data.weight, weightUnit)),
             reps: error || !data ? '' : String(data.reps),
           }
         })
@@ -38,6 +58,10 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
     return () => {
       cancelled = true
     }
+    // weightUnit deliberately excluded — see the same rationale in
+    // WorkoutForm.jsx: a unit flip re-converts existing rows above rather
+    // than re-fetching and discarding in-progress edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routine, userId])
 
   function updateRow(exerciseId, field, value) {
@@ -61,7 +85,7 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
     const { error, isPr } = await logSet({
       userId,
       exerciseId: row.exerciseId,
-      weight: Number(row.weight),
+      weight: toStorageWeightKg(row.weight, weightUnit),
       reps: Number(row.reps),
     })
 
@@ -124,7 +148,7 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
                 step="any"
                 value={row.weight}
                 onChange={(e) => updateRow(row.exerciseId, 'weight', e.target.value)}
-                placeholder="Wt"
+                placeholder={`Wt (${weightUnit})`}
                 className={inputClasses}
               />
               <button
@@ -161,6 +185,7 @@ function ActiveRoutine({ routine, userId, onExit, onLogged, onError }) {
       {calculatorRowId !== null && (
         <PlateCalculatorModal
           initialWeight={Number(rows.find((r) => r.exerciseId === calculatorRowId)?.weight) || 0}
+          unit={weightUnit}
           onClose={() => setCalculatorRowId(null)}
         />
       )}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { WEEKDAY_SHORT } from './weekdays'
 import { toDateString, formatDate } from './dateUtils'
@@ -204,7 +205,7 @@ function ContributionGraph({ weeks, monthLabels, onDayClick }) {
   )
 }
 
-function CalendarPage({ profiles, userId, onError }) {
+function CalendarPage({ profiles, userId, weightUnit, onError }) {
   const [dayDataByUser, setDayDataByUser] = useState(new Map())
   const [setsLoaded, setSetsLoaded] = useState(false)
   const [scheduleMap, setScheduleMap] = useState(new Map())
@@ -371,11 +372,22 @@ function CalendarPage({ profiles, userId, onError }) {
           )
         })}
       </div>
+
+      <Link
+        to="/history"
+        className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 shadow-[inset_0_1px_0_var(--card-highlight)] active:border-blue-500"
+      >
+        <span className="text-sm font-medium text-chalk">Search all sets</span>
+        <span className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+          Open →
+        </span>
+      </Link>
     </div>
 
     <WorkoutDayModal
       date={viewingDate}
       userId={userId}
+      weightUnit={weightUnit}
       onClose={() => setViewingDate(null)}
       onError={onError}
       onRepeated={() => setSetsVersion((v) => v + 1)}
