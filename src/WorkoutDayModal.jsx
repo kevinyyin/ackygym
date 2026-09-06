@@ -24,7 +24,7 @@ function groupSetsByExercise(sets) {
 
 // Shows one past day's logged sets and offers to re-log all of them as
 // today's sets — a whole-session repeat, distinct from the existing
-// per-set repeat (↻) on Home, which only replays one set at a time.
+// per-set repeat (RepeatIcon) on Home, which only replays one set at a time.
 function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
   const [sets, setSets] = useState(null)
   const [repeating, setRepeating] = useState(false)

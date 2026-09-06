@@ -140,6 +140,7 @@ function Home({
       return
     }
     setRefreshKey((key) => key + 1)
+    setShowTodaysSets(true)
   }
 
   async function handleDeleteSet(setId) {
@@ -273,7 +274,10 @@ function Home({
               exercises={exercises}
               routines={routines}
               userId={session.user.id}
-              onLogged={() => setRefreshKey((key) => key + 1)}
+              onLogged={() => {
+                setRefreshKey((key) => key + 1)
+                setShowTodaysSets(true)
+              }}
               onError={onError}
             />
           </div>
@@ -285,7 +289,10 @@ function Home({
           routine={activeRoutine}
           userId={session.user.id}
           onExit={() => onActiveRoutineChange(null)}
-          onLogged={() => setRefreshKey((key) => key + 1)}
+          onLogged={() => {
+            setRefreshKey((key) => key + 1)
+            setShowTodaysSets(true)
+          }}
           onError={onError}
         />
       )}

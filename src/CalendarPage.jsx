@@ -320,6 +320,8 @@ function CalendarPage({ profiles, userId, onError }) {
         })}
       </div>
 
+      <p className="text-xs text-chalk-dim">Tap a day to view or repeat that workout.</p>
+
       <div className="flex flex-col gap-3">
         {rows.map((profile, i) => {
           const byDate = dayDataByUser.get(profile.id) ?? new Map()

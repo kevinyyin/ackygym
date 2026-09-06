@@ -22,6 +22,9 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
   const [routinesVersion, setRoutinesVersion] = useState(0)
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [exerciseToDelete, setExerciseToDelete] = useState(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedExerciseIds, setSelectedExerciseIds] = useState(() => new Set())
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
 
   useEffect(() => {
     async function fetchExercises() {
@@ -81,6 +84,43 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
     setExercisesVersion((v) => v + 1)
   }
 
+  function toggleSelectMode() {
+    setSelectMode((v) => !v)
+    setSelectedExerciseIds(new Set())
+  }
+
+  function toggleExerciseSelected(exerciseId) {
+    setSelectedExerciseIds((current) => {
+      const next = new Set(current)
+      if (next.has(exerciseId)) next.delete(exerciseId)
+      else next.add(exerciseId)
+      return next
+    })
+  }
+
+  function toggleSelectAll(allExerciseIds) {
+    setSelectedExerciseIds((current) =>
+      current.size === allExerciseIds.length ? new Set() : new Set(allExerciseIds)
+    )
+  }
+
+  async function handleBulkDelete() {
+    onError('')
+    const { error } = await supabase.from('exercises').delete().in('id', [...selectedExerciseIds])
+    setConfirmBulkDelete(false)
+    if (error) {
+      onError(
+        error.code === '23503'
+          ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
+          : error.message
+      )
+      return
+    }
+    setSelectMode(false)
+    setSelectedExerciseIds(new Set())
+    setExercisesVersion((v) => v + 1)
+  }
+
   function handleStart(routine) {
     onActiveRoutineChange(routine)
     navigate('/')
@@ -104,7 +144,29 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
       </Card>
 
       <Card className="p-4">
-        <SectionLabel>Exercises</SectionLabel>
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel>Exercises</SectionLabel>
+          {exercises.length > 0 && (
+            <div className="flex shrink-0 items-center gap-3">
+              {selectMode && (
+                <button
+                  type="button"
+                  onClick={() => toggleSelectAll(exercises.map((e) => e.id))}
+                  className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                >
+                  {selectedExerciseIds.size === exercises.length ? 'Select none' : 'Select all'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={toggleSelectMode}
+                className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+              >
+                {selectMode ? 'Cancel' : 'Select'}
+              </button>
+            </div>
+          )}
+        </div>
         <AddExerciseForm
           exercises={exercises}
           showMuscleGroups
@@ -122,23 +184,44 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
               >
                 <button
                   type="button"
-                  onClick={() => setSelectedExercise(exercise)}
+                  onClick={() =>
+                    selectMode ? toggleExerciseSelected(exercise.id) : setSelectedExercise(exercise)
+                  }
                   className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left"
                 >
                   <span className="w-full truncate text-sm text-chalk">{exercise.name}</span>
                   <MuscleTags muscles={exercise.exercise_muscles} />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setExerciseToDelete(exercise)}
-                  aria-label={`Delete ${exercise.name}`}
-                  className="shrink-0 rounded px-1 py-0.5 text-chalk-dim hover:text-danger"
-                >
-                  <CloseIcon className="h-4 w-4" />
-                </button>
+                {selectMode ? (
+                  <input
+                    type="checkbox"
+                    checked={selectedExerciseIds.has(exercise.id)}
+                    onChange={() => toggleExerciseSelected(exercise.id)}
+                    aria-label={`Select ${exercise.name}`}
+                    className="h-4 w-4 shrink-0 accent-blue-500"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setExerciseToDelete(exercise)}
+                    aria-label={`Delete ${exercise.name}`}
+                    className="shrink-0 rounded px-1 py-0.5 text-chalk-dim hover:text-danger"
+                  >
+                    <CloseIcon className="h-4 w-4" />
+                  </button>
+                )}
               </li>
             ))}
           </ul>
+        )}
+        {selectMode && selectedExerciseIds.size > 0 && (
+          <button
+            type="button"
+            onClick={() => setConfirmBulkDelete(true)}
+            className="mt-3 w-full rounded-md border border-danger px-4 py-2 font-body text-sm font-bold text-danger active:bg-danger/10"
+          >
+            Delete {selectedExerciseIds.size} selected
+          </button>
         )}
       </Card>
 
@@ -156,6 +239,14 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
         message={`"${exerciseToDelete?.name}" will be removed from your exercise library. This can't be undone.`}
         onConfirm={() => handleDeleteExercise(exerciseToDelete.id)}
         onCancel={() => setExerciseToDelete(null)}
+      />
+
+      <ConfirmModal
+        open={confirmBulkDelete}
+        title="Delete selected exercises?"
+        message={`${selectedExerciseIds.size} exercise${selectedExerciseIds.size === 1 ? '' : 's'} will be removed from your exercise library. This can't be undone.`}
+        onConfirm={handleBulkDelete}
+        onCancel={() => setConfirmBulkDelete(false)}
       />
     </div>
   )
