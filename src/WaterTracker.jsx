@@ -6,11 +6,18 @@ import { getTodayDateString } from './dateUtils'
 import { DropletIcon } from './icons'
 import WaterBottle from './WaterBottle'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
+import { formatBottles } from './waterUnits'
 
 const GOAL_ML = 2000
 const QUICK_ADD_ML = [250, 500, 750]
+const QUICK_ADD_BOTTLE_FRACTIONS = [
+  { fraction: 0.5, label: '+½ bottle' },
+  { fraction: 1, label: '+1 bottle' },
+  { fraction: 2, label: '+2 bottles' },
+]
 
-function WaterTracker({ session, profiles, onError }) {
+function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl }) {
+  const isBottles = waterMode === 'bottles'
   const [logs, setLogs] = useState([])
   const [refreshKey, setRefreshKey] = useState(0)
   const [customValue, setCustomValue] = useState('')
@@ -51,7 +58,7 @@ function WaterTracker({ session, profiles, onError }) {
     e.preventDefault()
     const amount = Number(customValue)
     if (!amount || amount <= 0) return
-    await handleAdd(amount)
+    await handleAdd(isBottles ? Math.round(amount * bottleSizeMl) : amount)
     setCustomValue('')
   }
 
@@ -127,9 +134,9 @@ function WaterTracker({ session, profiles, onError }) {
             <WaterBottle progress={ownProgress} className="h-32 w-20 shrink-0" />
             <div className="min-w-0">
               <p className="font-mono text-4xl font-bold text-blue-400">
-                {ownTotalMl}
+                {isBottles ? formatBottles(ownTotalMl, bottleSizeMl) : ownTotalMl}
                 <span className="ml-1 font-body text-lg font-normal text-chalk-dim">
-                  / {GOAL_ML} ml
+                  / {isBottles ? `${formatBottles(GOAL_ML, bottleSizeMl)} bottles` : `${GOAL_ML} ml`}
                 </span>
               </p>
               <p className="mt-1 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
@@ -143,15 +150,25 @@ function WaterTracker({ session, profiles, onError }) {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {QUICK_ADD_ML.map((amount) => (
-              <button
-                key={amount}
-                onClick={() => handleAdd(amount)}
-                className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk active:border-blue-500 active:text-blue-400"
-              >
-                +{amount} ml
-              </button>
-            ))}
+            {isBottles
+              ? QUICK_ADD_BOTTLE_FRACTIONS.map(({ fraction, label }) => (
+                  <button
+                    key={fraction}
+                    onClick={() => handleAdd(Math.round(bottleSizeMl * fraction))}
+                    className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk active:border-blue-500 active:text-blue-400"
+                  >
+                    {label}
+                  </button>
+                ))
+              : QUICK_ADD_ML.map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={() => handleAdd(amount)}
+                    className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk active:border-blue-500 active:text-blue-400"
+                  >
+                    +{amount} ml
+                  </button>
+                ))}
             <button
               onClick={handleUndo}
               disabled={ownTotalMl === 0}
@@ -177,10 +194,11 @@ function WaterTracker({ session, profiles, onError }) {
           <form onSubmit={handleCustomAdd} className="mt-3 flex gap-2">
             <input
               type="number"
-              min="1"
+              min={isBottles ? '0.1' : '1'}
+              step={isBottles ? '0.1' : '1'}
               value={customValue}
               onChange={(e) => setCustomValue(e.target.value)}
-              placeholder="Custom amount (ml)"
+              placeholder={isBottles ? 'Custom amount (bottles)' : 'Custom amount (ml)'}
               className="w-full rounded-md border border-line bg-surface-2 px-4 py-2.5 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
             />
             <button
@@ -197,7 +215,9 @@ function WaterTracker({ session, profiles, onError }) {
                 <li key={entry.userId} className="flex items-center justify-between gap-2">
                   <span className="text-sm text-chalk-dim">{entry.name}</span>
                   <span className="font-mono text-sm text-chalk">
-                    {entry.totalMl} / {GOAL_ML} ml
+                    {isBottles
+                      ? `${formatBottles(entry.totalMl, bottleSizeMl)} / ${formatBottles(GOAL_ML, bottleSizeMl)} bottles`
+                      : `${entry.totalMl} / ${GOAL_ML} ml`}
                   </span>
                 </li>
               ))}
