@@ -61,6 +61,9 @@ function Home({
   const [routinesLoaded, setRoutinesLoaded] = useState(false)
   const [routinesVersion, setRoutinesVersion] = useState(0)
   const [expandedTodaysUserIds, setExpandedTodaysUserIds] = useState(() => new Set())
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedSetIds, setSelectedSetIds] = useState(() => new Set())
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
 
   useEffect(() => {
     async function fetchExercises() {
@@ -158,6 +161,33 @@ function Home({
       onError(error.message)
       return
     }
+    setRefreshKey((key) => key + 1)
+  }
+
+  function toggleSelectMode() {
+    setSelectMode((v) => !v)
+    setSelectedSetIds(new Set())
+  }
+
+  function toggleSetSelected(setId) {
+    setSelectedSetIds((current) => {
+      const next = new Set(current)
+      if (next.has(setId)) next.delete(setId)
+      else next.add(setId)
+      return next
+    })
+  }
+
+  async function handleBulkDelete() {
+    onError('')
+    const { error } = await supabase.from('sets').delete().in('id', [...selectedSetIds])
+    setConfirmBulkDelete(false)
+    if (error) {
+      onError(error.message)
+      return
+    }
+    setSelectMode(false)
+    setSelectedSetIds(new Set())
     setRefreshKey((key) => key + 1)
   }
 
@@ -272,7 +302,18 @@ function Home({
       )}
 
       <div className="flex flex-col gap-3">
-        <SectionLabel>Today&apos;s sets</SectionLabel>
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel>Today&apos;s sets</SectionLabel>
+          {todaysSets.some((s) => s.user_id === session.user.id) && (
+            <button
+              type="button"
+              onClick={toggleSelectMode}
+              className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+            >
+              {selectMode ? 'Cancel' : 'Select'}
+            </button>
+          )}
+        </div>
         {!todaysSetsLoaded ? (
           <Card className="p-4">
             <p className="text-sm text-chalk-dim">Loading…</p>
@@ -322,29 +363,38 @@ function Home({
                                   )}
                                 </span>
                                 <span className="flex items-center gap-3">
-                                  {set.user_id === session.user.id && (
-                                    <>
-                                      <button
-                                        onClick={() => openNoteEditor(set)}
-                                        aria-label={`Note for ${exerciseGroup.name} set`}
-                                        className="shrink-0 text-chalk-dim hover:text-blue-400"
-                                      >
-                                        <NoteIcon className="h-4 w-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleRepeatSet(set)}
-                                        aria-label={`Repeat ${exerciseGroup.name} set`}
-                                        className="shrink-0 text-chalk-dim hover:text-blue-400"
-                                      >
-                                        ↻
-                                      </button>
-                                      <ConfirmDeleteButton
-                                        onConfirm={() => handleDeleteSet(set.id)}
-                                        label={`${exerciseGroup.name} set`}
-                                        className="shrink-0"
+                                  {set.user_id === session.user.id &&
+                                    (selectMode ? (
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedSetIds.has(set.id)}
+                                        onChange={() => toggleSetSelected(set.id)}
+                                        aria-label={`Select ${exerciseGroup.name} set`}
+                                        className="h-4 w-4 accent-blue-500"
                                       />
-                                    </>
-                                  )}
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={() => openNoteEditor(set)}
+                                          aria-label={`Note for ${exerciseGroup.name} set`}
+                                          className="shrink-0 text-chalk-dim hover:text-blue-400"
+                                        >
+                                          <NoteIcon className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleRepeatSet(set)}
+                                          aria-label={`Repeat ${exerciseGroup.name} set`}
+                                          className="shrink-0 text-chalk-dim hover:text-blue-400"
+                                        >
+                                          ↻
+                                        </button>
+                                        <ConfirmDeleteButton
+                                          onConfirm={() => handleDeleteSet(set.id)}
+                                          label={`${exerciseGroup.name} set`}
+                                          className="shrink-0"
+                                        />
+                                      </>
+                                    ))}
                                 </span>
                               </div>
 
@@ -386,6 +436,15 @@ function Home({
               </Card>
             )
           })
+        )}
+        {selectMode && selectedSetIds.size > 0 && (
+          <button
+            type="button"
+            onClick={() => setConfirmBulkDelete(true)}
+            className="w-full rounded-md border border-danger px-4 py-2 font-body text-sm font-bold text-danger active:bg-danger/10"
+          >
+            Delete {selectedSetIds.size} selected
+          </button>
         )}
       </div>
 
@@ -488,6 +547,14 @@ function Home({
         message={`"${exerciseToDelete?.name}" will be removed from your exercise library. This can't be undone.`}
         onConfirm={() => handleDeleteExercise(exerciseToDelete.id)}
         onCancel={() => setExerciseToDelete(null)}
+      />
+
+      <ConfirmModal
+        open={confirmBulkDelete}
+        title="Delete selected sets?"
+        message={`${selectedSetIds.size} set${selectedSetIds.size === 1 ? '' : 's'} will be permanently deleted.`}
+        onConfirm={handleBulkDelete}
+        onCancel={() => setConfirmBulkDelete(false)}
       />
     </div>
   )

@@ -25,6 +25,9 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   const [uploading, setUploading] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState(null)
   const [photoToDelete, setPhotoToDelete] = useState(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState(() => new Set())
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
 
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
 
@@ -170,22 +173,91 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     setRefreshKey((k) => k + 1)
   }
 
+  function toggleSelectMode() {
+    setSelectMode((v) => !v)
+    setSelectedPhotoIds(new Set())
+  }
+
+  function togglePhotoSelected(photoId) {
+    setSelectedPhotoIds((current) => {
+      const next = new Set(current)
+      if (next.has(photoId)) next.delete(photoId)
+      else next.add(photoId)
+      return next
+    })
+  }
+
+  async function handleBulkShare() {
+    onError('')
+    const { error } = await supabase
+      .from('progress_photos')
+      .update({ shared: true })
+      .in('id', [...selectedPhotoIds])
+
+    if (error) {
+      onError(error.message)
+      return
+    }
+
+    setSelectMode(false)
+    setSelectedPhotoIds(new Set())
+    setRefreshKey((k) => k + 1)
+  }
+
+  async function handleBulkDelete() {
+    onError('')
+    const paths = photos.filter((p) => selectedPhotoIds.has(p.id)).map((p) => p.path)
+
+    const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths)
+    if (removeError) {
+      onError(removeError.message)
+      setConfirmBulkDelete(false)
+      return
+    }
+
+    const { error: deleteError } = await supabase
+      .from('progress_photos')
+      .delete()
+      .in('id', [...selectedPhotoIds])
+
+    setConfirmBulkDelete(false)
+    if (deleteError) {
+      onError(deleteError.message)
+      return
+    }
+
+    setSelectMode(false)
+    setSelectedPhotoIds(new Set())
+    setRefreshKey((k) => k + 1)
+  }
+
   return (
     <>
     <div className="flex flex-col gap-4">
       <Card className="p-4">
         <div className="flex items-center justify-between gap-3">
           <SectionLabel>Progress photos</SectionLabel>
-          <label className="shrink-0 cursor-pointer rounded-md bg-blue-500 px-4 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600">
-            {uploading ? 'Uploading…' : 'Add photo'}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleUpload}
-              disabled={uploading}
-              className="hidden"
-            />
-          </label>
+          <div className="flex shrink-0 items-center gap-3">
+            {photos.some((p) => p.user_id === userId) && (
+              <button
+                type="button"
+                onClick={toggleSelectMode}
+                className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+              >
+                {selectMode ? 'Cancel' : 'Select'}
+              </button>
+            )}
+            <label className="cursor-pointer rounded-md bg-blue-500 px-4 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600">
+              {uploading ? 'Uploading…' : 'Add photo'}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleUpload}
+                disabled={uploading}
+                className="hidden"
+              />
+            </label>
+          </div>
         </div>
         <p className="mt-2 text-xs text-chalk-dim">
           Private by default — share individual photos to let others see them.
@@ -211,15 +283,19 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                     <img
                       src={signedUrlByPath[photo.path]}
                       alt={`Progress photo from ${formatDate(photo.date, { year: true })}`}
-                      onClick={() => setViewingPhoto(photo)}
-                      className="h-full w-full cursor-pointer object-cover"
+                      onClick={() =>
+                        isOwn && selectMode ? togglePhotoSelected(photo.id) : setViewingPhoto(photo)
+                      }
+                      className={`h-full w-full cursor-pointer object-cover ${
+                        selectMode && selectedPhotoIds.has(photo.id) ? 'opacity-50' : ''
+                      }`}
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-chalk-dim">
                       <CameraIcon className="h-6 w-6" />
                     </div>
                   )}
-                  {isOwn && (
+                  {isOwn && !selectMode && (
                     <button
                       onClick={() => handleToggleShare(photo)}
                       aria-label={photo.shared ? 'Stop sharing photo' : 'Share photo'}
@@ -230,7 +306,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                       {photo.shared ? 'Shared' : 'Share'}
                     </button>
                   )}
-                  {isOwn && (
+                  {isOwn && !selectMode && (
                     <button
                       type="button"
                       onClick={() => setPhotoToDelete(photo)}
@@ -240,6 +316,15 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                       ✕
                     </button>
                   )}
+                  {isOwn && selectMode && (
+                    <input
+                      type="checkbox"
+                      checked={selectedPhotoIds.has(photo.id)}
+                      onChange={() => togglePhotoSelected(photo.id)}
+                      aria-label={`Select photo from ${formatDate(photo.date, { year: true })}`}
+                      className="absolute top-2 right-2 h-5 w-5 accent-blue-500"
+                    />
+                  )}
                 </div>
                 <p className="px-3 py-2 text-center font-mono text-xs text-chalk-dim">
                   {captionFor(photo, userId, profileByUserId)}
@@ -247,6 +332,25 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
               </Card>
             )
           })}
+        </div>
+      )}
+
+      {selectMode && selectedPhotoIds.size > 0 && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleBulkShare}
+            className="flex-1 rounded-md border border-line px-4 py-2 font-body text-sm font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400"
+          >
+            Share {selectedPhotoIds.size} selected
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmBulkDelete(true)}
+            className="flex-1 rounded-md border border-danger px-4 py-2 font-body text-sm font-bold text-danger active:bg-danger/10"
+          >
+            Delete {selectedPhotoIds.size} selected
+          </button>
         </div>
       )}
 
@@ -283,6 +387,14 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
       message={`This photo from ${photoToDelete ? formatDate(photoToDelete.date, { year: true }) : ''} will be permanently removed. This can't be undone.`}
       onConfirm={() => handleDelete(photoToDelete)}
       onCancel={() => setPhotoToDelete(null)}
+    />
+
+    <ConfirmModal
+      open={confirmBulkDelete}
+      title="Delete selected photos?"
+      message={`${selectedPhotoIds.size} photo${selectedPhotoIds.size === 1 ? '' : 's'} will be permanently removed. This can't be undone.`}
+      onConfirm={handleBulkDelete}
+      onCancel={() => setConfirmBulkDelete(false)}
     />
     </>
   )
