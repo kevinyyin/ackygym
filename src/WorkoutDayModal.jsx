@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { logSet } from './logSet'
 import { formatDate } from './dateUtils'
 import Card from './Card'
 import ConfirmModal from './ConfirmModal'
 import { useEscapeToClose } from './useEscapeToClose'
+import { useModalFocusTrap } from './useModalFocusTrap'
 import { CloseIcon } from './icons'
 
 function groupSetsByExercise(sets) {
@@ -35,6 +36,8 @@ function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
   const repeatingRef = useRef(false)
 
   useEscapeToClose(!!date, onClose)
+  const containerRef = useModalFocusTrap(!!date)
+  const titleId = useId()
 
   useEffect(() => {
     if (!date) return
@@ -103,9 +106,17 @@ function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
       className="fixed inset-0 z-20 flex items-center justify-center bg-ink/80 p-4"
       onClick={onClose}
     >
-      <Card className="w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+      <Card
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-sm p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between gap-3">
-          <h2 className="font-display text-xl leading-none tracking-tight text-chalk uppercase">
+          <h2 id={titleId} className="font-display text-xl leading-none tracking-tight text-chalk uppercase">
             {formatDate(date, { year: true })}
           </h2>
           <button

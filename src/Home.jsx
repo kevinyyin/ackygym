@@ -14,6 +14,17 @@ import ConfirmDeleteButton from './ConfirmDeleteButton'
 import ConfirmModal from './ConfirmModal'
 
 const TODAYS_SETS_COLLAPSED_COUNT = 8
+const SHOW_LOG_SET_KEY = 'gym-tracker:home-show-log-set'
+const SHOW_TODAYS_SETS_KEY = 'gym-tracker:home-show-todays-sets'
+
+// Show/Hide on Home's sections used to reset to their default on every
+// mount, which meant the first section a returning user actually wanted
+// open (usually Today's sets, right after logging) had to be re-opened
+// every visit. Persisting the choice per section makes that a one-time cost.
+function loadShown(key, fallback) {
+  const stored = localStorage.getItem(key)
+  return stored === null ? fallback : stored === 'true'
+}
 
 function groupSetsByExercise(sets) {
   const order = []
@@ -46,8 +57,18 @@ function Home({
   const [refreshKey, setRefreshKey] = useState(0)
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
-  const [showLogSet, setShowLogSet] = useState(false)
-  const [showTodaysSets, setShowTodaysSets] = useState(false)
+  const [showLogSet, setShowLogSetState] = useState(() => loadShown(SHOW_LOG_SET_KEY, false))
+  const [showTodaysSets, setShowTodaysSetsState] = useState(() => loadShown(SHOW_TODAYS_SETS_KEY, false))
+
+  function setShowLogSet(next) {
+    setShowLogSetState(next)
+    localStorage.setItem(SHOW_LOG_SET_KEY, String(next))
+  }
+
+  function setShowTodaysSets(next) {
+    setShowTodaysSetsState(next)
+    localStorage.setItem(SHOW_TODAYS_SETS_KEY, String(next))
+  }
   const [routines, setRoutines] = useState([])
   const [expandedTodaysUserIds, setExpandedTodaysUserIds] = useState(() => new Set())
   const [selectMode, setSelectMode] = useState(false)
@@ -159,7 +180,7 @@ function Home({
   }
 
   function toggleShowTodaysSets() {
-    setShowTodaysSets((v) => !v)
+    setShowTodaysSets(!showTodaysSets)
     setSelectMode(false)
     setSelectedSetIds(new Set())
   }
@@ -262,7 +283,7 @@ function Home({
           <SectionLabel>Log a set</SectionLabel>
           <button
             type="button"
-            onClick={() => setShowLogSet((v) => !v)}
+            onClick={() => setShowLogSet(!showLogSet)}
             className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
           >
             {showLogSet ? 'Hide' : 'Show'}

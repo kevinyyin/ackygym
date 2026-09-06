@@ -8,28 +8,33 @@ function Auth() {
   const [message, setMessage] = useState('')
   const [pendingAction, setPendingAction] = useState(null)
 
-  async function handleSignIn(e) {
+  // A real form onSubmit (rather than onClick on the submit buttons) so the
+  // browser's native required/type="email" constraint validation runs before
+  // this ever fires — the previous onClick + preventDefault wiring skipped
+  // that check entirely, letting malformed input reach Supabase and come
+  // back as a misleading "Invalid login credentials".
+  async function handleSubmit(e) {
     e.preventDefault()
     if (pendingAction) return
+    const intent = e.nativeEvent.submitter?.value === 'signup' ? 'signup' : 'signin'
+
     setMessage('')
-    setPendingAction('signin')
+    setPendingAction(intent)
+
+    if (intent === 'signup') {
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      setPendingAction(null)
+      if (error) {
+        setMessage(error.message)
+      } else if (!data.session) {
+        setMessage('Check your email to confirm your account.')
+      }
+      return
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setPendingAction(null)
     if (error) setMessage(error.message)
-  }
-
-  async function handleSignUp(e) {
-    e.preventDefault()
-    if (pendingAction) return
-    setMessage('')
-    setPendingAction('signup')
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    setPendingAction(null)
-    if (error) {
-      setMessage(error.message)
-    } else if (!data.session) {
-      setMessage('Check your email to confirm your account.')
-    }
   }
 
   const inputClasses =
@@ -37,24 +42,38 @@ function Auth() {
 
   return (
     <div className="flex min-h-svh flex-col justify-center bg-ink p-4">
-      <form className="mx-auto flex w-full max-w-md flex-col gap-3 rounded-lg border border-line bg-surface p-6 shadow-[inset_0_1px_0_var(--card-highlight)]">
+      <form
+        onSubmit={handleSubmit}
+        className="mx-auto flex w-full max-w-md flex-col gap-3 rounded-lg border border-line bg-surface p-6 shadow-[inset_0_1px_0_var(--card-highlight)]"
+      >
         <p className="mb-1 text-[11px] font-semibold tracking-[0.3em] text-blue-400 uppercase">
           Ackygym
         </p>
         <h1 className="mb-1 font-display text-4xl leading-none tracking-tight text-chalk uppercase">
           Sign in
         </h1>
+        <label htmlFor="auth-email" className="sr-only">
+          Email
+        </label>
         <input
+          id="auth-email"
           type="email"
+          required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
           autoComplete="email"
           className={inputClasses}
         />
+        <label htmlFor="auth-password" className="sr-only">
+          Password
+        </label>
         <div className="relative">
           <input
+            id="auth-password"
             type={showPassword ? 'text' : 'password'}
+            required
+            minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
@@ -72,7 +91,8 @@ function Auth() {
         </div>
         <button
           type="submit"
-          onClick={handleSignIn}
+          name="intent"
+          value="signin"
           disabled={!!pendingAction}
           className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
         >
@@ -80,13 +100,18 @@ function Auth() {
         </button>
         <button
           type="submit"
-          onClick={handleSignUp}
+          name="intent"
+          value="signup"
           disabled={!!pendingAction}
           className="w-full rounded-md border border-line px-4 py-3 font-body text-base font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400 disabled:opacity-40"
         >
           {pendingAction === 'signup' ? 'Creating account…' : 'Sign up'}
         </button>
-        {message && <p className="text-sm text-chalk-dim">{message}</p>}
+        {message && (
+          <p role="alert" aria-live="assertive" className="text-sm text-chalk-dim">
+            {message}
+          </p>
+        )}
       </form>
     </div>
   )
