@@ -30,6 +30,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
 
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
+  const ownPhotoIds = photos.filter((p) => p.user_id === userId).map((p) => p.id)
 
   useEffect(() => {
     async function fetchPhotos() {
@@ -187,12 +188,19 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     })
   }
 
+  function toggleSelectAll(ownPhotoIds) {
+    setSelectedPhotoIds((current) =>
+      current.size === ownPhotoIds.length ? new Set() : new Set(ownPhotoIds)
+    )
+  }
+
   async function handleBulkShare() {
     onError('')
     const { error } = await supabase
       .from('progress_photos')
       .update({ shared: true })
       .in('id', [...selectedPhotoIds])
+      .eq('user_id', userId)
 
     if (error) {
       onError(error.message)
@@ -219,6 +227,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
       .from('progress_photos')
       .delete()
       .in('id', [...selectedPhotoIds])
+      .eq('user_id', userId)
 
     setConfirmBulkDelete(false)
     if (deleteError) {
@@ -238,14 +247,25 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
         <div className="flex items-center justify-between gap-3">
           <SectionLabel>Progress photos</SectionLabel>
           <div className="flex shrink-0 items-center gap-3">
-            {photos.some((p) => p.user_id === userId) && (
-              <button
-                type="button"
-                onClick={toggleSelectMode}
-                className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-              >
-                {selectMode ? 'Cancel' : 'Select'}
-              </button>
+            {ownPhotoIds.length > 0 && (
+              <>
+                {selectMode && (
+                  <button
+                    type="button"
+                    onClick={() => toggleSelectAll(ownPhotoIds)}
+                    className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                  >
+                    {selectedPhotoIds.size === ownPhotoIds.length ? 'Select none' : 'Select all'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={toggleSelectMode}
+                  className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                >
+                  {selectMode ? 'Cancel' : 'Select'}
+                </button>
+              </>
             )}
             <label className="cursor-pointer rounded-md bg-blue-500 px-4 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600">
               {uploading ? 'Uploading…' : 'Add photo'}

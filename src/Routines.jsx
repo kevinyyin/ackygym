@@ -273,27 +273,34 @@ function DayToggles({ routine, schedule, userId, onChanged, onError }) {
     onChanged()
   }
 
+  function renderDayButton(day) {
+    const linked = schedule.some(
+      (s) => s.user_id === userId && s.day_of_week === day && s.routine_id === routine.id
+    )
+    return (
+      <button
+        key={day}
+        type="button"
+        onClick={() => toggleDay(day)}
+        className={
+          linked
+            ? 'flex-1 rounded border border-blue-500 bg-blue-500 py-1 font-mono text-[10px] tracking-wide text-onblue uppercase'
+            : 'flex-1 rounded border border-line bg-surface py-1 font-mono text-[10px] tracking-wide text-chalk-dim uppercase'
+        }
+      >
+        {WEEKDAY_SHORT[day].slice(0, 2)}
+      </button>
+    )
+  }
+
+  // Split into weekday/weekend clusters (5 + 2) instead of one undifferentiated
+  // 7-button row, so this stays within the ~4-items-per-group chunking guideline.
   return (
-    <div className="mt-2 flex gap-1">
-      {WEEKDAY_ORDER.map((day) => {
-        const linked = schedule.some(
-          (s) => s.user_id === userId && s.day_of_week === day && s.routine_id === routine.id
-        )
-        return (
-          <button
-            key={day}
-            type="button"
-            onClick={() => toggleDay(day)}
-            className={
-              linked
-                ? 'flex-1 rounded border border-blue-500 bg-blue-500 py-1 font-mono text-[10px] tracking-wide text-onblue uppercase'
-                : 'flex-1 rounded border border-line bg-surface py-1 font-mono text-[10px] tracking-wide text-chalk-dim uppercase'
-            }
-          >
-            {WEEKDAY_SHORT[day].slice(0, 2)}
-          </button>
-        )
-      })}
+    <div className="mt-2 flex gap-2">
+      <div className="flex flex-1 gap-1">{WEEKDAY_ORDER.slice(0, 5).map(renderDayButton)}</div>
+      <div className="flex gap-1" style={{ flexBasis: '28.5%' }}>
+        {WEEKDAY_ORDER.slice(5).map(renderDayButton)}
+      </div>
     </div>
   )
 }
