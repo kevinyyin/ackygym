@@ -432,6 +432,7 @@ function Home({
         userId={session.user.id}
         onClose={() => setSelectedExercise(null)}
         onError={onError}
+        onChanged={() => setRefreshKey((key) => key + 1)}
       />
     </div>
   )
