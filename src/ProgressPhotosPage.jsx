@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient'
 import Card, { SectionLabel } from './Card'
 import { displayName } from './displayName'
 import { getTodayDateString, formatDate } from './dateUtils'
-import { CameraIcon } from './icons'
+import { CameraIcon, CloseIcon } from './icons'
 import ConfirmModal from './ConfirmModal'
 
 const BUCKET = 'progress-photos'
@@ -333,7 +333,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                       aria-label={`Delete photo from ${formatDate(photo.date, { year: true })}`}
                       className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur hover:text-danger"
                     >
-                      ✕
+                      <CloseIcon className="h-4 w-4" />
                     </button>
                   )}
                   {isOwn && selectMode && (
@@ -384,7 +384,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
             aria-label="Close"
             className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur active:text-danger"
           >
-            ✕
+            <CloseIcon className="h-5 w-5" />
           </button>
           {signedUrlByPath[viewingPhoto.path] && (
             <img

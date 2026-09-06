@@ -3,6 +3,7 @@ import MuscleTags from './MuscleTags'
 import MuscleBodyMap from './MuscleBodyMap'
 import ExerciseProgression from './ExerciseProgression'
 import { useEscapeToClose } from './useEscapeToClose'
+import { CloseIcon } from './icons'
 
 function ExerciseDetailModal({ exercise, userId, onClose, onError, onChanged }) {
   useEscapeToClose(!!exercise, onClose)
@@ -28,7 +29,7 @@ function ExerciseDetailModal({ exercise, userId, onClose, onError, onChanged }) 
             aria-label="Close"
             className="shrink-0 text-chalk-dim hover:text-danger"
           >
-            ✕
+            <CloseIcon className="h-5 w-5" />
           </button>
         </div>
 

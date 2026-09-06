@@ -7,6 +7,7 @@ import AddExerciseForm from './AddExerciseForm'
 import ExerciseDetailModal from './ExerciseDetailModal'
 import Routines from './Routines'
 import ConfirmModal from './ConfirmModal'
+import { CloseIcon } from './icons'
 
 // Routine and exercise-library management, split out of Home so that page
 // can stay focused on today's status/logging — this is occasional
@@ -133,7 +134,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
                   aria-label={`Delete ${exercise.name}`}
                   className="shrink-0 rounded px-1 py-0.5 text-chalk-dim hover:text-danger"
                 >
-                  ✕
+                  <CloseIcon className="h-4 w-4" />
                 </button>
               </li>
             ))}

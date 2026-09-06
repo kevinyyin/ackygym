@@ -11,6 +11,7 @@ import {
 import Card from './Card'
 import { formatDate } from './dateUtils'
 import { useEscapeToClose } from './useEscapeToClose'
+import { CloseIcon } from './icons'
 
 function HistoryChartModal({ group, valueKey, getValue, formatTooltip, emptyLabel, referenceValue, onClose }) {
   useEscapeToClose(!!group, onClose)
@@ -42,7 +43,7 @@ function HistoryChartModal({ group, valueKey, getValue, formatTooltip, emptyLabe
             aria-label="Close"
             className="shrink-0 text-chalk-dim hover:text-danger"
           >
-            ✕
+            <CloseIcon className="h-5 w-5" />
           </button>
         </div>
 

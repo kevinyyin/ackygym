@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { logSet } from './logSet'
 import { formatDate } from './dateUtils'
 import Card from './Card'
+import ConfirmModal from './ConfirmModal'
 import { useEscapeToClose } from './useEscapeToClose'
+import { CloseIcon } from './icons'
 
 function groupSetsByExercise(sets) {
   const order = []
@@ -26,6 +28,11 @@ function groupSetsByExercise(sets) {
 function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
   const [sets, setSets] = useState(null)
   const [repeating, setRepeating] = useState(false)
+  const [confirmRepeat, setConfirmRepeat] = useState(false)
+  // Mirrors `repeating` but updates synchronously, so a rapid double-tap on
+  // the confirm button (both landing before React re-renders) can't both
+  // slip past the guard — see the same note in WorkoutForm.jsx.
+  const repeatingRef = useRef(false)
 
   useEscapeToClose(!!date, onClose)
 
@@ -63,7 +70,8 @@ function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
   // weight at call time, so replaying same-exercise sets in parallel could
   // race and mis-flag PRs the same way the historical sets never did.
   async function handleRepeat() {
-    if (repeating || !sets || sets.length === 0) return
+    if (repeatingRef.current || !sets || sets.length === 0) return
+    repeatingRef.current = true
     setRepeating(true)
     onError('')
 
@@ -76,12 +84,16 @@ function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
       })
       if (error) {
         onError(error.message)
+        repeatingRef.current = false
         setRepeating(false)
+        setConfirmRepeat(false)
         return
       }
     }
 
+    repeatingRef.current = false
     setRepeating(false)
+    setConfirmRepeat(false)
     onRepeated()
     onClose()
   }
@@ -102,7 +114,7 @@ function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
             aria-label="Close"
             className="shrink-0 text-chalk-dim hover:text-danger"
           >
-            ✕
+            <CloseIcon className="h-5 w-5" />
           </button>
         </div>
 
@@ -126,7 +138,7 @@ function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
         {exerciseGroups && exerciseGroups.length > 0 && (
           <button
             type="button"
-            onClick={handleRepeat}
+            onClick={() => setConfirmRepeat(true)}
             disabled={repeating}
             className="mt-5 w-full rounded-md bg-blue-500 px-4 py-2.5 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
           >
@@ -134,6 +146,15 @@ function WorkoutDayModal({ date, userId, onClose, onError, onRepeated }) {
           </button>
         )}
       </Card>
+
+      <ConfirmModal
+        open={confirmRepeat}
+        title="Repeat this workout?"
+        message={`${sets?.length ?? 0} set${sets?.length === 1 ? '' : 's'} will be logged as part of today's workout.`}
+        confirmLabel="Repeat"
+        onConfirm={handleRepeat}
+        onCancel={() => setConfirmRepeat(false)}
+      />
     </div>
   )
 }

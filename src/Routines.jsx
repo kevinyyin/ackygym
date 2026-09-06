@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { SectionLabel } from './Card'
 import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
 import { primaryMuscleGroup, groupByMuscle } from './exerciseGrouping'
-import { GripIcon, ChevronRightIcon } from './icons'
+import { GripIcon, ChevronRightIcon, CloseIcon } from './icons'
 import ExercisePicker from './ExercisePicker'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import ConfirmModal from './ConfirmModal'
@@ -69,7 +70,7 @@ function AddExerciseToRoutine({ routine, availableExercises, onAdded, onError })
   }
 
   return (
-    <div className="mt-2 flex gap-2">
+    <div className="flex gap-2">
       <ExercisePicker
         exercises={availableExercises}
         value={selected}
@@ -179,7 +180,7 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
   }
 
   if (items.length === 0) {
-    return <p className="mt-2 text-xs text-chalk-dim">No exercises yet.</p>
+    return <p className="text-xs text-chalk-dim">No exercises yet.</p>
   }
 
   const groups = groupByMuscle(items, (re) => re.exercises)
@@ -187,7 +188,7 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
   groups.forEach((g) => g.items.forEach((re) => orderIndex.set(re.id, orderIndex.size)))
 
   return (
-    <div className="mt-2 flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       {groups.map((group) => (
         <div key={group.key}>
           <GroupHeader>{group.label}</GroupHeader>
@@ -296,7 +297,7 @@ function DayToggles({ routine, schedule, userId, onChanged, onError }) {
   // Split into weekday/weekend clusters (5 + 2) instead of one undifferentiated
   // 7-button row, so this stays within the ~4-items-per-group chunking guideline.
   return (
-    <div className="mt-2 flex gap-2">
+    <div className="flex gap-2">
       <div className="flex flex-1 gap-1">{WEEKDAY_ORDER.slice(0, 5).map(renderDayButton)}</div>
       <div className="flex gap-1" style={{ flexBasis: '28.5%' }}>
         {WEEKDAY_ORDER.slice(5).map(renderDayButton)}
@@ -323,6 +324,16 @@ function Routines({
   const appliedInitialCollapse = useRef(false)
   const [routineToDelete, setRoutineToDelete] = useState(null)
   const [duplicatingId, setDuplicatingId] = useState(null)
+  const [addExerciseOpenIds, setAddExerciseOpenIds] = useState(() => new Set())
+
+  function toggleAddExerciseOpen(routineId) {
+    setAddExerciseOpenIds((current) => {
+      const next = new Set(current)
+      if (next.has(routineId)) next.delete(routineId)
+      else next.add(routineId)
+      return next
+    })
+  }
 
   // Routines start collapsed on each fresh load of the app. Once applied,
   // later routine list changes (add/delete/reorder) don't reset the user's
@@ -484,7 +495,7 @@ function Routines({
                       aria-label={`Delete ${routine.name}`}
                       className="rounded px-1 py-0.5 text-chalk-dim hover:text-danger"
                     >
-                      ✕
+                      <CloseIcon className="h-4 w-4" />
                     </button>
                   )}
                 </div>
@@ -496,18 +507,39 @@ function Routines({
                 </p>
               ) : (
                 <>
-                  {isOwn ? (
-                    <ReorderableExerciseList
-                      routine={routine}
-                      onRemove={handleRemoveExercise}
-                      onReordered={onRoutinesChanged}
-                      onError={onError}
-                    />
-                  ) : routine.routine_exercises.length === 0 ? (
-                    <p className="mt-2 text-xs text-chalk-dim">No exercises yet.</p>
-                  ) : (
-                    <div className="mt-2 flex flex-col gap-3">
-                      {groupByMuscle(routine.routine_exercises, (re) => re.exercises).map((group) => (
+                  <div className="mt-4 flex flex-col gap-2">
+                    <SectionLabel>Exercises</SectionLabel>
+                    {isOwn ? (
+                      <>
+                        <ReorderableExerciseList
+                          routine={routine}
+                          onRemove={handleRemoveExercise}
+                          onReordered={onRoutinesChanged}
+                          onError={onError}
+                        />
+                        {addExerciseOpenIds.has(routine.id) ? (
+                          <AddExerciseToRoutine
+                            routine={routine}
+                            availableExercises={availableExercises}
+                            onAdded={onRoutinesChanged}
+                            onError={onError}
+                          />
+                        ) : (
+                          availableExercises.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleAddExerciseOpen(routine.id)}
+                              className="self-start font-mono text-[11px] tracking-wide text-blue-400 uppercase hover:text-blue-300"
+                            >
+                              + Add exercise
+                            </button>
+                          )
+                        )}
+                      </>
+                    ) : routine.routine_exercises.length === 0 ? (
+                      <p className="text-xs text-chalk-dim">No exercises yet.</p>
+                    ) : (
+                      groupByMuscle(routine.routine_exercises, (re) => re.exercises).map((group) => (
                         <div key={group.key}>
                           <GroupHeader>{group.label}</GroupHeader>
                           <div className="flex flex-wrap gap-1.5">
@@ -521,18 +553,13 @@ function Routines({
                             ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ))
+                    )}
+                  </div>
 
                   {isOwn && (
-                    <>
-                      <AddExerciseToRoutine
-                        routine={routine}
-                        availableExercises={availableExercises}
-                        onAdded={onRoutinesChanged}
-                        onError={onError}
-                      />
+                    <div className="mt-4 flex flex-col gap-2">
+                      <SectionLabel>Schedule</SectionLabel>
                       <DayToggles
                         routine={routine}
                         schedule={schedule}
@@ -540,7 +567,7 @@ function Routines({
                         onChanged={onScheduleChanged}
                         onError={onError}
                       />
-                    </>
+                    </div>
                   )}
                 </>
               )}

@@ -174,6 +174,31 @@ export function ChevronRightIcon(props) {
   )
 }
 
+export function CloseIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </BaseIcon>
+  )
+}
+
+export function CheckIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M5 12.5l4.5 4.5L19 7" />
+    </BaseIcon>
+  )
+}
+
+export function RepeatIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 12a8 8 0 0 1 14-5.3M20 6v5h-5" />
+      <path d="M20 12a8 8 0 0 1-14 5.3M4 18v-5h5" />
+    </BaseIcon>
+  )
+}
+
 export function SettingsIcon(props) {
   return (
     <BaseIcon {...props}>

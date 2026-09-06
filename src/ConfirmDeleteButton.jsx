@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { CloseIcon } from './icons'
 
 const ARM_TIMEOUT_MS = 4000
 
@@ -12,7 +13,7 @@ function ConfirmDeleteButton({
   label,
   idleLabel = `Delete ${label}`,
   armedLabel = `Tap again to confirm deleting ${label}`,
-  children = '✕',
+  children = <CloseIcon className="h-4 w-4" />,
   armedChildren,
   disabled = false,
   className = '',
