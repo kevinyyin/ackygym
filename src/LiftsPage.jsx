@@ -51,6 +51,7 @@ function LiftsPage({ profiles, userId, onError }) {
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [expandedUpper, setExpandedUpper] = useState(false)
   const [expandedLower, setExpandedLower] = useState(false)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     async function fetchExercises() {
@@ -158,11 +159,13 @@ function LiftsPage({ profiles, userId, onError }) {
     )
   }
 
-  function renderSection(label, sectionExercises, expanded, setExpanded) {
+  // While searching, every match is shown up front — expanding one more time
+  // to see the rest would defeat the point of searching in the first place.
+  function renderSection(label, sectionExercises, expanded, setExpanded, isSearching) {
     if (sectionExercises.length === 0) return null
 
-    const hasOverflow = sectionExercises.length > COLLAPSED_COUNT
-    const visible = expanded ? sectionExercises : sectionExercises.slice(0, COLLAPSED_COUNT)
+    const hasOverflow = !isSearching && sectionExercises.length > COLLAPSED_COUNT
+    const visible = expanded || isSearching ? sectionExercises : sectionExercises.slice(0, COLLAPSED_COUNT)
 
     return (
       <div className="flex flex-col gap-3">
@@ -192,8 +195,14 @@ function LiftsPage({ profiles, userId, onError }) {
     return aLogged === bLogged ? 0 : aLogged ? -1 : 1
   }
 
-  const upperExercises = exercises.filter((e) => bodyRegionFor(e) === 'Upper Body').sort(byLoggedFirst)
-  const lowerExercises = exercises.filter((e) => bodyRegionFor(e) === 'Lower Body').sort(byLoggedFirst)
+  const normalizedSearch = search.trim().toLowerCase()
+  const isSearching = normalizedSearch !== ''
+  const visibleExercises = isSearching
+    ? exercises.filter((e) => e.name.toLowerCase().includes(normalizedSearch))
+    : exercises
+
+  const upperExercises = visibleExercises.filter((e) => bodyRegionFor(e) === 'Upper Body').sort(byLoggedFirst)
+  const lowerExercises = visibleExercises.filter((e) => bodyRegionFor(e) === 'Lower Body').sort(byLoggedFirst)
 
   return (
     <>
@@ -207,8 +216,24 @@ function LiftsPage({ profiles, userId, onError }) {
         </Card>
       ) : (
         <div className="flex flex-col gap-5">
-          {renderSection('Upper Body', upperExercises, expandedUpper, setExpandedUpper)}
-          {renderSection('Lower Body', lowerExercises, expandedLower, setExpandedLower)}
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search exercises"
+            autoComplete="off"
+            className="w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+          />
+          {isSearching && visibleExercises.length === 0 ? (
+            <Card className="p-4">
+              <p className="text-sm text-chalk-dim">No exercises match “{search.trim()}”.</p>
+            </Card>
+          ) : (
+            <>
+              {renderSection('Upper Body', upperExercises, expandedUpper, setExpandedUpper, isSearching)}
+              {renderSection('Lower Body', lowerExercises, expandedLower, setExpandedLower, isSearching)}
+            </>
+          )}
         </div>
       )}
 
