@@ -30,7 +30,16 @@ function groupSetsByExercise(sets) {
   return order.map((exerciseId) => byExerciseId.get(exerciseId))
 }
 
-function Home({ session, profiles, schedule, onScheduleSaved, onError, showWaterTracker }) {
+function Home({
+  session,
+  profiles,
+  schedule,
+  onScheduleSaved,
+  onError,
+  showWaterTracker,
+  activeRoutine,
+  onActiveRoutineChange,
+}) {
   const [exercises, setExercises] = useState([])
   const [exercisesLoaded, setExercisesLoaded] = useState(false)
   const [todaysSets, setTodaysSets] = useState([])
@@ -45,7 +54,6 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
   const [routines, setRoutines] = useState([])
   const [routinesLoaded, setRoutinesLoaded] = useState(false)
   const [routinesVersion, setRoutinesVersion] = useState(0)
-  const [activeRoutine, setActiveRoutine] = useState(null)
 
   useEffect(() => {
     async function fetchExercises() {
@@ -204,7 +212,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
           </p>
           <button
             type="button"
-            onClick={() => setActiveRoutine(suggestedRoutine)}
+            onClick={() => onActiveRoutineChange(suggestedRoutine)}
             className="shrink-0 rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600"
           >
             Start
@@ -240,7 +248,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
         <ActiveRoutine
           routine={activeRoutine}
           userId={session.user.id}
-          onExit={() => setActiveRoutine(null)}
+          onExit={() => onActiveRoutineChange(null)}
           onLogged={() => setRefreshKey((key) => key + 1)}
           onError={onError}
         />
@@ -357,7 +365,7 @@ function Home({ session, profiles, schedule, onScheduleSaved, onError, showWater
           userId={session.user.id}
           onRoutinesChanged={() => setRoutinesVersion((v) => v + 1)}
           onScheduleChanged={onScheduleSaved}
-          onStart={setActiveRoutine}
+          onStart={onActiveRoutineChange}
           onError={onError}
         />
       </Card>
