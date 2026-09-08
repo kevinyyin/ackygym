@@ -27,7 +27,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
   const [selectMode, setSelectMode] = useState(false)
   const [selectedExerciseIds, setSelectedExerciseIds] = useState(() => new Set())
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
-  const { isPending, message, stageDelete, undo } = useDeferredDelete()
+  const { isPending, message, stageDelete, undo } = useDeferredDelete('exercises')
 
   useEffect(() => {
     async function fetchExercises() {
@@ -77,15 +77,17 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
     stageDelete({
       ids: [exercise.id],
       message: `"${exercise.name}" deleted`,
-      commit: async () => {
-        onError('')
+      commit: async (isForeground) => {
+        if (isForeground) onError('')
         const { error } = await supabase.from('exercises').delete().eq('id', exercise.id)
         if (error) {
-          onError(
-            error.code === '23503'
-              ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
-              : error.message
-          )
+          if (isForeground) {
+            onError(
+              error.code === '23503'
+                ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
+                : error.message
+            )
+          }
           return
         }
         setExercisesVersion((v) => v + 1)
@@ -121,15 +123,17 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
     stageDelete({
       ids,
       message: `${ids.length} exercise${ids.length === 1 ? '' : 's'} deleted`,
-      commit: async () => {
-        onError('')
+      commit: async (isForeground) => {
+        if (isForeground) onError('')
         const { error } = await supabase.from('exercises').delete().in('id', ids)
         if (error) {
-          onError(
-            error.code === '23503'
-              ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
-              : error.message
-          )
+          if (isForeground) {
+            onError(
+              error.code === '23503'
+                ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
+                : error.message
+            )
+          }
           return
         }
         setExercisesVersion((v) => v + 1)
@@ -194,7 +198,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
         {!exercisesLoaded ? (
           <p className="mt-3 text-sm text-chalk-dim">Loading…</p>
         ) : (
-          <ul className="mt-3 flex flex-col gap-2">
+          <ul className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto">
             {visibleExercises.map((exercise) => (
               <li
                 key={exercise.id}

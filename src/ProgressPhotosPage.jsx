@@ -30,7 +30,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedPhotoIds, setSelectedPhotoIds] = useState(() => new Set())
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
-  const { isPending, message, stageDelete, undo } = useDeferredDelete()
+  const { isPending, message, stageDelete, undo } = useDeferredDelete('progress-photos')
 
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
   const visiblePhotos = photos.filter((p) => !isPending(p.id))
@@ -159,18 +159,18 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     stageDelete({
       ids: [photo.id],
       message: 'Photo deleted',
-      commit: async () => {
-        onError('')
+      commit: async (isForeground) => {
+        if (isForeground) onError('')
 
         const { error: removeError } = await supabase.storage.from(BUCKET).remove([photo.path])
         if (removeError) {
-          onError(removeError.message)
+          if (isForeground) onError(removeError.message)
           return
         }
 
         const { error: deleteError } = await supabase.from('progress_photos').delete().eq('id', photo.id)
         if (deleteError) {
-          onError(deleteError.message)
+          if (isForeground) onError(deleteError.message)
           return
         }
 
@@ -227,12 +227,12 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     stageDelete({
       ids,
       message: `${ids.length} photo${ids.length === 1 ? '' : 's'} deleted`,
-      commit: async () => {
-        onError('')
+      commit: async (isForeground) => {
+        if (isForeground) onError('')
 
         const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths)
         if (removeError) {
-          onError(removeError.message)
+          if (isForeground) onError(removeError.message)
           return
         }
 
@@ -243,7 +243,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
           .eq('user_id', userId)
 
         if (deleteError) {
-          onError(deleteError.message)
+          if (isForeground) onError(deleteError.message)
           return
         }
 

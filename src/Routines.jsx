@@ -327,7 +327,7 @@ function Routines({
   const [routineToDelete, setRoutineToDelete] = useState(null)
   const [duplicatingId, setDuplicatingId] = useState(null)
   const [addExerciseOpenIds, setAddExerciseOpenIds] = useState(() => new Set())
-  const { isPending, message, stageDelete, undo } = useDeferredDelete()
+  const { isPending, message, stageDelete, undo } = useDeferredDelete('routines')
 
   function toggleAddExerciseOpen(routineId) {
     setAddExerciseOpenIds((current) => {
@@ -382,11 +382,11 @@ function Routines({
     stageDelete({
       ids: [routine.id],
       message: `"${routine.name}" deleted`,
-      commit: async () => {
-        onError('')
+      commit: async (isForeground) => {
+        if (isForeground) onError('')
         const { error } = await supabase.from('routines').delete().eq('id', routine.id)
         if (error) {
-          onError(error.message)
+          if (isForeground) onError(error.message)
           return
         }
         onRoutinesChanged()
