@@ -7,6 +7,10 @@ import { displayName } from './displayName'
 import { sortProfilesSelfFirst } from './groupByUser'
 import Card from './Card'
 import WorkoutDayModal from './WorkoutDayModal'
+import { ChevronLeftIcon, ChevronRightIcon } from './icons'
+
+const VIEW_MODE_KEY = 'calendarViewMode'
+const MONTH_WEEKDAY_HEADER = [0, 1, 2, 3, 4, 5, 6].map((d) => WEEKDAY_SHORT[d])
 
 const DOT_COLORS = ['bg-blue-400', 'bg-emerald', 'bg-amber', 'bg-purple']
 const STREAK_WINDOW_DAYS = 90
@@ -101,6 +105,39 @@ function levelAndLabelFor(entry, routineExerciseIds, maxCount) {
   }
 
   return { level: levelForSetCount(total, maxCount), label: `${total} set${total === 1 ? '' : 's'}` }
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+// Sun-first 6-row grid for the given month, padded with nulls so every row
+// has 7 cells — a familiar "regular calendar" layout, as opposed to the
+// GitHub-style contribution grid above.
+function buildMonthScaffold(monthCursor, today) {
+  const year = monthCursor.getFullYear()
+  const month = monthCursor.getMonth()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const todayStr = toDateString(today)
+
+  const cells = []
+  for (let i = 0; i < new Date(year, month, 1).getDay(); i++) cells.push(null)
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day)
+    const dateStr = toDateString(date)
+    cells.push({
+      date,
+      dateStr,
+      dayOfWeek: date.getDay(),
+      isFuture: date > today,
+      isToday: dateStr === todayStr,
+    })
+  }
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  const weeks = []
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+  return weeks
 }
 
 function computeStreak(workoutDates) {
@@ -205,12 +242,82 @@ function ContributionGraph({ weeks, monthLabels, onDayClick }) {
   )
 }
 
+function MonthGrid({ weeks, onDayClick }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-7 gap-1">
+        {MONTH_WEEKDAY_HEADER.map((label, i) => (
+          <div key={i} className="text-center font-mono text-[10px] tracking-wide text-chalk-dim uppercase">
+            {label}
+          </div>
+        ))}
+      </div>
+
+      {weeks.map((week, weekIndex) => (
+        <div key={weekIndex} className="grid grid-cols-7 gap-1">
+          {week.map((day, dayIndex) => {
+            if (!day) return <div key={dayIndex} />
+
+            const numberClass = day.isFuture
+              ? 'text-chalk-dim/50'
+              : day.isToday
+                ? 'font-bold text-blue-400'
+                : 'text-chalk'
+
+            const content = (
+              <>
+                <span className={`font-mono text-xs ${numberClass}`}>{day.date.getDate()}</span>
+                {!day.isFuture && day.level > 0 && (
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: `var(--color-heat-${day.level})` }}
+                  />
+                )}
+              </>
+            )
+
+            if (!day.isFuture && onDayClick && day.level > 0) {
+              return (
+                <button
+                  key={dayIndex}
+                  type="button"
+                  onClick={() => onDayClick(day.dateStr)}
+                  title={`${day.label ?? 'No sets'} · ${formatDate(day.dateStr)} — tap to view or repeat`}
+                  className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-md active:bg-surface-2"
+                >
+                  {content}
+                </button>
+              )
+            }
+
+            return (
+              <div
+                key={dayIndex}
+                title={day.isFuture ? undefined : `${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}`}
+                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md"
+              >
+                {content}
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function CalendarPage({ profiles, userId, weightUnit, onError }) {
   const [dayDataByUser, setDayDataByUser] = useState(new Map())
   const [setsLoaded, setSetsLoaded] = useState(false)
   const [scheduleMap, setScheduleMap] = useState(new Map())
   const [setsVersion, setSetsVersion] = useState(0)
   const [viewingDate, setViewingDate] = useState(null)
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem(VIEW_MODE_KEY) || 'heatmap')
+  const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()))
+
+  useEffect(() => {
+    localStorage.setItem(VIEW_MODE_KEY, viewMode)
+  }, [viewMode])
 
   useEffect(() => {
     async function fetchSchedule() {
@@ -270,6 +377,12 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
   const { today, start } = getContributionRange()
   const dateScaffold = buildDateScaffold(start, today)
   const monthLabels = getMonthLabels(dateScaffold)
+  const monthScaffold = buildMonthScaffold(monthCursor, today)
+
+  const earliestMonth = startOfMonth(start)
+  const currentMonth = startOfMonth(today)
+  const canGoPrevMonth = monthCursor > earliestMonth
+  const canGoNextMonth = monthCursor < currentMonth
 
   const streaksByUserId = Object.fromEntries(
     rows.map((profile) => {
@@ -321,22 +434,69 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
         })}
       </div>
 
-      <p className="text-xs text-chalk-dim">Tap a day to view or repeat that workout.</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-chalk-dim">Tap a day to view or repeat that workout.</p>
+
+        <div className="flex shrink-0 gap-1 rounded-md border border-line bg-surface p-1">
+          {[
+            { key: 'heatmap', label: 'Heatmap' },
+            { key: 'month', label: 'Calendar' },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setViewMode(key)}
+              className={`rounded px-2.5 py-1 font-mono text-[11px] tracking-wide uppercase ${
+                viewMode === key ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {viewMode === 'month' && (
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setMonthCursor((m) => startOfMonth(new Date(m.getFullYear(), m.getMonth() - 1, 1)))}
+            disabled={!canGoPrevMonth}
+            aria-label="Previous month"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim disabled:opacity-30 active:border-blue-500 active:text-blue-400"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </button>
+          <p className="w-32 text-center font-mono text-xs tracking-wide text-chalk uppercase">
+            {monthCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+          </p>
+          <button
+            type="button"
+            onClick={() => setMonthCursor((m) => startOfMonth(new Date(m.getFullYear(), m.getMonth() + 1, 1)))}
+            disabled={!canGoNextMonth}
+            aria-label="Next month"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim disabled:opacity-30 active:border-blue-500 active:text-blue-400"
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         {rows.map((profile, i) => {
           const byDate = dayDataByUser.get(profile.id) ?? new Map()
           const maxCount = Math.max(0, ...[...byDate.values()].map((e) => e.total))
 
-          const weeks = dateScaffold.map((week) =>
-            week.map((day) => {
-              if (day.isFuture) return day
-              const entry = byDate.get(day.dateStr)
-              const routineExerciseIds = scheduleMap.get(`${profile.id}:${day.dayOfWeek}`)
-              const { level, label } = levelAndLabelFor(entry, routineExerciseIds, maxCount)
-              return { ...day, level, label }
-            })
-          )
+          const withLevels = (day) => {
+            if (!day || day.isFuture) return day
+            const entry = byDate.get(day.dateStr)
+            const routineExerciseIds = scheduleMap.get(`${profile.id}:${day.dayOfWeek}`)
+            const { level, label } = levelAndLabelFor(entry, routineExerciseIds, maxCount)
+            return { ...day, level, label }
+          }
+
+          const weeks = dateScaffold.map((week) => week.map(withLevels))
+          const monthWeeks = monthScaffold.map((week) => week.map(withLevels))
 
           return (
             <Card key={profile.id} className="p-3">
@@ -347,11 +507,18 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
                 </p>
               </div>
 
-              <ContributionGraph
-                weeks={weeks}
-                monthLabels={monthLabels}
-                onDayClick={profile.id === userId ? setViewingDate : undefined}
-              />
+              {viewMode === 'heatmap' ? (
+                <ContributionGraph
+                  weeks={weeks}
+                  monthLabels={monthLabels}
+                  onDayClick={profile.id === userId ? setViewingDate : undefined}
+                />
+              ) : (
+                <MonthGrid
+                  weeks={monthWeeks}
+                  onDayClick={profile.id === userId ? setViewingDate : undefined}
+                />
+              )}
 
               <div className="mt-1 flex items-center justify-end gap-1">
                 <span className="font-mono text-[11px] text-chalk-dim">Less</span>
