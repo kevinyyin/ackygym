@@ -40,7 +40,13 @@ function CalorieCalculator({ userId, latestWeightKg, unit }) {
   // also convert the height field's *value* (not just its label) — cm and
   // in aren't interchangeable digits, so leaving the number as-is would
   // silently reinterpret it in the new unit.
-  const [prevUnit, setPrevUnit] = useState(unit)
+  // Seed from the unit the stored height was actually saved under (not the
+  // current `unit` prop) — otherwise a unit toggle that happened in a
+  // previous session goes undetected on mount, and the stale height value
+  // silently gets reinterpreted under the new unit without conversion.
+  const [prevUnit, setPrevUnit] = useState(() =>
+    stored.heightUnit ? (stored.heightUnit === 'cm' ? 'kg' : 'lb') : unit
+  )
   const [prevWeightKg, setPrevWeightKg] = useState(latestWeightKg)
 
   if (prevUnit !== unit || prevWeightKg !== latestWeightKg) {
