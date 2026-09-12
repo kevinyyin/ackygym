@@ -186,8 +186,6 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
   }
 
   const groups = groupByMuscle(items, (re) => re.exercises)
-  const orderIndex = new Map()
-  groups.forEach((g) => g.items.forEach((re) => orderIndex.set(re.id, orderIndex.size)))
 
   return (
     <div className="flex flex-col gap-3">
@@ -201,9 +199,6 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
                 data-reorder-id={re.id}
                 className="flex items-center gap-2 rounded-md border border-line bg-surface px-2 py-1.5"
               >
-                <span className="w-4 shrink-0 text-center font-mono text-[10px] text-chalk-dim">
-                  {orderIndex.get(re.id) + 1}
-                </span>
                 <button
                   type="button"
                   onPointerDown={(e) => handlePointerDown(e, re.id)}

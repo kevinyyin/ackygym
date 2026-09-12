@@ -208,6 +208,10 @@ function CalorieCalculator({ userId, latestWeightKg, unit }) {
                   {result.target} kcal/day
                 </span>
               </div>
+              <p className="text-xs text-chalk-dim">
+                BMR is what you'd burn at rest; maintenance adds your activity level on top; the
+                target adjusts that for your goal.
+              </p>
             </div>
           ) : (
             <p className="text-xs text-chalk-dim">
