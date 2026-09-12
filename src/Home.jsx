@@ -13,6 +13,8 @@ import { toDisplayWeight } from './weightUnits'
 import { NoteIcon, TrophyIcon, RepeatIcon } from './icons'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import ConfirmModal from './ConfirmModal'
+import UndoToast from './UndoToast'
+import { useDeferredDelete } from './useDeferredDelete'
 
 const TODAYS_SETS_COLLAPSED_COUNT = 8
 const SHOW_LOG_SET_KEY = 'gym-tracker:home-show-log-set'
@@ -76,6 +78,7 @@ function Home({
   const [selectMode, setSelectMode] = useState(false)
   const [selectedSetIds, setSelectedSetIds] = useState(() => new Set())
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
+  const { isPending, message, stageDelete, undo } = useDeferredDelete('home-sets')
 
   useEffect(() => {
     async function fetchExercises() {
@@ -139,8 +142,9 @@ function Home({
     fetchTodaysSets()
   }, [refreshKey, onError])
 
-  const groupedSets = groupByUser(todaysSets, profiles, session.user.id, 'sets')
-  const ownSetIds = todaysSets.filter((s) => s.user_id === session.user.id).map((s) => s.id)
+  const visibleTodaysSets = todaysSets.filter((s) => !isPending(s.id))
+  const groupedSets = groupByUser(visibleTodaysSets, profiles, session.user.id, 'sets')
+  const ownSetIds = visibleTodaysSets.filter((s) => s.user_id === session.user.id).map((s) => s.id)
 
   const todayDayOfWeek = new Date().getDay()
   const todaysScheduleEntry = schedule.find(
@@ -166,14 +170,20 @@ function Home({
     setShowTodaysSets(true)
   }
 
-  async function handleDeleteSet(setId) {
-    onError('')
-    const { error } = await supabase.from('sets').delete().eq('id', setId)
-    if (error) {
-      onError(error.message)
-      return
-    }
-    setRefreshKey((key) => key + 1)
+  function handleDeleteSet(set, exerciseName) {
+    stageDelete({
+      ids: [set.id],
+      message: `${exerciseName} set deleted`,
+      commit: async (isForeground) => {
+        if (isForeground) onError('')
+        const { error } = await supabase.from('sets').delete().eq('id', set.id)
+        if (error) {
+          if (isForeground) onError(error.message)
+          return
+        }
+        setRefreshKey((key) => key + 1)
+      },
+    })
   }
 
   function toggleSelectMode() {
@@ -260,7 +270,7 @@ function Home({
           <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
             Sets today
           </p>
-          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">{todaysSets.length}</p>
+          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">{visibleTodaysSets.length}</p>
         </Card>
       </div>
 
@@ -429,7 +439,7 @@ function Home({
                                           <RepeatIcon className="h-4 w-4" />
                                         </button>
                                         <ConfirmDeleteButton
-                                          onConfirm={() => handleDeleteSet(set.id)}
+                                          onConfirm={() => handleDeleteSet(set, exerciseGroup.name)}
                                           label={`${exerciseGroup.name} set`}
                                           className="shrink-0"
                                         />
@@ -516,6 +526,8 @@ function Home({
         onConfirm={handleBulkDelete}
         onCancel={() => setConfirmBulkDelete(false)}
       />
+
+      <UndoToast message={message} onUndo={undo} />
     </div>
   )
 }
