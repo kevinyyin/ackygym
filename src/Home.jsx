@@ -61,8 +61,12 @@ function Home({
   const [refreshKey, setRefreshKey] = useState(0)
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
-  const [showLogSet, setShowLogSetState] = useState(() => loadShown(SHOW_LOG_SET_KEY, false))
-  const [showTodaysSets, setShowTodaysSetsState] = useState(() => loadShown(SHOW_TODAYS_SETS_KEY, false))
+  // Default to expanded (not collapsed like other optional cards) — these are
+  // the two things people actually open the app to do, and a first-time user
+  // with no stored preference yet shouldn't have to find a "Show" tap before
+  // they can log anything.
+  const [showLogSet, setShowLogSetState] = useState(() => loadShown(SHOW_LOG_SET_KEY, true))
+  const [showTodaysSets, setShowTodaysSetsState] = useState(() => loadShown(SHOW_TODAYS_SETS_KEY, true))
 
   function setShowLogSet(next) {
     setShowLogSetState(next)
@@ -290,6 +294,21 @@ function Home({
         </Card>
       )}
 
+      {/* Surfaced here, above the fold and outside any collapsed section,
+          because Routines/Schedule is what drives the card above — a
+          brand-new user has no other way to discover it exists otherwise. */}
+      <Link
+        to="/routines"
+        className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 shadow-[inset_0_1px_0_var(--card-highlight)] active:border-blue-500"
+      >
+        <span className="text-sm font-medium text-chalk">
+          {routines.length === 0 ? 'No routines yet — set one up' : 'Manage routines & exercises'}
+        </span>
+        <span className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+          Open →
+        </span>
+      </Link>
+
       <Card className="p-4">
         <div className="flex items-center justify-between gap-2">
           <SectionLabel>Log a set</SectionLabel>
@@ -498,15 +517,6 @@ function Home({
         )}
       </div>
 
-      <Link
-        to="/routines"
-        className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 shadow-[inset_0_1px_0_var(--card-highlight)] active:border-blue-500"
-      >
-        <span className="text-sm font-medium text-chalk">Manage routines &amp; exercises</span>
-        <span className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-          Open →
-        </span>
-      </Link>
 
       {showWaterTracker && (
         <WaterTracker

@@ -14,8 +14,14 @@ import { CloseIcon } from './icons'
 // Routine and exercise-library management, split out of Home so that page
 // can stay focused on today's status/logging — this is occasional
 // housekeeping, not a "today" action.
+const SECTIONS = [
+  { value: 'routines', label: 'Routines' },
+  { value: 'exercises', label: 'Exercises' },
+]
+
 function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRoutineChange, weightUnit }) {
   const navigate = useNavigate()
+  const [section, setSection] = useState('routines')
   const [exercises, setExercises] = useState([])
   const [exercisesLoaded, setExercisesLoaded] = useState(false)
   const [exercisesVersion, setExercisesVersion] = useState(0)
@@ -150,21 +156,43 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
 
   return (
     <div className="flex flex-col gap-5">
-      <Card className="p-4">
-        <SectionLabel>Routines</SectionLabel>
-        <Routines
-          routines={routines}
-          loaded={routinesLoaded}
-          exercises={exercises}
-          schedule={schedule}
-          userId={session.user.id}
-          onRoutinesChanged={() => setRoutinesVersion((v) => v + 1)}
-          onScheduleChanged={onScheduleSaved}
-          onStart={handleStart}
-          onError={onError}
-        />
-      </Card>
+      {/* Routine editing and exercise-library editing are unrelated tasks
+          that happened to share a route — a segmented view keeps each one
+          the only thing on screen instead of stacking both regardless of
+          which one a visitor actually came here to do. */}
+      <div className="inline-flex w-full rounded-md border border-line bg-surface-2 p-0.5">
+        {SECTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setSection(option.value)}
+            className={`flex-1 rounded px-3 py-1.5 font-mono text-xs font-semibold tracking-wide uppercase ${
+              section === option.value ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
 
+      {section === 'routines' && (
+        <Card className="p-4">
+          <SectionLabel>Routines</SectionLabel>
+          <Routines
+            routines={routines}
+            loaded={routinesLoaded}
+            exercises={exercises}
+            schedule={schedule}
+            userId={session.user.id}
+            onRoutinesChanged={() => setRoutinesVersion((v) => v + 1)}
+            onScheduleChanged={onScheduleSaved}
+            onStart={handleStart}
+            onError={onError}
+          />
+        </Card>
+      )}
+
+      {section === 'exercises' && (
       <Card className="p-4">
         <div className="flex items-center justify-between gap-2">
           <SectionLabel>Exercises</SectionLabel>
@@ -246,6 +274,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
           </button>
         )}
       </Card>
+      )}
 
       <ExerciseDetailModal
         exercise={selectedExercise}

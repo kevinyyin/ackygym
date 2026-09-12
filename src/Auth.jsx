@@ -52,6 +52,10 @@ function Auth() {
         <h1 className="mb-1 font-display text-4xl leading-none tracking-tight text-chalk uppercase">
           Sign in
         </h1>
+        <p className="-mt-2 mb-1 text-sm text-chalk-dim">
+          Track workouts, weight, and calories with your household — everyone sees each other's
+          progress.
+        </p>
         <label htmlFor="auth-email" className="sr-only">
           Email
         </label>
