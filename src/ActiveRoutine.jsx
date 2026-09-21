@@ -134,49 +134,51 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
           {rows.map((row) => (
             <li
               key={row.exerciseId}
-              className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3 py-2"
+              className="flex flex-col gap-2 rounded-md border border-line bg-surface-2 px-3 py-2.5"
             >
-              <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-chalk">
+              <span className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-chalk">
                 <span className="truncate">{row.name}</span>
                 {prExerciseIds.has(row.exerciseId) && (
                   <TrophyIcon className="h-3.5 w-3.5 shrink-0 text-amber" aria-label="New PR" />
                 )}
               </span>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={row.weight}
-                onChange={(e) => updateRow(row.exerciseId, 'weight', e.target.value)}
-                placeholder={`Wt (${weightUnit})`}
-                className={inputClasses}
-              />
-              <button
-                type="button"
-                onClick={() => setCalculatorRowId(row.exerciseId)}
-                aria-label={`Plate calculator for ${row.name}`}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
-              >
-                <BarbellIcon className="h-4 w-4" />
-              </button>
-              <span className="text-chalk-dim/60">×</span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={row.reps}
-                onChange={(e) => updateRow(row.exerciseId, 'reps', e.target.value)}
-                placeholder="Reps"
-                className={inputClasses}
-              />
-              <button
-                type="button"
-                onClick={() => handleLog(row)}
-                disabled={!isValidSet(row) || loggingExerciseIds.has(row.exerciseId)}
-                className="shrink-0 rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
-              >
-                Log
-              </button>
+              <div className="flex items-center justify-between gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={row.weight}
+                  onChange={(e) => updateRow(row.exerciseId, 'weight', e.target.value)}
+                  placeholder={`Wt (${weightUnit})`}
+                  className={inputClasses}
+                />
+                <button
+                  type="button"
+                  onClick={() => setCalculatorRowId(row.exerciseId)}
+                  aria-label={`Plate calculator for ${row.name}`}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
+                >
+                  <BarbellIcon className="h-4 w-4" />
+                </button>
+                <span className="text-chalk-dim/60">×</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={row.reps}
+                  onChange={(e) => updateRow(row.exerciseId, 'reps', e.target.value)}
+                  placeholder="Reps"
+                  className={inputClasses}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleLog(row)}
+                  disabled={!isValidSet(row) || loggingExerciseIds.has(row.exerciseId)}
+                  className="shrink-0 rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
+                >
+                  Log
+                </button>
+              </div>
             </li>
           ))}
         </ul>
