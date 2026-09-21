@@ -121,6 +121,20 @@ html[data-theme="light"] {
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-blue-500) 22%, transparent);
   }
 
+  /* Some mobile browsers render number-input spin buttons inside the box
+     even though this app has no use for them, squeezing narrow inputs
+     (e.g. ActiveRoutine's w-16 weight field) and clipping the value. */
+  input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     button:active,
     a:active {
