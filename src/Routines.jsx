@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { SectionLabel } from './Card'
 import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
-import { primaryMuscleGroup, groupByMuscle } from './exerciseGrouping'
+import { groupByMuscle } from './exerciseGrouping'
 import { GripIcon, ChevronRightIcon, CloseIcon } from './icons'
 import ExercisePicker from './ExercisePicker'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
@@ -115,11 +115,6 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
     const targetId = Number(row.dataset.reorderId)
     if (targetId === draggingId) return
 
-    const groupKeyById = new Map(
-      items.map((it) => [it.id, primaryMuscleGroup(it.exercises).name ?? '__other__'])
-    )
-    if (groupKeyById.get(targetId) !== groupKeyById.get(draggingId)) return
-
     setItems((current) => {
       const fromIndex = current.findIndex((it) => it.id === draggingId)
       const toIndex = current.findIndex((it) => it.id === targetId)
@@ -139,9 +134,8 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
 
   async function persistOrder(nextItems) {
     onError('')
-    const finalOrder = groupByMuscle(nextItems, (re) => re.exercises).flatMap((g) => g.items)
     const results = await Promise.all(
-      finalOrder.map((item, index) =>
+      nextItems.map((item, index) =>
         supabase.from('routine_exercises').update({ position: index }).eq('id', item.id)
       )
     )
@@ -161,20 +155,12 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
   }
 
   // Keyboard/pointer-free alternative to drag-to-reorder — moves an item one
-  // slot within its own muscle-group boundary, same constraint the drag
-  // handler enforces above.
+  // slot in the full list.
   async function moveItem(id, direction) {
-    const groupKeyById = new Map(
-      items.map((it) => [it.id, primaryMuscleGroup(it.exercises).name ?? '__other__'])
-    )
-    const groupItems = items.filter((it) => groupKeyById.get(it.id) === groupKeyById.get(id))
-    const indexInGroup = groupItems.findIndex((it) => it.id === id)
-    const targetIndexInGroup = indexInGroup + direction
-    if (targetIndexInGroup < 0 || targetIndexInGroup >= groupItems.length) return
-
-    const targetId = groupItems[targetIndexInGroup].id
     const fromIndex = items.findIndex((it) => it.id === id)
-    const toIndex = items.findIndex((it) => it.id === targetId)
+    const toIndex = fromIndex + direction
+    if (toIndex < 0 || toIndex >= items.length) return
+
     const next = [...items]
     ;[next[fromIndex], next[toIndex]] = [next[toIndex], next[fromIndex]]
     setItems(next)
@@ -185,66 +171,57 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
     return <p className="text-xs text-chalk-dim">No exercises yet.</p>
   }
 
-  const groups = groupByMuscle(items, (re) => re.exercises)
-
   return (
-    <div className="flex flex-col gap-3">
-      {groups.map((group) => (
-        <div key={group.key}>
-          <GroupHeader>{group.label}</GroupHeader>
-          <ul className="flex flex-col gap-1.5">
-            {group.items.map((re, indexInGroup) => (
-              <li
-                key={re.id}
-                data-reorder-id={re.id}
-                className="flex items-center gap-2 rounded-md border border-line bg-surface px-2 py-1.5"
-              >
-                <button
-                  type="button"
-                  onPointerDown={(e) => handlePointerDown(e, re.id)}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerCancel}
-                  aria-label={`Reorder ${re.exercises.name}`}
-                  className="shrink-0 touch-none cursor-grab text-chalk-dim active:cursor-grabbing"
-                >
-                  <GripIcon className="h-4 w-4" />
-                </button>
-                <div className="flex shrink-0 flex-col">
-                  <button
-                    type="button"
-                    onClick={() => moveItem(re.id, -1)}
-                    disabled={indexInGroup === 0}
-                    aria-label={`Move ${re.exercises.name} up`}
-                    className="text-chalk-dim hover:text-blue-400 disabled:opacity-30"
-                  >
-                    <ChevronRightIcon className="h-3 w-3 -rotate-90" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveItem(re.id, 1)}
-                    disabled={indexInGroup === group.items.length - 1}
-                    aria-label={`Move ${re.exercises.name} down`}
-                    className="text-chalk-dim hover:text-blue-400 disabled:opacity-30"
-                  >
-                    <ChevronRightIcon className="h-3 w-3 rotate-90" />
-                  </button>
-                </div>
-                <span className="min-w-0 flex-1 truncate font-mono text-[10px] tracking-wide text-chalk uppercase">
-                  {re.exercises.name}
-                </span>
-                <ConfirmDeleteButton
-                  onConfirm={() => onRemove(re.id)}
-                  idleLabel={`Remove ${re.exercises.name} from ${routine.name}`}
-                  armedLabel={`Tap again to confirm removing ${re.exercises.name} from ${routine.name}`}
-                  className="shrink-0"
-                />
-              </li>
-            ))}
-          </ul>
-        </div>
+    <ul className="flex flex-col gap-1.5">
+      {items.map((re, index) => (
+        <li
+          key={re.id}
+          data-reorder-id={re.id}
+          className="flex items-center gap-2 rounded-md border border-line bg-surface px-2 py-1.5"
+        >
+          <button
+            type="button"
+            onPointerDown={(e) => handlePointerDown(e, re.id)}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            aria-label={`Reorder ${re.exercises.name}`}
+            className="shrink-0 touch-none cursor-grab text-chalk-dim active:cursor-grabbing"
+          >
+            <GripIcon className="h-4 w-4" />
+          </button>
+          <div className="flex shrink-0 flex-col">
+            <button
+              type="button"
+              onClick={() => moveItem(re.id, -1)}
+              disabled={index === 0}
+              aria-label={`Move ${re.exercises.name} up`}
+              className="text-chalk-dim hover:text-blue-400 disabled:opacity-30"
+            >
+              <ChevronRightIcon className="h-3 w-3 -rotate-90" />
+            </button>
+            <button
+              type="button"
+              onClick={() => moveItem(re.id, 1)}
+              disabled={index === items.length - 1}
+              aria-label={`Move ${re.exercises.name} down`}
+              className="text-chalk-dim hover:text-blue-400 disabled:opacity-30"
+            >
+              <ChevronRightIcon className="h-3 w-3 rotate-90" />
+            </button>
+          </div>
+          <span className="min-w-0 flex-1 truncate font-mono text-[10px] tracking-wide text-chalk uppercase">
+            {re.exercises.name}
+          </span>
+          <ConfirmDeleteButton
+            onConfirm={() => onRemove(re.id)}
+            idleLabel={`Remove ${re.exercises.name} from ${routine.name}`}
+            armedLabel={`Tap again to confirm removing ${re.exercises.name} from ${routine.name}`}
+            className="shrink-0"
+          />
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }
 
