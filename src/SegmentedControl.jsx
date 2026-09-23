@@ -10,7 +10,7 @@ function SegmentedControl({ segments, value, onChange, layoutId }) {
     <motion.span
       layoutId={layoutId}
       transition={snappy}
-      className="absolute inset-0 rounded-full bg-surface-2 shadow-[0_1px_4px_var(--shadow-tint)] [html[data-theme=light]_&]:bg-ink"
+      className="absolute inset-0 rounded-full bg-surface shadow-[0_1px_4px_var(--shadow-tint)]"
     />
   )
   const segmentClass = (active) =>
@@ -19,7 +19,7 @@ function SegmentedControl({ segments, value, onChange, layoutId }) {
     }`
 
   return (
-    <div className="flex rounded-full bg-surface p-0.5">
+    <div className="flex rounded-full bg-surface-2 p-0.5">
       {segments.map((segment) =>
         segment.to ? (
           <NavLink key={segment.key} to={segment.to} end={segment.end} data-press className={({ isActive }) => segmentClass(isActive)}>
