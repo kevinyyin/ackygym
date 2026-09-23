@@ -1,25 +1,33 @@
-// Purely presentational — the timing lives in useDeferredDelete. Positioned
-// above App.jsx's bottom tab bar (which carries no z-* class of its own) and
-// above modals (z-20), so it stays visible even if a confirm dialog is still
-// closing underneath it.
-function UndoToast({ message, onUndo }) {
-  if (!message) return null
+import { AnimatePresence, motion } from 'motion/react'
+import { smooth } from './motionPresets'
 
+// Purely presentational — the timing lives in useDeferredDelete. Sits above
+// the tab bar and the timer pill's slot. z-30 keeps it under open sheets
+// (z-40), which is fine: every deferred delete is triggered from a page,
+// not from inside a sheet.
+function UndoToast({ message, onUndo }) {
   return (
-    <div className="fixed inset-x-0 bottom-20 z-30 flex justify-center px-4">
-      <div className="flex items-center gap-3 rounded-full border border-line bg-surface-2 px-4 py-2 shadow-lg">
-        <span role="status" aria-live="polite" className="text-sm text-chalk">
-          {message}
-        </span>
-        <button
-          type="button"
-          onClick={onUndo}
-          className="shrink-0 font-mono text-xs font-bold tracking-wide text-blue-400 uppercase"
+    <AnimatePresence>
+      {message && (
+        <motion.div
+          key="undo"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={smooth}
+          className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+8rem)] z-30 flex justify-center px-5"
         >
-          Undo
-        </button>
-      </div>
-    </div>
+          <div className="flex items-center gap-4 rounded-full bg-surface-2 py-2.5 pr-3 pl-5 shadow-[0_10px_30px_var(--shadow-tint)]">
+            <span role="status" aria-live="polite" className="text-[15px] text-chalk">
+              {message}
+            </span>
+            <button type="button" onClick={onUndo} className="shrink-0 text-[15px] font-semibold text-blue-400">
+              Undo
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 

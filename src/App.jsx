@@ -22,7 +22,7 @@ import { useRestTimer } from './useRestTimer'
 import TimerSheet from './TimerSheet'
 import TimerPill from './TimerPill'
 import { loadAutoRest, saveAutoRest } from './autoRestSettings'
-import { GridIcon, BarbellIcon, CalendarIcon, ScaleIcon, TimerIcon } from './icons'
+import { GridIcon, BarbellIcon, CalendarIcon, ScaleIcon, TimerIcon, CloseIcon } from './icons'
 
 const TABS = [
   { to: '/', label: 'Today', icon: GridIcon, end: true },
@@ -210,6 +210,14 @@ function App() {
     observer.observe(sentinel)
     return () => observer.disconnect()
   }, [session])
+
+  // Errors used to sit in the page flow until the next action cleared them;
+  // as a floating pill it would cover the header forever, so it times out.
+  useEffect(() => {
+    if (!error) return
+    const id = setTimeout(() => setError(''), 6000)
+    return () => clearTimeout(id)
+  }, [error])
 
   if (!sessionChecked) {
     return <div className="min-h-svh bg-ink" />
@@ -408,22 +416,44 @@ function App() {
         </div>
       </nav>
 
-      {/* Offline/error banners — temporary placement; Task 8 restyles them */}
-      {!isOnline && (
-        <p className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 rounded-md border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-amber">
-          You're offline. Changes won't save until your connection is back.
-        </p>
-      )}
-
-      {error && (
-        <p
-          role="alert"
-          aria-live="assertive"
-          className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
-        >
-          {error}
-        </p>
-      )}
+      <div className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 flex flex-col items-center gap-2 px-5">
+        <AnimatePresence>
+          {!isOnline && (
+            <motion.p
+              key="offline"
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={smooth}
+              className="rounded-full bg-surface-2 px-4 py-2 text-[13px] font-semibold text-amber shadow-[0_10px_30px_var(--shadow-tint)]"
+            >
+              You're offline. Changes won't save until you reconnect.
+            </motion.p>
+          )}
+          {error && (
+            <motion.div
+              key="error"
+              role="alert"
+              aria-live="assertive"
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={smooth}
+              className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full bg-surface-2 py-2 pr-2 pl-4 text-[13px] font-semibold text-danger shadow-[0_10px_30px_var(--shadow-tint)]"
+            >
+              <span className="min-w-0">{error}</span>
+              <button
+                type="button"
+                onClick={() => handleError('')}
+                aria-label="Dismiss"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface text-chalk-dim"
+              >
+                <CloseIcon className="h-3.5 w-3.5" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       <TimerPill timer={restTimer} onOpen={() => setTimerOpen(true)} />
       <TimerSheet open={timerOpen} onClose={() => setTimerOpen(false)} timer={restTimer} />
