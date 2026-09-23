@@ -6,6 +6,7 @@ import WorkoutDayModal from './WorkoutDayModal'
 import { getDateDaysAgoString, getTodayDateString, formatDate } from './dateUtils'
 import { toDisplayWeight } from './weightUnits'
 import { TrophyIcon } from './icons'
+import Skeleton from './Skeleton'
 
 function groupSetsByDate(sets) {
   const order = []
@@ -134,9 +135,12 @@ function SetsHistoryPage({ userId, weightUnit, onError }) {
         </Card>
 
         {dateGroups === null ? (
-          <Card className="p-4">
-            <p className="text-sm text-chalk-dim">Loading…</p>
-          </Card>
+          <div aria-busy="true" className="flex flex-col gap-3">
+            <span className="sr-only">Loading</span>
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+          </div>
         ) : dateGroups.length === 0 ? (
           <Card className="p-4">
             <p className="text-sm text-chalk-dim">No sets logged in this range.</p>
