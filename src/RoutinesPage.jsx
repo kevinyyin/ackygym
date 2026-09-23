@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
-import Card, { SectionLabel } from './Card'
+import Card from './Card'
 import MuscleTags from './MuscleTags'
 import AddExerciseForm from './AddExerciseForm'
 import ExerciseDetailModal from './ExerciseDetailModal'
@@ -177,7 +177,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
 
       {section === 'routines' && (
         <Card className="p-4">
-          <SectionLabel>Routines</SectionLabel>
+          <h2 className="text-headline text-chalk">Routines</h2>
           <Routines
             routines={routines}
             loaded={routinesLoaded}
@@ -195,7 +195,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
       {section === 'exercises' && (
       <Card className="p-4">
         <div className="flex items-center justify-between gap-2">
-          <SectionLabel>Exercises</SectionLabel>
+          <h2 className="text-headline text-chalk">Exercises</h2>
           {visibleExercises.length > 0 && (
             <div className="flex shrink-0 items-center gap-3">
               {selectMode && (

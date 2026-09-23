@@ -1,20 +1,34 @@
-function Card({ className = '', children, ...rest }) {
+import { motion } from 'motion/react'
+import { snappy } from './motionPresets'
+import { ChevronRightIcon } from './icons'
+
+// `onPress` (not onClick) makes the card a pressable tile — onClick is
+// still passed through untouched for the existing callers that use it to
+// stop propagation inside overlays.
+function Card({ className = '', onPress, chevron = false, children, ...rest }) {
+  const base = `rounded-card bg-surface ${className}`
+
+  if (!onPress) {
+    return (
+      <div className={base} {...rest}>
+        {children}
+      </div>
+    )
+  }
+
   return (
-    <div
-      className={`rounded-lg border border-line bg-surface shadow-[inset_0_1px_0_var(--card-highlight)] ${className}`}
+    <motion.button
+      data-press
+      type="button"
+      onClick={onPress}
+      whileTap={{ scale: 0.98 }}
+      transition={snappy}
+      className={`flex w-full items-center gap-3 text-left ${base}`}
       {...rest}
     >
-      {children}
-    </div>
-  )
-}
-
-export function SectionLabel({ children }) {
-  return (
-    <h2 className="flex items-center gap-2 px-1 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
-      <span className="h-2.5 w-0.5 bg-blue-500" />
-      {children}
-    </h2>
+      <span className="min-w-0 flex-1">{children}</span>
+      {chevron && <ChevronRightIcon className="h-4 w-4 shrink-0 text-chalk-dim" />}
+    </motion.button>
   )
 }
 

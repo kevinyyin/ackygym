@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
-import Card, { SectionLabel } from './Card'
+import Card from './Card'
 import { groupByUser } from './groupByUser'
 import { getTodayDateString, formatDate } from './dateUtils'
 import { isPositiveNumber } from './validation'
@@ -135,7 +135,7 @@ function HistoryLogSection({
   return (
     <>
       <Card className="p-4">
-        <SectionLabel>{logLabel}</SectionLabel>
+        <h2 className="text-headline text-chalk">{logLabel}</h2>
         <form onSubmit={handleSubmit} className="mt-3 flex gap-3">
           <input
             type="number"
@@ -158,7 +158,7 @@ function HistoryLogSection({
       </Card>
 
       <div className="flex flex-col gap-3">
-        <SectionLabel>History</SectionLabel>
+        <h2 className="text-headline text-chalk">History</h2>
         {entriesLoaded && entries.length > 0 && (
           <input
             type="text"

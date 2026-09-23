@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
-import Card, { SectionLabel } from './Card'
+import Card from './Card'
 import { displayName } from './displayName'
 import { getTodayDateString, formatDate } from './dateUtils'
 import { CameraIcon, CloseIcon } from './icons'
@@ -257,7 +257,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     <div className="flex flex-col gap-4">
       <Card className="p-4">
         <div className="flex items-center justify-between gap-3">
-          <SectionLabel>Progress photos</SectionLabel>
+          <h2 className="text-headline text-chalk">Progress photos</h2>
           <div className="flex shrink-0 items-center gap-3">
             {ownPhotoIds.length > 0 && (
               <>
