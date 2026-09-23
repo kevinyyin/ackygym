@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Card from './Card'
+import Button from './Button'
+import SegmentedControl from './SegmentedControl'
 
 const PRESETS = [
   { label: '60s', seconds: 60 },
@@ -37,7 +39,7 @@ function formatTime(totalSeconds) {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
-function TimerPage({ duration, remaining, status, selectDuration, onStart, onPause, onReset }) {
+function TimerPanel({ duration, remaining, status, selectDuration, onStart, onPause, onReset }) {
   const [customValue, setCustomValue] = useState('')
 
   function handleCustomSubmit(e) {
@@ -52,22 +54,12 @@ function TimerPage({ duration, remaining, status, selectDuration, onStart, onPau
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-4 gap-2">
-        {PRESETS.map((preset) => (
-          <button
-            key={preset.seconds}
-            type="button"
-            onClick={() => selectDuration(preset.seconds)}
-            className={`rounded-md border py-3 font-mono text-sm font-semibold ${
-              duration === preset.seconds
-                ? 'border-blue-500 bg-blue-500 text-onblue'
-                : 'border-line bg-surface text-chalk-dim active:border-blue-500'
-            }`}
-          >
-            {preset.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        layoutId="timer-presets"
+        value={duration}
+        onChange={selectDuration}
+        segments={PRESETS.map((p) => ({ key: p.seconds, label: p.label }))}
+      />
 
       <Card className="p-3">
         <form onSubmit={handleCustomSubmit} className="flex gap-2">
@@ -131,14 +123,14 @@ function TimerPage({ duration, remaining, status, selectDuration, onStart, onPau
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <p
-              className={`font-mono text-6xl font-bold tabular-nums ${
+              className={`text-hero tabular-nums ${
                 isFinished ? 'text-blue-300' : 'text-chalk'
               }`}
             >
               {formatTime(remaining)}
             </p>
             <p
-              className={`mt-2 font-mono text-xs tracking-[0.3em] uppercase ${
+              className={`mt-2 text-caption ${
                 isFinished ? 'text-blue-300' : 'text-chalk-dim'
               }`}
             >
@@ -149,32 +141,18 @@ function TimerPage({ duration, remaining, status, selectDuration, onStart, onPau
       </Card>
 
       <div className="grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          onClick={onStart}
-          disabled={status === 'running'}
-          className="rounded-md bg-blue-500 py-4 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:pointer-events-none disabled:opacity-40"
-        >
+        <Button size="lg" onClick={onStart} disabled={status === 'running'}>
           {status === 'paused' ? 'Resume' : 'Start'}
-        </button>
-        <button
-          type="button"
-          onClick={onPause}
-          disabled={status !== 'running'}
-          className="rounded-md border border-line bg-surface py-4 font-body text-base font-semibold text-chalk active:border-blue-500 disabled:pointer-events-none disabled:opacity-40"
-        >
+        </Button>
+        <Button size="lg" variant="secondary" onClick={onPause} disabled={status !== 'running'}>
           Pause
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="rounded-md border border-line bg-surface py-4 font-body text-base font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400"
-        >
+        </Button>
+        <Button size="lg" variant="secondary" onClick={onReset}>
           Reset
-        </button>
+        </Button>
       </div>
     </div>
   )
 }
 
-export default TimerPage
+export default TimerPanel

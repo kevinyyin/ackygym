@@ -26,7 +26,7 @@ function playAlert(ctx) {
   }
 }
 
-// Lifted out of TimerPage so the countdown keeps running (and fires its
+// Lifted out of TimerPanel so the countdown keeps running (and fires its
 // alert at the right wall-clock moment) no matter which tab is on screen —
 // a component-local timer is destroyed the instant the user taps away to
 // log a set mid-rest, which is the single most common thing to do while
@@ -107,5 +107,24 @@ export function useRestTimer() {
     setStatus('idle')
   }
 
-  return { duration, remaining, status, selectDuration, start, pause, reset }
+  // For auto-rest after logging a set: always a fresh full countdown, even
+  // mid-rest or paused. start() can't do this — it resumes from `remaining`
+  // when paused, and reads `status` from this render's closure.
+  function restart() {
+    unlockAudio()
+    endTimeRef.current = Date.now() + duration * 1000
+    setRemaining(duration)
+    setStatus('running')
+  }
+
+  // restart() usually runs after an awaited Supabase insert — no longer
+  // inside a user gesture, so iOS Safari won't let it create/resume the
+  // AudioContext. Unlocking on the app's first tap means the alert can
+  // still play when an auto-started rest finishes.
+  useEffect(() => {
+    window.addEventListener('pointerdown', unlockAudio, { once: true })
+    return () => window.removeEventListener('pointerdown', unlockAudio)
+  }, [])
+
+  return { duration, remaining, status, selectDuration, start, pause, reset, restart }
 }

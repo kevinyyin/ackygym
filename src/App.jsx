@@ -19,7 +19,10 @@ import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
 import { loadWaterSettings, saveWaterSettings } from './waterSettings'
 import { loadWeightUnit, saveWeightUnit } from './weightUnitSettings'
 import { useRestTimer } from './useRestTimer'
-import { GridIcon, BarbellIcon, CalendarIcon, ScaleIcon } from './icons'
+import TimerSheet from './TimerSheet'
+import TimerPill from './TimerPill'
+import { loadAutoRest, saveAutoRest } from './autoRestSettings'
+import { GridIcon, BarbellIcon, CalendarIcon, ScaleIcon, TimerIcon } from './icons'
 
 const TABS = [
   { to: '/', label: 'Today', icon: GridIcon, end: true },
@@ -68,13 +71,23 @@ function App() {
   // component-local state.
   const [activeRoutine, setActiveRoutine] = useState(null)
   const location = useLocation()
-  // Unused until Task 7's TimerSheet/TimerPill; kept mounted here so a
-  // running rest timer survives tab switches.
-  // eslint-disable-next-line no-unused-vars
+  // Kept mounted here (not inside TimerSheet) so a running rest timer
+  // survives tab switches.
   const restTimer = useRestTimer()
+  const [timerOpen, setTimerOpen] = useState(false)
+  const [autoRest, setAutoRestState] = useState(loadAutoRest)
   const scrollRootRef = useRef(null)
   const titleSentinelRef = useRef(null)
   const [titleCollapsed, setTitleCollapsed] = useState(false)
+
+  function setAutoRest(next) {
+    setAutoRestState(next)
+    saveAutoRest(next)
+  }
+
+  function handleSetLogged() {
+    if (autoRest) restTimer.restart()
+  }
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -236,14 +249,26 @@ function App() {
               <p className="h-5 text-caption text-chalk-dim">{tabKey === '/' ? todayCaption : ''}</p>
               <h1 className="text-large-title">{pageTitle}</h1>
             </div>
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Settings"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-chalk"
-            >
-              {initials(currentProfile)}
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {tabKey === '/train' && (
+                <button
+                  type="button"
+                  onClick={() => setTimerOpen(true)}
+                  aria-label="Rest timer"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-chalk"
+                >
+                  <TimerIcon className="h-5 w-5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Settings"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-chalk"
+              >
+                {initials(currentProfile)}
+              </button>
+            </div>
           </header>
           <div ref={titleSentinelRef} aria-hidden="true" className="-mt-10 h-0" />
 
@@ -269,6 +294,7 @@ function App() {
                       weightUnit={weightUnit}
                       activeRoutine={activeRoutine}
                       onActiveRoutineChange={setActiveRoutine}
+                      onSetLogged={handleSetLogged}
                     />
                   }
                 />
@@ -399,6 +425,9 @@ function App() {
         </p>
       )}
 
+      <TimerPill timer={restTimer} onOpen={() => setTimerOpen(true)} />
+      <TimerSheet open={timerOpen} onClose={() => setTimerOpen(false)} timer={restTimer} />
+
       <SettingsModal
         open={settingsOpen}
         theme={theme}
@@ -409,6 +438,8 @@ function App() {
         onWaterSettingsChange={updateWaterSettings}
         weightUnit={weightUnit}
         onWeightUnitChange={setWeightUnit}
+        autoRest={autoRest}
+        onAutoRestChange={setAutoRest}
         onClose={() => setSettingsOpen(false)}
         profile={currentProfile}
         userId={session.user.id}
