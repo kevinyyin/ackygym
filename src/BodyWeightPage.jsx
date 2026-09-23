@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import Card from './Card'
 import { formatDate } from './dateUtils'
 import { toDisplayWeight, toStorageWeightKg } from './weightUnits'
@@ -8,10 +7,11 @@ import MuscleVolume from './MuscleVolume'
 import WeightHistoryModal from './WeightHistoryModal'
 import CalorieTracker from './CalorieTracker'
 import HistoryLogSection from './HistoryLogSection'
+import { useCachedState } from './pageCache'
 
 function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCalorieTracking, weightUnit: unit }) {
-  const [entries, setEntries] = useState([])
-  const [entriesLoaded, setEntriesLoaded] = useState(false)
+  const [entries, setEntries] = useCachedState('bodyWeight:entries', [])
+  const [entriesLoaded, setEntriesLoaded] = useCachedState('bodyWeight:entriesLoaded', false)
 
   const latestOwnEntry = entries.find((entry) => entry.user_id === userId)
 

@@ -16,6 +16,7 @@ import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
 import Skeleton from './Skeleton'
+import { useCachedState } from './pageCache'
 
 const TODAYS_SETS_COLLAPSED_COUNT = 8
 const SHOW_LOG_SET_KEY = 'gym-tracker:home-show-log-set'
@@ -57,9 +58,9 @@ function Home({
   onActiveRoutineChange,
   onSetLogged,
 }) {
-  const [exercises, setExercises] = useState([])
-  const [todaysSets, setTodaysSets] = useState([])
-  const [todaysSetsLoaded, setTodaysSetsLoaded] = useState(false)
+  const [exercises, setExercises] = useCachedState('home:exercises', [])
+  const [todaysSets, setTodaysSets] = useCachedState('home:todaysSets', [])
+  const [todaysSetsLoaded, setTodaysSetsLoaded] = useCachedState('home:todaysSetsLoaded', false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
@@ -79,7 +80,7 @@ function Home({
     setShowTodaysSetsState(next)
     localStorage.setItem(SHOW_TODAYS_SETS_KEY, String(next))
   }
-  const [routines, setRoutines] = useState([])
+  const [routines, setRoutines] = useCachedState('home:routines', [])
   const [expandedTodaysUserIds, setExpandedTodaysUserIds] = useState(() => new Set())
   const [selectMode, setSelectMode] = useState(false)
   const [selectedSetIds, setSelectedSetIds] = useState(() => new Set())

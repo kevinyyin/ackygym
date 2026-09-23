@@ -7,6 +7,7 @@ import { isPositiveNumber } from './validation'
 import { CheckIcon, CloseIcon } from './icons'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import Skeleton from './Skeleton'
+import { useCachedState } from './pageCache'
 
 // Shared by CalorieTracker.jsx and BodyWeightPage.jsx — both used to
 // duplicate this entire log/edit/delete/history-list block verbatim aside
@@ -30,8 +31,8 @@ function HistoryLogSection({
   onEntriesChange,
   renderChartModal,
 }) {
-  const [entries, setEntries] = useState([])
-  const [entriesLoaded, setEntriesLoaded] = useState(false)
+  const [entries, setEntries] = useCachedState(`history:${tableName}:entries`, [])
+  const [entriesLoaded, setEntriesLoaded] = useCachedState(`history:${tableName}:entriesLoaded`, false)
   const [inputValue, setInputValue] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [chartGroup, setChartGroup] = useState(null)
