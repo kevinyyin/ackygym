@@ -3,6 +3,7 @@ import Sheet from './Sheet'
 import { supabase } from './supabaseClient'
 import { TOGGLEABLE_CARDS } from './cardVisibility'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
+import SegmentedControl from './SegmentedControl'
 
 const WATER_MODES = [
   { key: 'volume', label: 'Volume' },
@@ -24,6 +25,8 @@ function SettingsModal({
   userId,
   onProfileSaved,
   onError,
+  theme,
+  onThemeChange,
 }) {
   const [username, setUsername] = useState('')
   const [savingUsername, setSavingUsername] = useState(false)
@@ -84,7 +87,20 @@ function SettingsModal({
 
   return (
     <Sheet open={open} onClose={onClose} title="Settings" size="large">
-      <p className="mt-4 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+      <h3 className="text-headline">Appearance</h3>
+      <div className="mt-3">
+        <SegmentedControl
+          layoutId="settings-theme"
+          value={theme}
+          onChange={onThemeChange}
+          segments={[
+            { key: 'dark', label: 'Dark' },
+            { key: 'light', label: 'Light' },
+          ]}
+        />
+      </div>
+
+      <p className="mt-8 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
         Username
       </p>
       <div className="mt-2 flex gap-2">

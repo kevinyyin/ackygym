@@ -541,7 +541,7 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
       </div>
 
       <Link
-        to="/history"
+        to="/progress/history"
         className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 shadow-[inset_0_1px_0_var(--card-highlight)] active:border-blue-500"
       >
         <span className="text-sm font-medium text-chalk">Search all sets</span>

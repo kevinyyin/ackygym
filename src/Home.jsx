@@ -298,7 +298,7 @@ function Home({
           because Routines/Schedule is what drives the card above — a
           brand-new user has no other way to discover it exists otherwise. */}
       <Link
-        to="/routines"
+        to="/train"
         className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 shadow-[inset_0_1px_0_var(--card-highlight)] active:border-blue-500"
       >
         <span className="text-sm font-medium text-chalk">
