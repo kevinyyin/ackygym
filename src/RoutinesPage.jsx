@@ -10,6 +10,7 @@ import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
 import { CloseIcon } from './icons'
+import Skeleton from './Skeleton'
 
 // Routine and exercise-library management, split out of Home so that page
 // can stay focused on today's status/logging — this is occasional
@@ -224,7 +225,11 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
           onError={onError}
         />
         {!exercisesLoaded ? (
-          <p className="mt-3 text-sm text-chalk-dim">Loading…</p>
+          <div aria-busy="true" className="mt-3 flex flex-col gap-2">
+            <span className="sr-only">Loading</span>
+            <Skeleton className="h-11 rounded-field bg-surface-2" />
+            <Skeleton className="h-11 rounded-field bg-surface-2" />
+          </div>
         ) : (
           <ul className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto">
             {visibleExercises.map((exercise) => (

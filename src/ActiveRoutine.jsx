@@ -6,6 +6,7 @@ import { BarbellIcon, TrophyIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 import { isValidSet } from './validation'
 import { toDisplayWeight, toStorageWeightKg, convertWeight, roundWeight } from './weightUnits'
+import Skeleton from './Skeleton'
 
 function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError }) {
   const [rows, setRows] = useState(null)
@@ -128,7 +129,11 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
       </div>
 
       {rows === null ? (
-        <p className="mt-3 text-sm text-chalk-dim">Loading…</p>
+        <div aria-busy="true" className="mt-3 flex flex-col gap-2">
+          <span className="sr-only">Loading</span>
+          <Skeleton className="h-11 rounded-field bg-surface-2" />
+          <Skeleton className="h-11 rounded-field bg-surface-2" />
+        </div>
       ) : (
         <ul className="mt-3 flex flex-col gap-2">
           {rows.map((row) => (

@@ -4,6 +4,7 @@ import Card from './Card'
 import MuscleBodyMap from './MuscleBodyMap'
 import { sortMuscleGroups } from './muscleGroupOrder'
 import { getDateDaysAgoString } from './dateUtils'
+import Skeleton from './Skeleton'
 
 const RANGE_STORAGE_KEY = 'gym-tracker:muscle-volume-range-days'
 
@@ -123,7 +124,11 @@ function MuscleVolume({ userId, onError }) {
       </p>
 
       {sets === null ? (
-        <p className="mt-3 text-sm text-chalk-dim">Loading…</p>
+        <div aria-busy="true" className="mt-3 flex flex-col gap-2">
+          <span className="sr-only">Loading</span>
+          <Skeleton className="h-11 rounded-field bg-surface-2" />
+          <Skeleton className="h-11 rounded-field bg-surface-2" />
+        </div>
       ) : volume.length === 0 ? (
         <p className="mt-3 text-sm text-chalk-dim">No sets logged in this period.</p>
       ) : (

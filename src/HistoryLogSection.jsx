@@ -6,6 +6,7 @@ import { getTodayDateString, formatDate } from './dateUtils'
 import { isPositiveNumber } from './validation'
 import { CheckIcon, CloseIcon } from './icons'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
+import Skeleton from './Skeleton'
 
 // Shared by CalorieTracker.jsx and BodyWeightPage.jsx — both used to
 // duplicate this entire log/edit/delete/history-list block verbatim aside
@@ -170,9 +171,12 @@ function HistoryLogSection({
           />
         )}
         {!entriesLoaded ? (
-          <Card className="p-4">
-            <p className="text-sm text-chalk-dim">Loading…</p>
-          </Card>
+          <div aria-busy="true" className="flex flex-col gap-3">
+            <span className="sr-only">Loading</span>
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+          </div>
         ) : groupedEntries.length === 0 ? (
           <Card className="p-4">
             <p className="text-sm text-chalk-dim">{emptyLogMessage}</p>

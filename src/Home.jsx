@@ -15,6 +15,7 @@ import ConfirmDeleteButton from './ConfirmDeleteButton'
 import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
+import Skeleton from './Skeleton'
 
 const TODAYS_SETS_COLLAPSED_COUNT = 8
 const SHOW_LOG_SET_KEY = 'gym-tracker:home-show-log-set'
@@ -387,9 +388,11 @@ function Home({
           </div>
         )}
         {!showTodaysSets ? null : !todaysSetsLoaded ? (
-          <Card className="p-4">
-            <p className="text-sm text-chalk-dim">Loading…</p>
-          </Card>
+          <div aria-busy="true" className="flex flex-col gap-3">
+            <span className="sr-only">Loading</span>
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </div>
         ) : groupedSets.length === 0 ? (
           <Card className="p-4">
             <p className="text-sm text-chalk-dim">No sets logged yet today.</p>
