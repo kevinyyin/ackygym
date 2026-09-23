@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Routes, Route, NavLink, Link, useLocation } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import Auth from './Auth'
@@ -97,13 +97,10 @@ function App() {
     }
   }, [])
 
-  // Route every page's onError through here so a dropped connection reads
-  // as "you're offline," not as whatever raw fetch/Supabase error surfaces —
-  // `navigator.onLine` catches a device with no network at all, and the
-  // message pattern catches the common case of a flaky connection where the
-  // browser still thinks it's online but the request itself failed to reach
-  // the server.
-  function handleError(message) {
+  // Stable identity matters: every page lists onError in its fetch effect's
+  // deps, so a fresh function per render made every App re-render (the rest
+  // timer ticks 4×/s) refetch whatever page was on screen.
+  const handleError = useCallback((message) => {
     if (!message) {
       setError('')
       return
@@ -114,7 +111,7 @@ function App() {
         ? "You're offline — check your connection and try again."
         : message
     )
-  }
+  }, [])
 
   function toggleCardVisibility(key) {
     setCardVisibility((current) => {
@@ -161,7 +158,7 @@ function App() {
     }
 
     fetchProfiles()
-  }, [session, profilesVersion])
+  }, [session, profilesVersion, handleError])
 
   useEffect(() => {
     if (!session) return
@@ -179,7 +176,7 @@ function App() {
     }
 
     fetchSchedule()
-  }, [session, scheduleVersion])
+  }, [session, scheduleVersion, handleError])
 
   if (!sessionChecked) {
     return <div className="min-h-svh bg-ink" />
