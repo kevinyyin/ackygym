@@ -421,10 +421,10 @@ function Routines({
     <>
     <div className="mt-3 flex flex-col gap-3">
       {!loaded ? (
-        <div aria-busy="true" className="mt-3 flex flex-col gap-2">
+        <div aria-busy="true" className="flex flex-col gap-2">
           <span className="sr-only">Loading</span>
-          <Skeleton className="h-11 rounded-field bg-surface-2" />
-          <Skeleton className="h-11 rounded-field bg-surface-2" />
+          <Skeleton tone="surface-2" className="h-11 rounded-field" />
+          <Skeleton tone="surface-2" className="h-11 rounded-field" />
         </div>
       ) : visibleRoutines.length === 0 ? (
         <p className="text-sm text-chalk-dim">No routines yet.</p>

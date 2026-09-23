@@ -37,7 +37,7 @@ function TimerPill({ timer, onOpen }) {
             exit={{ opacity: 0, y: 16, scale: 0.9 }}
             whileTap={{ scale: 0.96 }}
             transition={smooth}
-            className="pointer-events-auto flex items-center gap-2.5 rounded-full bg-surface-2 py-2.5 pr-4 pl-3 text-[15px] font-semibold shadow-[0_10px_30px_var(--shadow-tint)]"
+            className="pointer-events-auto flex items-center gap-2.5 rounded-full bg-surface py-2.5 pr-4 pl-3 text-[15px] font-semibold shadow-[0_10px_30px_var(--shadow-tint)]"
           >
             <svg viewBox="0 0 22 22" className="h-[22px] w-[22px] -rotate-90">
               <circle cx="11" cy="11" r={RING_RADIUS} fill="none" stroke="var(--color-line)" strokeWidth="3" />

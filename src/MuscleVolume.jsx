@@ -126,8 +126,8 @@ function MuscleVolume({ userId, onError }) {
       {sets === null ? (
         <div aria-busy="true" className="mt-3 flex flex-col gap-2">
           <span className="sr-only">Loading</span>
-          <Skeleton className="h-11 rounded-field bg-surface-2" />
-          <Skeleton className="h-11 rounded-field bg-surface-2" />
+          <Skeleton tone="surface-2" className="h-11 rounded-field" />
+          <Skeleton tone="surface-2" className="h-11 rounded-field" />
         </div>
       ) : volume.length === 0 ? (
         <p className="mt-3 text-sm text-chalk-dim">No sets logged in this period.</p>
