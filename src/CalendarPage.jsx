@@ -342,7 +342,7 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
     }
 
     fetchSchedule()
-  }, [onError])
+  }, [onError, setScheduleMap])
 
   useEffect(() => {
     async function fetchSets() {
@@ -372,7 +372,7 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
     }
 
     fetchSets()
-  }, [setsVersion, onError])
+  }, [setsVersion, onError, setDayDataByUser, setSetsLoaded])
 
   const rows = sortProfilesSelfFirst(profiles, userId)
 

@@ -53,7 +53,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
     }
 
     fetchExercises()
-  }, [exercisesVersion, onError])
+  }, [exercisesVersion, onError, setExercises, setExercisesLoaded])
 
   useEffect(() => {
     async function fetchRoutines() {
@@ -79,7 +79,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
     }
 
     fetchRoutines()
-  }, [routinesVersion, onError])
+  }, [routinesVersion, onError, setRoutines, setRoutinesLoaded])
 
   function handleDeleteExercise(exercise) {
     setExerciseToDelete(null)

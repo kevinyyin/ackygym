@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // Tab switches unmount pages, and each page's first render used to show
 // "Loading…" again while it refetched. This keeps each page's last data in
@@ -22,16 +22,12 @@ export function clearPageCache() {
 export function useCachedState(key, initial) {
   const [value, setValue] = useState(() => cacheRead(key, initial).value)
 
-  const setCached = useCallback(
-    (next) => {
-      setValue((prev) => {
-        const resolved = typeof next === 'function' ? next(prev) : next
-        cacheWrite(key, resolved)
-        return resolved
-      })
-    },
-    [key]
-  )
+  // Written from an effect, not inside the setter: a fetch that resolves
+  // after its page unmounted (e.g. after sign-out cleared the cache) must not
+  // repopulate it — an unmounted component's effects never run.
+  useEffect(() => {
+    cacheWrite(key, value)
+  }, [key, value])
 
-  return [value, setCached]
+  return [value, setValue]
 }
