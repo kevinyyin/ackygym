@@ -1,13 +1,11 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { logSet } from './logSet'
 import { formatDate } from './dateUtils'
-import Card from './Card'
+import Sheet from './Sheet'
+import Button from './Button'
 import ConfirmModal from './ConfirmModal'
-import { useEscapeToClose } from './useEscapeToClose'
-import { useModalFocusTrap } from './useModalFocusTrap'
 import { toDisplayWeight } from './weightUnits'
-import { CloseIcon } from './icons'
 
 function groupSetsByExercise(sets) {
   const order = []
@@ -36,10 +34,6 @@ function WorkoutDayModal({ date, userId, weightUnit, onClose, onError, onRepeate
   // slip past the guard — see the same note in WorkoutForm.jsx.
   const repeatingRef = useRef(false)
 
-  useEscapeToClose(!!date, onClose)
-  const containerRef = useModalFocusTrap(!!date)
-  const titleId = useId()
-
   useEffect(() => {
     if (!date) return
     let cancelled = false
@@ -65,8 +59,6 @@ function WorkoutDayModal({ date, userId, weightUnit, onClose, onError, onRepeate
       cancelled = true
     }
   }, [date, userId, onError])
-
-  if (!date) return null
 
   const exerciseGroups = sets ? groupSetsByExercise(sets) : null
 
@@ -103,43 +95,22 @@ function WorkoutDayModal({ date, userId, weightUnit, onClose, onError, onRepeate
   }
 
   return (
-    <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-ink/80 p-4"
-      onClick={onClose}
-    >
-      <Card
-        ref={containerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className="w-full max-w-sm p-5"
-        onClick={(e) => e.stopPropagation()}
+    <>
+      <Sheet
+        open={!!date}
+        onClose={onClose}
+        title={date ? formatDate(date, { year: true }) : ''}
       >
-        <div className="flex items-start justify-between gap-3">
-          <h2 id={titleId} className="font-display text-xl leading-none tracking-tight text-chalk uppercase">
-            {formatDate(date, { year: true })}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="shrink-0 text-chalk-dim hover:text-danger"
-          >
-            <CloseIcon className="h-5 w-5" />
-          </button>
-        </div>
-
         {exerciseGroups === null ? (
-          <p className="mt-4 text-sm text-chalk-dim">Loading…</p>
+          <p className="text-[15px] text-chalk-dim">Loading…</p>
         ) : exerciseGroups.length === 0 ? (
-          <p className="mt-4 text-sm text-chalk-dim">No sets logged this day.</p>
+          <p className="text-[15px] text-chalk-dim">No sets logged this day.</p>
         ) : (
-          <ul className="mt-4 flex flex-col gap-3">
+          <ul className="flex flex-col gap-4">
             {exerciseGroups.map((group) => (
               <li key={group.exerciseId}>
-                <p className="font-medium text-chalk">{group.name}</p>
-                <p className="mt-1 font-mono text-sm text-chalk-dim">
+                <p className="text-[17px] font-semibold text-chalk">{group.name}</p>
+                <p className="mt-1 text-[15px] text-chalk-dim tabular-nums">
                   {group.sets
                     .map((s) => `${toDisplayWeight(s.weight, weightUnit)}${weightUnit}×${s.reps}`)
                     .join(', ')}
@@ -150,16 +121,16 @@ function WorkoutDayModal({ date, userId, weightUnit, onClose, onError, onRepeate
         )}
 
         {exerciseGroups && exerciseGroups.length > 0 && (
-          <button
-            type="button"
+          <Button
+            size="lg"
+            className="mt-6"
             onClick={() => setConfirmRepeat(true)}
-            disabled={repeating}
-            className="mt-5 w-full rounded-md bg-blue-500 px-4 py-2.5 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
+            loading={repeating}
           >
-            {repeating ? 'Repeating…' : 'Repeat this workout'}
-          </button>
+            Repeat this workout
+          </Button>
         )}
-      </Card>
+      </Sheet>
 
       <ConfirmModal
         open={confirmRepeat}
@@ -169,7 +140,7 @@ function WorkoutDayModal({ date, userId, weightUnit, onClose, onError, onRepeate
         onConfirm={handleRepeat}
         onCancel={() => setConfirmRepeat(false)}
       />
-    </div>
+    </>
   )
 }
 

@@ -1,11 +1,8 @@
-import { useId, useState } from 'react'
-import Card from './Card'
+import { useState } from 'react'
+import Sheet from './Sheet'
 import { supabase } from './supabaseClient'
 import { TOGGLEABLE_CARDS } from './cardVisibility'
-import { useEscapeToClose } from './useEscapeToClose'
-import { useModalFocusTrap } from './useModalFocusTrap'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
-import { CloseIcon } from './icons'
 
 const WATER_MODES = [
   { key: 'volume', label: 'Volume' },
@@ -64,12 +61,6 @@ function SettingsModal({
     }
   }
 
-  useEscapeToClose(open, onClose)
-  const containerRef = useModalFocusTrap(open)
-  const titleId = useId()
-
-  if (!open) return null
-
   async function handleSaveUsername() {
     const trimmed = username.trim()
     if (!trimmed || trimmed === (profile?.username ?? '')) {
@@ -92,165 +83,138 @@ function SettingsModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-ink/80 p-4"
-      onClick={onClose}
-    >
-      <Card
-        ref={containerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className="w-full max-w-md p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <h2 id={titleId} className="font-display text-2xl leading-none tracking-tight text-chalk uppercase">
-            Settings
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="shrink-0 text-chalk-dim hover:text-danger"
-          >
-            <CloseIcon className="h-5 w-5" />
-          </button>
-        </div>
+    <Sheet open={open} onClose={onClose} title="Settings" size="large">
+      <p className="mt-4 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+        Username
+      </p>
+      <div className="mt-2 flex gap-2">
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => {
+            setUsername(e.target.value)
+            setUsernameStatus('')
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && handleSaveUsername()}
+          placeholder="Set a username"
+          className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={handleSaveUsername}
+          disabled={savingUsername}
+          className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-50"
+        >
+          {savingUsername ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+      {usernameStatus && <p className="mt-1.5 text-xs text-chalk-dim">{usernameStatus}</p>}
 
-        <p className="mt-4 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
-          Username
-        </p>
-        <div className="mt-2 flex gap-2">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => {
-              setUsername(e.target.value)
-              setUsernameStatus('')
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && handleSaveUsername()}
-            placeholder="Set a username"
-            className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={handleSaveUsername}
-            disabled={savingUsername}
-            className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-50"
+      <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+        Visible cards
+      </p>
+      <div className="mt-2 flex flex-col gap-2">
+        {TOGGLEABLE_CARDS.map((card) => (
+          <label
+            key={card.key}
+            className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3"
           >
-            {savingUsername ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-        {usernameStatus && <p className="mt-1.5 text-xs text-chalk-dim">{usernameStatus}</p>}
+            <span className="text-sm text-chalk">{card.label}</span>
+            <input
+              type="checkbox"
+              checked={visibility[card.key]}
+              onChange={() => onToggle(card.key)}
+              className="h-5 w-5 accent-blue-500"
+            />
+          </label>
+        ))}
+      </div>
 
-        <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
-          Visible cards
-        </p>
-        <div className="mt-2 flex flex-col gap-2">
-          {TOGGLEABLE_CARDS.map((card) => (
-            <label
-              key={card.key}
-              className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3"
+      <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+        Weight unit
+      </p>
+      <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
+        <span className="text-sm text-chalk">Display as</span>
+        <div className="inline-flex rounded-full border border-line bg-surface p-0.5">
+          {WEIGHT_UNITS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onWeightUnitChange(option)}
+              className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
+                weightUnit === option ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
+              }`}
             >
-              <span className="text-sm text-chalk">{card.label}</span>
-              <input
-                type="checkbox"
-                checked={visibility[card.key]}
-                onChange={() => onToggle(card.key)}
-                className="h-5 w-5 accent-blue-500"
-              />
-            </label>
+              {option}
+            </button>
           ))}
         </div>
+      </div>
 
-        <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
-          Weight unit
-        </p>
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
-          <span className="text-sm text-chalk">Display as</span>
-          <div className="inline-flex rounded-full border border-line bg-surface p-0.5">
-            {WEIGHT_UNITS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => onWeightUnitChange(option)}
-                className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
-                  weightUnit === option ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
+      <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+        Water tracking
+      </p>
+      <p className="mt-1 text-xs text-chalk-dim">
+        Show your water totals as a raw amount, or as a count of bottles of a size you set.
+      </p>
+      <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
+        <span className="text-sm text-chalk">Display as</span>
+        <div className="inline-flex rounded-full border border-line bg-surface p-0.5">
+          {WATER_MODES.map((mode) => (
+            <button
+              key={mode.key}
+              type="button"
+              onClick={() => onWaterSettingsChange({ mode: mode.key })}
+              className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
+                waterSettings.mode === mode.key ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
+              }`}
+            >
+              {mode.label}
+            </button>
+          ))}
         </div>
-
-        <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
-          Water tracking
-        </p>
-        <p className="mt-1 text-xs text-chalk-dim">
-          Show your water totals as a raw amount, or as a count of bottles of a size you set.
-        </p>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
+        <label htmlFor="water-goal" className="text-sm text-chalk">
+          Daily goal (mL)
+        </label>
+        <input
+          id="water-goal"
+          type="number"
+          min="1"
+          value={goalInput}
+          onChange={(e) => handleGoalChange(e.target.value)}
+          className="w-24 rounded-md border border-line bg-surface px-2 py-1.5 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+        />
+      </div>
+      {waterSettings.mode === 'bottles' && (
         <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
-          <span className="text-sm text-chalk">Display as</span>
-          <div className="inline-flex rounded-full border border-line bg-surface p-0.5">
-            {WATER_MODES.map((mode) => (
-              <button
-                key={mode.key}
-                type="button"
-                onClick={() => onWaterSettingsChange({ mode: mode.key })}
-                className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
-                  waterSettings.mode === mode.key ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
-                }`}
-              >
-                {mode.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
-          <label htmlFor="water-goal" className="text-sm text-chalk">
-            Daily goal (mL)
+          <label htmlFor="water-bottle-size" className="text-sm text-chalk">
+            Bottle size (mL)
           </label>
           <input
-            id="water-goal"
+            id="water-bottle-size"
             type="number"
             min="1"
-            value={goalInput}
-            onChange={(e) => handleGoalChange(e.target.value)}
+            value={bottleSizeInput}
+            onChange={(e) => handleBottleSizeChange(e.target.value)}
             className="w-24 rounded-md border border-line bg-surface px-2 py-1.5 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
           />
         </div>
-        {waterSettings.mode === 'bottles' && (
-          <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
-            <label htmlFor="water-bottle-size" className="text-sm text-chalk">
-              Bottle size (mL)
-            </label>
-            <input
-              id="water-bottle-size"
-              type="number"
-              min="1"
-              value={bottleSizeInput}
-              onChange={(e) => handleBottleSizeChange(e.target.value)}
-              className="w-24 rounded-md border border-line bg-surface px-2 py-1.5 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
-            />
-          </div>
-        )}
+      )}
 
-        <ConfirmDeleteButton
-          onConfirm={() => supabase.auth.signOut()}
-          idleLabel="Sign out"
-          armedLabel="Tap again to sign out"
-          children="Sign out"
-          armedChildren="Tap again to sign out"
-          danger={false}
-          className="mt-5 w-full rounded-md border px-4 py-2.5 font-body text-sm font-semibold"
-          idleClassName="border-line text-chalk-dim active:border-blue-500 active:text-blue-400"
-          armedClassName="border-blue-500"
-        />
-      </Card>
-    </div>
+      <ConfirmDeleteButton
+        onConfirm={() => supabase.auth.signOut()}
+        idleLabel="Sign out"
+        armedLabel="Tap again to sign out"
+        children="Sign out"
+        armedChildren="Tap again to sign out"
+        danger={false}
+        className="mt-5 w-full rounded-md border px-4 py-2.5 font-body text-sm font-semibold"
+        idleClassName="border-line text-chalk-dim active:border-blue-500 active:text-blue-400"
+        armedClassName="border-blue-500"
+      />
+    </Sheet>
   )
 }
 
