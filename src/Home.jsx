@@ -59,8 +59,12 @@ function Home({
   onSetLogged,
 }) {
   const [exercises, setExercises] = useCachedState('home:exercises', [])
-  const [todaysSets, setTodaysSets] = useCachedState('home:todaysSets', [])
-  const [todaysSetsLoaded, setTodaysSetsLoaded] = useCachedState('home:todaysSetsLoaded', false)
+  // Date-scoped so a remount after midnight doesn't paint yesterday's sets
+  // as today's. Fixed per mount: a changing key would carry this mount's
+  // state over into the new key's cache slot.
+  const [today] = useState(getTodayDateString)
+  const [todaysSets, setTodaysSets] = useCachedState(`home:todaysSets:${today}`, [])
+  const [todaysSetsLoaded, setTodaysSetsLoaded] = useCachedState(`home:todaysSetsLoaded:${today}`, false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
@@ -101,7 +105,7 @@ function Home({
     }
 
     fetchExercises()
-  }, [onError])
+  }, [onError, setExercises])
 
   useEffect(() => {
     async function fetchRoutines() {
@@ -126,7 +130,7 @@ function Home({
     }
 
     fetchRoutines()
-  }, [onError])
+  }, [onError, setRoutines])
 
   useEffect(() => {
     async function fetchTodaysSets() {
@@ -147,7 +151,7 @@ function Home({
     }
 
     fetchTodaysSets()
-  }, [refreshKey, onError])
+  }, [refreshKey, onError, setTodaysSets, setTodaysSetsLoaded])
 
   const visibleTodaysSets = todaysSets.filter((s) => !isPending(s.id))
   const groupedSets = groupByUser(visibleTodaysSets, profiles, session.user.id, 'sets')

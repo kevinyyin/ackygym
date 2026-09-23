@@ -151,7 +151,16 @@ function App() {
       (_event, session) => {
         // A different user signing in on this device must never see the
         // previous user's cached page data.
-        if (!session) clearPageCache()
+        if (!session) {
+          clearPageCache()
+          // Nothing opened or started by the previous user may greet the next
+          // one. The rest timer's countdown itself isn't reset here: this
+          // effect subscribes once, so it would only hold the first render's
+          // restTimer — the sheet closing is what matters.
+          setSettingsOpen(false)
+          setTimerOpen(false)
+          setActiveRoutine(null)
+        }
         setSession(session)
         setSessionChecked(true)
       }
@@ -195,12 +204,6 @@ function App() {
 
   const tabKey = '/' + location.pathname.split('/')[1]
 
-  // Each tab starts at the top — the scroll container persists across tab
-  // switches now that the page itself no longer scrolls.
-  useEffect(() => {
-    scrollRootRef.current?.scrollTo(0, 0)
-  }, [tabKey])
-
   // iOS large-title collapse: when the sentinel under the big title scrolls
   // out of view, the compact frosted bar fades in.
   useEffect(() => {
@@ -208,7 +211,9 @@ function App() {
     if (!sentinel) return
     const observer = new IntersectionObserver(
       ([entry]) => setTitleCollapsed(!entry.isIntersecting),
-      { root: scrollRootRef.current, threshold: 0 }
+      // Offset by the 44px compact bar so the title counts as gone once
+      // it slides under the bar, not once it leaves the screen.
+      { root: scrollRootRef.current, rootMargin: '-44px 0px 0px 0px', threshold: 0 }
     )
     observer.observe(sentinel)
     return () => observer.disconnect()
@@ -284,7 +289,14 @@ function App() {
             </header>
             <div ref={titleSentinelRef} aria-hidden="true" className="-mt-10 h-0" />
 
-            <AnimatePresence mode="wait" initial={false}>
+            {/* Each tab starts at the top — the scroll container persists
+              across tab switches. Reset once the old page has faded out, so
+              it doesn't visibly jump mid-fade. */}
+            <AnimatePresence
+              mode="wait"
+              initial={false}
+              onExitComplete={() => scrollRootRef.current?.scrollTo(0, 0)}
+            >
               <motion.div
                 key={tabKey}
                 initial={{ opacity: 0, y: 8 }}

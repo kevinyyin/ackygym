@@ -73,7 +73,7 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
     }
 
     fetchExercises()
-  }, [onError])
+  }, [onError, setExercises, setExercisesLoaded])
 
   useEffect(() => {
     async function fetchBestSets() {

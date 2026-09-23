@@ -57,7 +57,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     }
 
     fetchPhotos()
-  }, [refreshKey, onError])
+  }, [refreshKey, onError, setPhotos, setPhotosLoaded])
 
   useEffect(() => {
     if (photos.length === 0) return
