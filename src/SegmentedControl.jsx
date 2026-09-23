@@ -14,7 +14,7 @@ function SegmentedControl({ segments, value, onChange, layoutId }) {
     />
   )
   const segmentClass = (active) =>
-    `relative flex h-8 flex-1 items-center justify-center rounded-full text-[13px] font-semibold ${
+    `relative flex h-8 flex-1 items-center justify-center rounded-full text-[13px] font-semibold after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] ${
       active ? 'text-chalk' : 'text-chalk-dim'
     }`
 
