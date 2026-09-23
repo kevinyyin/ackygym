@@ -9,6 +9,7 @@ import { MedalIcon } from './icons'
 import { formatDate } from './dateUtils'
 import { toDisplayWeight } from './weightUnits'
 import Skeleton from './Skeleton'
+import { useCachedState } from './pageCache'
 
 // Which muscle_groups.name values count as "lower body" for the purpose of
 // this grouping — everything else (including core) is bucketed as upper body.
@@ -47,8 +48,8 @@ function bodyRegionFor(exercise) {
 const COLLAPSED_COUNT = 8
 
 function LiftsPage({ profiles, userId, weightUnit, onError }) {
-  const [exercises, setExercises] = useState([])
-  const [exercisesLoaded, setExercisesLoaded] = useState(false)
+  const [exercises, setExercises] = useCachedState('lifts:exercises', [])
+  const [exercisesLoaded, setExercisesLoaded] = useCachedState('lifts:exercisesLoaded', false)
   const [bestSets, setBestSets] = useState(new Map())
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [expandedUpper, setExpandedUpper] = useState(false)

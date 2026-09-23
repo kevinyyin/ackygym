@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Routes, Route, NavLink, Link, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from './supabaseClient'
+import { clearPageCache } from './pageCache'
 import Auth from './Auth'
 import Home from './Home'
 import RoutinesPage from './RoutinesPage'
@@ -149,6 +150,9 @@ function App() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        // A different user signing in on this device must never see the
+        // previous user's cached page data.
+        if (!session) clearPageCache()
         setSession(session)
         setSessionChecked(true)
       }

@@ -10,6 +10,7 @@ import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
 import { smooth } from './motionPresets'
 import Skeleton from './Skeleton'
+import { useCachedState } from './pageCache'
 
 const BUCKET = 'progress-photos'
 const SIGNED_URL_TTL = 60 * 60
@@ -23,8 +24,8 @@ function captionFor(photo, userId, profileByUserId) {
 }
 
 function ProgressPhotosPage({ profiles, userId, onError }) {
-  const [photos, setPhotos] = useState([])
-  const [photosLoaded, setPhotosLoaded] = useState(false)
+  const [photos, setPhotos] = useCachedState('photos:photos', [])
+  const [photosLoaded, setPhotosLoaded] = useCachedState('photos:photosLoaded', false)
   const [signedUrlByPath, setSignedUrlByPath] = useState({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [uploading, setUploading] = useState(false)

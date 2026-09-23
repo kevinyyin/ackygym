@@ -9,6 +9,7 @@ import Card from './Card'
 import WorkoutDayModal from './WorkoutDayModal'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons'
 import Skeleton from './Skeleton'
+import { useCachedState } from './pageCache'
 
 const VIEW_MODE_KEY = 'calendarViewMode'
 const MONTH_WEEKDAY_HEADER = [0, 1, 2, 3, 4, 5, 6].map((d) => WEEKDAY_SHORT[d])
@@ -308,9 +309,9 @@ function MonthGrid({ weeks, onDayClick }) {
 }
 
 function CalendarPage({ profiles, userId, weightUnit, onError }) {
-  const [dayDataByUser, setDayDataByUser] = useState(new Map())
-  const [setsLoaded, setSetsLoaded] = useState(false)
-  const [scheduleMap, setScheduleMap] = useState(new Map())
+  const [dayDataByUser, setDayDataByUser] = useCachedState('calendar:dayDataByUser', new Map())
+  const [setsLoaded, setSetsLoaded] = useCachedState('calendar:setsLoaded', false)
+  const [scheduleMap, setScheduleMap] = useCachedState('calendar:scheduleMap', new Map())
   const [setsVersion, setSetsVersion] = useState(0)
   const [viewingDate, setViewingDate] = useState(null)
   const [viewMode, setViewMode] = useState(() => localStorage.getItem(VIEW_MODE_KEY) || 'heatmap')

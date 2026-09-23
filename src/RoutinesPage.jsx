@@ -11,6 +11,7 @@ import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
 import { CloseIcon } from './icons'
 import Skeleton from './Skeleton'
+import { useCachedState } from './pageCache'
 
 // Routine and exercise-library management, split out of Home so that page
 // can stay focused on today's status/logging — this is occasional
@@ -23,11 +24,11 @@ const SECTIONS = [
 function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRoutineChange, weightUnit }) {
   const navigate = useNavigate()
   const [section, setSection] = useState('routines')
-  const [exercises, setExercises] = useState([])
-  const [exercisesLoaded, setExercisesLoaded] = useState(false)
+  const [exercises, setExercises] = useCachedState('routinesPage:exercises', [])
+  const [exercisesLoaded, setExercisesLoaded] = useCachedState('routinesPage:exercisesLoaded', false)
   const [exercisesVersion, setExercisesVersion] = useState(0)
-  const [routines, setRoutines] = useState([])
-  const [routinesLoaded, setRoutinesLoaded] = useState(false)
+  const [routines, setRoutines] = useCachedState('routinesPage:routines', [])
+  const [routinesLoaded, setRoutinesLoaded] = useCachedState('routinesPage:routinesLoaded', false)
   const [routinesVersion, setRoutinesVersion] = useState(0)
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [exerciseToDelete, setExerciseToDelete] = useState(null)
