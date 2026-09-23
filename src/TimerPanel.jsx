@@ -61,24 +61,22 @@ function TimerPanel({ duration, remaining, status, selectDuration, onStart, onPa
         segments={PRESETS.map((p) => ({ key: p.seconds, label: p.label }))}
       />
 
-      <Card className="p-3">
-        <form onSubmit={handleCustomSubmit} className="flex gap-2">
-          <input
-            type="number"
-            min="1"
-            value={customValue}
-            onChange={(e) => setCustomValue(e.target.value)}
-            placeholder="Custom seconds"
-            className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="shrink-0 rounded-md border border-line bg-surface-2 px-4 py-2 font-body text-sm font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400"
-          >
-            Set
-          </button>
-        </form>
-      </Card>
+      <form onSubmit={handleCustomSubmit} className="flex gap-2">
+        <input
+          type="number"
+          min="1"
+          value={customValue}
+          onChange={(e) => setCustomValue(e.target.value)}
+          placeholder="Custom seconds"
+          className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-md border border-line bg-surface-2 px-4 py-2 font-body text-sm font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400"
+        >
+          Set
+        </button>
+      </form>
 
       <Card
         className={`flex flex-col items-center gap-1 border-0 bg-transparent py-4 transition ${

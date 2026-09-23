@@ -1,7 +1,6 @@
 import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useDragControls } from 'motion/react'
-import { useEscapeToClose } from './useEscapeToClose'
 import { useModalFocusTrap } from './useModalFocusTrap'
 import { smooth } from './motionPresets'
 import { CloseIcon } from './icons'
@@ -23,6 +22,32 @@ function useBackgroundRecede(open) {
   }, [open])
 }
 
+// Open sheets in opening order. Every open sheet listens for Escape, but only
+// the topmost may act on it — otherwise one keypress closes a ConfirmModal
+// and the sheet beneath it together.
+const openSheetStack = []
+
+function useEscapeToCloseTopmost(open, onClose, id) {
+  // Membership is keyed on `open` alone: re-running it whenever the caller
+  // passes a fresh onClose would move this sheet to the top of the stack.
+  useEffect(() => {
+    if (!open) return
+    openSheetStack.push(id)
+    return () => {
+      openSheetStack.splice(openSheetStack.indexOf(id), 1)
+    }
+  }, [open, id])
+
+  useEffect(() => {
+    if (!open) return
+    function handleKeyDown(e) {
+      if (e.key === 'Escape' && openSheetStack.at(-1) === id) onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, onClose, id])
+}
+
 const DISMISS_DISTANCE_RATIO = 0.3
 const DISMISS_VELOCITY = 500
 
@@ -33,7 +58,7 @@ function Sheet({ open, onClose, title, size = 'auto', children }) {
   const titleId = useId()
   const dragControls = useDragControls()
   const containerRef = useModalFocusTrap(open)
-  useEscapeToClose(open, onClose)
+  useEscapeToCloseTopmost(open, onClose, titleId)
   useBackgroundRecede(open)
 
   function handleDragEnd(_event, info) {
