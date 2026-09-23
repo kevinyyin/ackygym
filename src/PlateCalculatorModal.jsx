@@ -1,5 +1,5 @@
-import { useId, useState } from 'react'
-import Card from './Card'
+import { useState } from 'react'
+import Sheet from './Sheet'
 import {
   calculatePlates,
   STANDARD_PLATES_KG,
@@ -7,8 +7,6 @@ import {
   STANDARD_PLATES_LB,
   STANDARD_BAR_LB,
 } from './plateCalculator'
-import { useModalFocusTrap } from './useModalFocusTrap'
-import { CloseIcon } from './icons'
 
 function standardBarFor(unit) {
   return unit === 'kg' ? STANDARD_BAR_KG : STANDARD_BAR_LB
@@ -31,8 +29,6 @@ function Plate({ weight }) {
 }
 
 function PlateCalculatorModal({ initialWeight, unit, onClose }) {
-  const containerRef = useModalFocusTrap(true)
-  const titleId = useId()
   const [weight, setWeight] = useState(String(initialWeight || ''))
   const [barWeight, setBarWeight] = useState(String(standardBarFor(unit)))
 
@@ -48,93 +44,66 @@ function PlateCalculatorModal({ initialWeight, unit, onClose }) {
   const leftSide = [...platesPerSide].reverse()
 
   return (
-    <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-ink/80 p-4"
-      onClick={onClose}
-    >
-      <Card
-        ref={containerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <h2 id={titleId} className="font-display text-2xl leading-none tracking-tight text-chalk uppercase">
-            Plate calculator
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="shrink-0 text-chalk-dim hover:text-danger"
-          >
-            <CloseIcon className="h-5 w-5" />
-          </button>
-        </div>
+    <Sheet open onClose={onClose} title="Plate calculator">
+      <div className="mt-3 flex gap-3">
+        <label className="flex-1">
+          <span className="text-[11px] text-chalk-dim uppercase">Target weight ({unit})</span>
+          <input
+            type="number"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            className="mt-1 w-full rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+          />
+        </label>
+        <label className="flex-1">
+          <span className="text-[11px] text-chalk-dim uppercase">Bar weight ({unit})</span>
+          <input
+            type="number"
+            value={barWeight}
+            onChange={(e) => setBarWeight(e.target.value)}
+            className="mt-1 w-full rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+          />
+        </label>
+      </div>
 
-        <div className="mt-3 flex gap-3">
-          <label className="flex-1">
-            <span className="text-[11px] text-chalk-dim uppercase">Target weight ({unit})</span>
-            <input
-              type="number"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              className="mt-1 w-full rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
-            />
-          </label>
-          <label className="flex-1">
-            <span className="text-[11px] text-chalk-dim uppercase">Bar weight ({unit})</span>
-            <input
-              type="number"
-              value={barWeight}
-              onChange={(e) => setBarWeight(e.target.value)}
-              className="mt-1 w-full rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
-            />
-          </label>
+      <div className="mt-5 overflow-x-auto">
+        <div className="flex min-w-max items-center justify-center gap-0.5 py-2">
+          <div className="h-1.5 w-6 shrink-0 rounded-l bg-line" />
+          {leftSide.map((p, i) => (
+            <Plate key={`l-${i}`} weight={p} />
+          ))}
+          <div className="h-2.5 w-10 shrink-0 bg-line" />
+          {platesPerSide.map((p, i) => (
+            <Plate key={`r-${i}`} weight={p} />
+          ))}
+          <div className="h-1.5 w-6 shrink-0 rounded-r bg-line" />
         </div>
+      </div>
 
-        <div className="mt-5 overflow-x-auto">
-          <div className="flex min-w-max items-center justify-center gap-0.5 py-2">
-            <div className="h-1.5 w-6 shrink-0 rounded-l bg-line" />
-            {leftSide.map((p, i) => (
-              <Plate key={`l-${i}`} weight={p} />
-            ))}
-            <div className="h-2.5 w-10 shrink-0 bg-line" />
-            {platesPerSide.map((p, i) => (
-              <Plate key={`r-${i}`} weight={p} />
-            ))}
-            <div className="h-1.5 w-6 shrink-0 rounded-r bg-line" />
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-col gap-1 text-center">
-          {platesPerSide.length === 0 ? (
-            <p className="text-sm text-chalk-dim">
-              {targetWeight <= bar
-                ? `No plates needed — the bar alone is ${bar}${unit}.`
-                : 'Enter a target weight to calculate.'}
-            </p>
-          ) : (
-            <p className="text-sm text-chalk">
-              Each side:{' '}
-              <span className="font-mono font-bold text-blue-400">
-                {platesPerSide.join(' + ')} {unit}
-              </span>
-            </p>
-          )}
-          {remainder > 0 && (
-            <p className="text-xs text-chalk-dim">
-              {targetWeight}
-              {unit} isn't exactly achievable with these plates — closest is {achievedWeight}
-              {unit}.
-            </p>
-          )}
-        </div>
-      </Card>
-    </div>
+      <div className="mt-4 flex flex-col gap-1 text-center">
+        {platesPerSide.length === 0 ? (
+          <p className="text-sm text-chalk-dim">
+            {targetWeight <= bar
+              ? `No plates needed — the bar alone is ${bar}${unit}.`
+              : 'Enter a target weight to calculate.'}
+          </p>
+        ) : (
+          <p className="text-sm text-chalk">
+            Each side:{' '}
+            <span className="font-mono font-bold text-blue-400">
+              {platesPerSide.join(' + ')} {unit}
+            </span>
+          </p>
+        )}
+        {remainder > 0 && (
+          <p className="text-xs text-chalk-dim">
+            {targetWeight}
+            {unit} isn't exactly achievable with these plates — closest is {achievedWeight}
+            {unit}.
+          </p>
+        )}
+      </div>
+    </Sheet>
   )
 }
 

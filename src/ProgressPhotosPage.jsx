@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from './supabaseClient'
 import Card from './Card'
 import { displayName } from './displayName'
@@ -7,6 +8,7 @@ import { CameraIcon, CloseIcon } from './icons'
 import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
+import { smooth } from './motionPresets'
 
 const BUCKET = 'progress-photos'
 const SIGNED_URL_TTL = 60 * 60
@@ -386,31 +388,38 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
         </div>
       )}
 
-      {viewingPhoto && (
-        <div
-          onClick={() => setViewingPhoto(null)}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-ink/90 p-4"
-        >
-          <button
+      <AnimatePresence>
+        {viewingPhoto && (
+          <motion.div
+            key="lightbox"
             onClick={() => setViewingPhoto(null)}
-            aria-label="Close"
-            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur active:text-danger"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={smooth}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/95 p-4"
           >
-            <CloseIcon className="h-5 w-5" />
-          </button>
-          {signedUrlByPath[viewingPhoto.path] && (
-            <img
-              src={signedUrlByPath[viewingPhoto.path]}
-              alt={`Progress photo from ${formatDate(viewingPhoto.date, { year: true })}`}
-              onClick={(e) => e.stopPropagation()}
-              className="max-h-[85vh] max-w-[95vw] object-contain"
-            />
-          )}
-          <p className="font-mono text-xs text-chalk-dim">
-            {captionFor(viewingPhoto, userId, profileByUserId)}
-          </p>
-        </div>
-      )}
+            <button
+              onClick={() => setViewingPhoto(null)}
+              aria-label="Close"
+              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur active:text-danger"
+            >
+              <CloseIcon className="h-5 w-5" />
+            </button>
+            {signedUrlByPath[viewingPhoto.path] && (
+              <img
+                src={signedUrlByPath[viewingPhoto.path]}
+                alt={`Progress photo from ${formatDate(viewingPhoto.date, { year: true })}`}
+                onClick={(e) => e.stopPropagation()}
+                className="max-h-[85vh] max-w-[95vw] object-contain"
+              />
+            )}
+            <p className="font-mono text-xs text-chalk-dim">
+              {captionFor(viewingPhoto, userId, profileByUserId)}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
 
     <ConfirmModal
