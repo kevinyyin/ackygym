@@ -54,6 +54,7 @@ function Home({
   weightUnit,
   activeRoutine,
   onActiveRoutineChange,
+  onSetLogged,
 }) {
   const [exercises, setExercises] = useState([])
   const [todaysSets, setTodaysSets] = useState([])
@@ -172,6 +173,7 @@ function Home({
     }
     setRefreshKey((key) => key + 1)
     setShowTodaysSets(true)
+    onSetLogged()
   }
 
   function handleDeleteSet(set, exerciseName) {
@@ -330,6 +332,7 @@ function Home({
               onLogged={() => {
                 setRefreshKey((key) => key + 1)
                 setShowTodaysSets(true)
+                onSetLogged()
               }}
               onError={onError}
             />
@@ -346,6 +349,7 @@ function Home({
           onLogged={() => {
             setRefreshKey((key) => key + 1)
             setShowTodaysSets(true)
+            onSetLogged()
           }}
           onError={onError}
         />

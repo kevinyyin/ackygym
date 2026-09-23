@@ -20,6 +20,8 @@ function SettingsModal({
   onWaterSettingsChange,
   weightUnit,
   onWeightUnitChange,
+  autoRest,
+  onAutoRestChange,
   onClose,
   profile,
   userId,
@@ -166,6 +168,19 @@ function SettingsModal({
           ))}
         </div>
       </div>
+
+      <h3 className="mt-8 text-headline">Workout</h3>
+      <label className="mt-3 flex items-center justify-between gap-3 rounded-field bg-surface-2 px-4 py-3.5">
+        <span className="text-[15px] text-chalk">
+          Auto-start rest after logging a set
+        </span>
+        <input
+          type="checkbox"
+          checked={autoRest}
+          onChange={(e) => onAutoRestChange(e.target.checked)}
+          className="h-5 w-5 accent-blue-500"
+        />
+      </label>
 
       <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
         Water tracking
