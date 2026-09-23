@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Routes, Route, NavLink, Link, useLocation } from 'react-router-dom'
+import { Routes, Route, NavLink, Link, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from './supabaseClient'
 import Auth from './Auth'
 import Home from './Home'
@@ -9,44 +10,44 @@ import LiftsPage from './LiftsPage'
 import BodyWeightPage from './BodyWeightPage'
 import ProgressPhotosPage from './ProgressPhotosPage'
 import SetsHistoryPage from './SetsHistoryPage'
-import TimerPage from './TimerPage'
 import SettingsModal from './SettingsModal'
+import TabSection from './TabSection'
+import { smooth } from './motionPresets'
+import { LEGACY_REDIRECTS } from './legacyRoutes'
 import { displayName } from './displayName'
 import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
 import { loadWaterSettings, saveWaterSettings } from './waterSettings'
 import { loadWeightUnit, saveWeightUnit } from './weightUnitSettings'
 import { useRestTimer } from './useRestTimer'
-import {
-  GridIcon,
-  CalendarIcon,
-  BarbellIcon,
-  ScaleIcon,
-  CameraIcon,
-  TimerIcon,
-  SunIcon,
-  MoonIcon,
-  SettingsIcon,
-} from './icons'
-
-const PAGE_TITLES = {
-  '/': 'Home',
-  '/calendar': 'Calendar',
-  '/lifts': 'Lifts',
-  '/weight': 'Weight',
-  '/photos': 'Photos',
-  '/timer': 'Timer',
-  '/routines': 'Routines',
-  '/history': 'History',
-}
+import { GridIcon, BarbellIcon, CalendarIcon, ScaleIcon } from './icons'
 
 const TABS = [
-  { to: '/', label: 'Home', icon: GridIcon, end: true },
-  { to: '/calendar', label: 'Calendar', icon: CalendarIcon },
-  { to: '/lifts', label: 'Lifts', icon: BarbellIcon },
-  { to: '/weight', label: 'Weight', icon: ScaleIcon },
-  { to: '/photos', label: 'Photos', icon: CameraIcon },
-  { to: '/timer', label: 'Timer', icon: TimerIcon },
+  { to: '/', label: 'Today', icon: GridIcon, end: true },
+  { to: '/train', label: 'Train', icon: BarbellIcon },
+  { to: '/progress', label: 'Progress', icon: CalendarIcon },
+  { to: '/body', label: 'Body', icon: ScaleIcon },
 ]
+
+const PAGE_TITLES = Object.fromEntries(TABS.map((tab) => [tab.to, tab.label]))
+
+const TRAIN_SEGMENTS = [
+  { key: 'routines', label: 'Routines', to: '/train', end: true },
+  { key: 'exercises', label: 'Exercises', to: '/train/exercises' },
+]
+const PROGRESS_SEGMENTS = [
+  { key: 'calendar', label: 'Calendar', to: '/progress', end: true },
+  { key: 'history', label: 'History', to: '/progress/history' },
+]
+const BODY_SEGMENTS = [
+  { key: 'weight', label: 'Weight', to: '/body', end: true },
+  { key: 'photos', label: 'Photos', to: '/body/photos' },
+]
+
+function initials(profile) {
+  if (!profile) return ''
+  return displayName(profile).slice(0, 2).toUpperCase()
+}
+
 
 function App() {
   const [session, setSession] = useState(null)
@@ -62,25 +63,23 @@ function App() {
   const [weightUnit, setWeightUnitState] = useState(loadWeightUnit)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
-  const errorRef = useRef(null)
   // Lifted out of Home so a started routine survives switching tabs — Home
   // unmounts on route change, which would otherwise wipe this like any other
   // component-local state.
   const [activeRoutine, setActiveRoutine] = useState(null)
   const location = useLocation()
+  // Unused until Task 7's TimerSheet/TimerPill; kept mounted here so a
+  // running rest timer survives tab switches.
+  // eslint-disable-next-line no-unused-vars
   const restTimer = useRestTimer()
+  const scrollRootRef = useRef(null)
+  const titleSentinelRef = useRef(null)
+  const [titleCollapsed, setTitleCollapsed] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
-
-  // A failed action can happen anywhere on a tall page (a form at the
-  // bottom, mid-workout) while this banner always renders at the top —
-  // scroll it into view so it's not silently missed below the fold.
-  useEffect(() => {
-    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [error])
 
   useEffect(() => {
     function handleOnline() {
@@ -178,6 +177,27 @@ function App() {
     fetchSchedule()
   }, [session, scheduleVersion, handleError])
 
+  const tabKey = '/' + location.pathname.split('/')[1]
+
+  // Each tab starts at the top — the scroll container persists across tab
+  // switches now that the page itself no longer scrolls.
+  useEffect(() => {
+    scrollRootRef.current?.scrollTo(0, 0)
+  }, [tabKey])
+
+  // iOS large-title collapse: when the sentinel under the big title scrolls
+  // out of view, the compact frosted bar fades in.
+  useEffect(() => {
+    const sentinel = titleSentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setTitleCollapsed(!entry.isIntersecting),
+      { root: scrollRootRef.current, threshold: 0 }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [session])
+
   if (!sessionChecked) {
     return <div className="min-h-svh bg-ink" />
   }
@@ -186,208 +206,203 @@ function App() {
     return <Auth />
   }
 
-  const pageTitle = PAGE_TITLES[location.pathname] ?? 'Gym Tracker'
+  const pageTitle = PAGE_TITLES[tabKey] ?? 'Ackygym'
   const currentProfile = profiles.find((p) => p.id === session.user.id)
+  const todayCaption = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
 
   return (
-    <div className="min-h-svh bg-ink text-chalk">
-      <div className="mx-auto flex min-h-svh max-w-md flex-col gap-6 px-4 pb-28 pt-6">
-        <header className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="mb-1 text-[11px] font-semibold tracking-[0.3em] text-blue-400 uppercase">
-              Ackygym
-            </p>
-            <h1 className="font-display text-4xl leading-none tracking-tight text-chalk uppercase">
-              {pageTitle}
-            </h1>
-            <p className="truncate font-mono text-xs text-chalk-dim">
-              {currentProfile ? displayName(currentProfile) : ''}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Settings"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
-            >
-              <SettingsIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim active:border-blue-500 active:text-blue-400"
-            >
-              {theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-            </button>
-          </div>
-        </header>
-
-        {!isOnline && (
-          <p className="rounded-md border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-amber">
-            You're offline. Changes won't save until your connection is back.
-          </p>
-        )}
-
-        {error && (
-          <p
-            ref={errorRef}
-            role="alert"
-            aria-live="assertive"
-            className="rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
-          >
-            {error}
-          </p>
-        )}
-
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Home
-                session={session}
-                profiles={profiles}
-                schedule={schedule}
-                onError={handleError}
-                showWaterTracker={cardVisibility.water}
-                waterSettings={waterSettings}
-                weightUnit={weightUnit}
-                activeRoutine={activeRoutine}
-                onActiveRoutineChange={setActiveRoutine}
-              />
-            }
-          />
-          <Route
-            path="/routines"
-            element={
-              <RoutinesPage
-                session={session}
-                schedule={schedule}
-                onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
-                onError={handleError}
-                onActiveRoutineChange={setActiveRoutine}
-                weightUnit={weightUnit}
-              />
-            }
-          />
-          <Route
-            path="/calendar"
-            element={
-              <CalendarPage
-                profiles={profiles}
-                userId={session.user.id}
-                onError={handleError}
-                weightUnit={weightUnit}
-              />
-            }
-          />
-          <Route
-            path="/lifts"
-            element={
-              <LiftsPage
-                profiles={profiles}
-                userId={session.user.id}
-                onError={handleError}
-                weightUnit={weightUnit}
-              />
-            }
-          />
-          <Route
-            path="/weight"
-            element={
-              <BodyWeightPage
-                profiles={profiles}
-                userId={session.user.id}
-                onError={handleError}
-                showCalorieTracker={cardVisibility.calorie}
-                showCalorieTracking={cardVisibility.calorieTracker}
-                weightUnit={weightUnit}
-              />
-            }
-          />
-          <Route
-            path="/photos"
-            element={
-              <ProgressPhotosPage
-                profiles={profiles}
-                userId={session.user.id}
-                onError={handleError}
-              />
-            }
-          />
-          <Route
-            path="/timer"
-            element={
-              <TimerPage
-                duration={restTimer.duration}
-                remaining={restTimer.remaining}
-                status={restTimer.status}
-                selectDuration={restTimer.selectDuration}
-                onStart={restTimer.start}
-                onPause={restTimer.pause}
-                onReset={restTimer.reset}
-              />
-            }
-          />
-          <Route
-            path="/history"
-            element={
-              <SetsHistoryPage
-                userId={session.user.id}
-                weightUnit={weightUnit}
-                onError={handleError}
-              />
-            }
-          />
-          <Route
-            path="*"
-            element={
-              <div className="flex flex-col items-center gap-3 py-12 text-center">
-                <p className="font-display text-2xl leading-none tracking-tight text-chalk uppercase">
-                  Page not found
-                </p>
-                <p className="text-sm text-chalk-dim">There's nothing at this address.</p>
-                <Link
-                  to="/"
-                  className="mt-2 rounded-md bg-blue-500 px-4 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600"
-                >
-                  Go home
-                </Link>
-              </div>
-            }
-          />
-        </Routes>
+    <div id="app-shell" className="fixed inset-0 bg-ink text-chalk">
+      <div
+        aria-hidden={!titleCollapsed}
+        className={`pointer-events-none absolute inset-x-0 top-0 z-10 border-b border-line bg-ink/75 pt-[env(safe-area-inset-top)] backdrop-blur-xl transition-opacity duration-200 ${
+          titleCollapsed ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <p className="flex h-11 items-center justify-center text-[17px] font-semibold">{pageTitle}</p>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 shadow-[0_-12px_28px_-18px_var(--shadow-tint)] backdrop-blur">
-        <div className="mx-auto flex max-w-md items-stretch justify-around px-2 pb-[calc(env(safe-area-inset-bottom)+0.625rem)]">
-          {TABS.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} aria-label={label} className="px-3 pt-2.5 pb-3">
-              {({ isActive }) => (
-                <span
-                  className={`relative flex flex-col items-center gap-1 transition-colors ${
-                    isActive ? 'text-blue-400' : 'text-chalk-dim'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  {to === '/timer' && restTimer.status === 'running' && !isActive && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -top-0.5 -right-1 h-1.5 w-1.5 rounded-full bg-blue-500 motion-safe:animate-pulse"
+      <main
+        ref={scrollRootRef}
+        data-scroll-root
+        className="h-full overflow-y-auto overscroll-y-contain"
+      >
+        <div className="mx-auto flex max-w-md flex-col gap-10 px-5 pt-[calc(env(safe-area-inset-top)+3.5rem)] pb-[calc(env(safe-area-inset-bottom)+9rem)]">
+          <header className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="h-5 text-caption text-chalk-dim">{tabKey === '/' ? todayCaption : ''}</p>
+              <h1 className="text-large-title">{pageTitle}</h1>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-chalk"
+            >
+              {initials(currentProfile)}
+            </button>
+          </header>
+          <div ref={titleSentinelRef} aria-hidden="true" className="-mt-10 h-0" />
+
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={tabKey}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ ...smooth, opacity: { duration: 0.18 } }}
+            >
+              <Routes location={location}>
+                <Route
+                  path="/"
+                  element={
+                    <Home
+                      session={session}
+                      profiles={profiles}
+                      schedule={schedule}
+                      onError={handleError}
+                      showWaterTracker={cardVisibility.water}
+                      waterSettings={waterSettings}
+                      weightUnit={weightUnit}
+                      activeRoutine={activeRoutine}
+                      onActiveRoutineChange={setActiveRoutine}
                     />
-                  )}
-                  <span className="font-mono text-[9px] tracking-wide uppercase">{label}</span>
-                  <span
-                    className={`h-[2px] w-4 rounded-full transition-colors ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}
+                  }
+                />
+                <Route path="/train" element={<TabSection segments={TRAIN_SEGMENTS} layoutId="seg-train" />}>
+                  <Route
+                    index
+                    element={
+                      <RoutinesPage
+                        session={session}
+                        schedule={schedule}
+                        onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
+                        onError={handleError}
+                        onActiveRoutineChange={setActiveRoutine}
+                        weightUnit={weightUnit}
+                      />
+                    }
                   />
-                </span>
+                  <Route
+                    path="exercises"
+                    element={
+                      <LiftsPage
+                        profiles={profiles}
+                        userId={session.user.id}
+                        onError={handleError}
+                        weightUnit={weightUnit}
+                      />
+                    }
+                  />
+                </Route>
+                <Route path="/progress" element={<TabSection segments={PROGRESS_SEGMENTS} layoutId="seg-progress" />}>
+                  <Route
+                    index
+                    element={
+                      <CalendarPage
+                        profiles={profiles}
+                        userId={session.user.id}
+                        onError={handleError}
+                        weightUnit={weightUnit}
+                      />
+                    }
+                  />
+                  <Route
+                    path="history"
+                    element={
+                      <SetsHistoryPage
+                        userId={session.user.id}
+                        weightUnit={weightUnit}
+                        onError={handleError}
+                      />
+                    }
+                  />
+                </Route>
+                <Route path="/body" element={<TabSection segments={BODY_SEGMENTS} layoutId="seg-body" />}>
+                  <Route
+                    index
+                    element={
+                      <BodyWeightPage
+                        profiles={profiles}
+                        userId={session.user.id}
+                        onError={handleError}
+                        showCalorieTracker={cardVisibility.calorie}
+                        showCalorieTracking={cardVisibility.calorieTracker}
+                        weightUnit={weightUnit}
+                      />
+                    }
+                  />
+                  <Route
+                    path="photos"
+                    element={
+                      <ProgressPhotosPage
+                        profiles={profiles}
+                        userId={session.user.id}
+                        onError={handleError}
+                      />
+                    }
+                  />
+                </Route>
+                {Object.entries(LEGACY_REDIRECTS).map(([from, to]) => (
+                  <Route key={from} path={from} element={<Navigate to={to} replace />} />
+                ))}
+                <Route
+                  path="*"
+                  element={
+                    <div className="flex flex-col items-center gap-3 py-16 text-center">
+                      <p className="text-title">Page not found</p>
+                      <p className="text-[15px] text-chalk-dim">There's nothing at this address.</p>
+                      <Link to="/" className="mt-3 rounded-full bg-chalk px-5 py-2.5 text-[15px] font-semibold text-ink">
+                        Go to Today
+                      </Link>
+                    </div>
+                  }
+                />
+              </Routes>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </main>
+
+      <nav className="absolute inset-x-0 bottom-0 z-10 border-t border-line bg-ink/75 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-md items-stretch justify-around pb-[env(safe-area-inset-bottom)]">
+          {TABS.map(({ to, label, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end} className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 pt-2 pb-1.5">
+              {({ isActive }) => (
+                <>
+                  <Icon className={`h-6 w-6 ${isActive ? 'text-chalk' : 'text-chalk-dim'}`} />
+                  <span className={`text-[10px] font-medium ${isActive ? 'text-chalk' : 'text-chalk-dim'}`}>{label}</span>
+                </>
               )}
             </NavLink>
           ))}
         </div>
       </nav>
 
+      {/* Offline/error banners — temporary placement; Task 8 restyles them */}
+      {!isOnline && (
+        <p className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 rounded-md border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-amber">
+          You're offline. Changes won't save until your connection is back.
+        </p>
+      )}
+
+      {error && (
+        <p
+          role="alert"
+          aria-live="assertive"
+          className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
+        >
+          {error}
+        </p>
+      )}
+
       <SettingsModal
         open={settingsOpen}
+        theme={theme}
+        onThemeChange={setTheme}
         visibility={cardVisibility}
         onToggle={toggleCardVisibility}
         waterSettings={waterSettings}
