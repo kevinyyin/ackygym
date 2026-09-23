@@ -188,6 +188,38 @@ html[data-theme="light"] {
       transition: none;
     }
   }
+
+  /* iOS card-sheet effect: the app behind an open Sheet shrinks, rounds,
+     and darkens. #app-shell is App.jsx's viewport-sized root, so scaling it
+     doesn't disturb any fixed-position children. */
+  #app-shell {
+    transform-origin: 50% 50%;
+    transition:
+      transform 420ms cubic-bezier(0.32, 0.72, 0, 1),
+      border-radius 420ms cubic-bezier(0.32, 0.72, 0, 1),
+      filter 420ms ease;
+  }
+
+  html[data-sheet-open] body {
+    background-color: #000;
+  }
+
+  html[data-sheet-open] #app-shell {
+    transform: scale(0.94);
+    border-radius: 16px;
+    overflow: hidden;
+    filter: brightness(0.7);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #app-shell {
+      transition: none;
+    }
+    html[data-sheet-open] #app-shell {
+      transform: none;
+      border-radius: 0;
+    }
+  }
 }
 
 @layer utilities {
