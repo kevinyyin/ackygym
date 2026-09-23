@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
-import { SectionLabel } from './Card'
 import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
 import { groupByMuscle } from './exerciseGrouping'
 import { GripIcon, ChevronRightIcon, CloseIcon } from './icons'
@@ -491,7 +490,7 @@ function Routines({
               ) : (
                 <>
                   <div className="mt-4 flex flex-col gap-2">
-                    <SectionLabel>Exercises</SectionLabel>
+                    <h2 className="text-headline text-chalk">Exercises</h2>
                     {isOwn ? (
                       <>
                         <ReorderableExerciseList
@@ -542,7 +541,7 @@ function Routines({
 
                   {isOwn && (
                     <div className="mt-4 flex flex-col gap-2">
-                      <SectionLabel>Schedule</SectionLabel>
+                      <h2 className="text-headline text-chalk">Schedule</h2>
                       <DayToggles
                         routine={routine}
                         schedule={schedule}

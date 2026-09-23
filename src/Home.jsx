@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import WorkoutForm from './WorkoutForm'
-import Card, { SectionLabel } from './Card'
+import Card from './Card'
 import ActiveRoutine from './ActiveRoutine'
 import WaterTracker from './WaterTracker'
 import { groupByUser } from './groupByUser'
@@ -311,7 +311,7 @@ function Home({
 
       <Card className="p-4">
         <div className="flex items-center justify-between gap-2">
-          <SectionLabel>Log a set</SectionLabel>
+          <h2 className="text-headline text-chalk">Log a set</h2>
           <button
             type="button"
             onClick={() => setShowLogSet(!showLogSet)}
@@ -353,7 +353,7 @@ function Home({
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <SectionLabel>Today&apos;s sets</SectionLabel>
+          <h2 className="text-headline text-chalk">Today&apos;s sets</h2>
           <button
             type="button"
             onClick={toggleShowTodaysSets}

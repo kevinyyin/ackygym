@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
-import Card, { SectionLabel } from './Card'
+import Card from './Card'
 import { displayName } from './displayName'
 import { getTodayDateString } from './dateUtils'
 import { DropletIcon } from './icons'
@@ -120,7 +120,7 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between gap-2">
-        <SectionLabel>Water</SectionLabel>
+        <h2 className="text-headline text-chalk">Water</h2>
         <div className="flex shrink-0 items-center gap-3">
           <DropletIcon className="h-4 w-4 text-blue-400" />
           <button
