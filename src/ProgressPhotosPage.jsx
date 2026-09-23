@@ -9,6 +9,7 @@ import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
 import { smooth } from './motionPresets'
+import Skeleton from './Skeleton'
 
 const BUCKET = 'progress-photos'
 const SIGNED_URL_TTL = 60 * 60
@@ -299,9 +300,12 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
       </Card>
 
       {!photosLoaded ? (
-        <Card className="p-4">
-          <p className="text-sm text-chalk-dim">Loading…</p>
-        </Card>
+        <div aria-busy="true" className="flex flex-col gap-3">
+          <span className="sr-only">Loading</span>
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+        </div>
       ) : visiblePhotos.length === 0 ? (
         <Card className="p-4">
           <p className="text-sm text-chalk-dim">No progress photos yet.</p>

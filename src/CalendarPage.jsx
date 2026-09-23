@@ -8,6 +8,7 @@ import { sortProfilesSelfFirst } from './groupByUser'
 import Card from './Card'
 import WorkoutDayModal from './WorkoutDayModal'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons'
+import Skeleton from './Skeleton'
 
 const VIEW_MODE_KEY = 'calendarViewMode'
 const MONTH_WEEKDAY_HEADER = [0, 1, 2, 3, 4, 5, 6].map((d) => WEEKDAY_SHORT[d])
@@ -393,9 +394,11 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
 
   if (!setsLoaded) {
     return (
-      <Card className="p-4">
-        <p className="text-sm text-chalk-dim">Loading…</p>
-      </Card>
+      <div aria-busy="true" className="flex flex-col gap-3">
+        <span className="sr-only">Loading</span>
+        <Skeleton className="h-56" />
+        <Skeleton className="h-32" />
+      </div>
     )
   }
 

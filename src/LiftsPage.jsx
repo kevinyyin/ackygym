@@ -8,6 +8,7 @@ import ExerciseDetailModal from './ExerciseDetailModal'
 import { MedalIcon } from './icons'
 import { formatDate } from './dateUtils'
 import { toDisplayWeight } from './weightUnits'
+import Skeleton from './Skeleton'
 
 // Which muscle_groups.name values count as "lower body" for the purpose of
 // this grouping — everything else (including core) is bucketed as upper body.
@@ -211,9 +212,12 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
   return (
     <>
       {!exercisesLoaded ? (
-        <Card className="p-4">
-          <p className="text-sm text-chalk-dim">Loading…</p>
-        </Card>
+        <div aria-busy="true" className="flex flex-col gap-3">
+          <span className="sr-only">Loading</span>
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+        </div>
       ) : exercises.length === 0 ? (
         <Card className="p-4">
           <p className="text-sm text-chalk-dim">No exercises yet.</p>

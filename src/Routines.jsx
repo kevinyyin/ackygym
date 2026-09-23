@@ -8,6 +8,7 @@ import ConfirmDeleteButton from './ConfirmDeleteButton'
 import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
+import Skeleton from './Skeleton'
 
 function GroupHeader({ children }) {
   return (
@@ -420,7 +421,11 @@ function Routines({
     <>
     <div className="mt-3 flex flex-col gap-3">
       {!loaded ? (
-        <p className="text-sm text-chalk-dim">Loading…</p>
+        <div aria-busy="true" className="mt-3 flex flex-col gap-2">
+          <span className="sr-only">Loading</span>
+          <Skeleton className="h-11 rounded-field bg-surface-2" />
+          <Skeleton className="h-11 rounded-field bg-surface-2" />
+        </div>
       ) : visibleRoutines.length === 0 ? (
         <p className="text-sm text-chalk-dim">No routines yet.</p>
       ) : (
