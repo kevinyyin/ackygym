@@ -11,14 +11,15 @@ import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
 import { CloseIcon } from './icons'
 import Skeleton from './Skeleton'
+import SegmentedControl from './SegmentedControl'
 import { useCachedState } from './pageCache'
 
 // Routine and exercise-library management, split out of Home so that page
 // can stay focused on today's status/logging — this is occasional
 // housekeeping, not a "today" action.
 const SECTIONS = [
-  { value: 'routines', label: 'Routines' },
-  { value: 'exercises', label: 'Exercises' },
+  { key: 'routines', label: 'Routines' },
+  { key: 'exercises', label: 'Library' },
 ]
 
 function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRoutineChange, weightUnit }) {
@@ -162,20 +163,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
           that happened to share a route — a segmented view keeps each one
           the only thing on screen instead of stacking both regardless of
           which one a visitor actually came here to do. */}
-      <div className="inline-flex w-full rounded-md border border-line bg-surface-2 p-0.5">
-        {SECTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => setSection(option.value)}
-            className={`flex-1 rounded px-3 py-1.5 font-mono text-xs font-semibold tracking-wide uppercase ${
-              section === option.value ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl segments={SECTIONS} value={section} onChange={setSection} layoutId="seg-routines-inner" />
 
       {section === 'routines' && (
         <Card className="p-4">

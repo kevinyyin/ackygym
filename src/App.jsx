@@ -36,7 +36,7 @@ const PAGE_TITLES = Object.fromEntries(TABS.map((tab) => [tab.to, tab.label]))
 
 const TRAIN_SEGMENTS = [
   { key: 'routines', label: 'Routines', to: '/train', end: true },
-  { key: 'exercises', label: 'Exercises', to: '/train/exercises' },
+  { key: 'exercises', label: 'Lifts', to: '/train/exercises' },
 ]
 const PROGRESS_SEGMENTS = [
   { key: 'calendar', label: 'Calendar', to: '/progress', end: true },
@@ -51,7 +51,6 @@ function initials(profile) {
   if (!profile) return ''
   return displayName(profile).slice(0, 2).toUpperCase()
 }
-
 
 function App() {
   const [session, setSession] = useState(null)
@@ -267,7 +266,7 @@ function App() {
                   type="button"
                   onClick={() => setTimerOpen(true)}
                   aria-label="Rest timer"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-chalk"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-chalk after:absolute after:-inset-1 after:content-['']"
                 >
                   <TimerIcon className="h-5 w-5" />
                 </button>
@@ -276,7 +275,7 @@ function App() {
                 type="button"
                 onClick={() => setSettingsOpen(true)}
                 aria-label="Settings"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-chalk"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-chalk after:absolute after:-inset-1 after:content-['']"
               >
                 {initials(currentProfile)}
               </button>
@@ -450,7 +449,7 @@ function App() {
                 type="button"
                 onClick={() => handleError('')}
                 aria-label="Dismiss"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface text-chalk-dim"
+                className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface text-chalk-dim after:absolute after:-inset-2.5 after:content-['']"
               >
                 <CloseIcon className="h-3.5 w-3.5" />
               </button>

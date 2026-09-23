@@ -96,7 +96,7 @@ function Sheet({ open, onClose, title, size = 'auto', children }) {
                   type="button"
                   onClick={onClose}
                   aria-label="Close"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-chalk-dim"
+                  className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-chalk-dim after:absolute after:-inset-1.5 after:content-['']"
                 >
                   <CloseIcon className="h-4 w-4" />
                 </button>
