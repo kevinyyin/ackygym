@@ -37,6 +37,7 @@
 4. **New: remount cache (Task 10).** Tab switches unmount pages, so every switch re-shows "Loading…". A tiny module-level `useCachedState` shows the last data instantly and refetches in the background. This is the spec's "refetch never clears existing data" rule applied across remounts.
 5. **`TimerPage.jsx` is renamed `TimerPanel.jsx`** (content unchanged apart from restyling) and wrapped by `TimerSheet.jsx`.
 6. **`PlateCalculatorModal` gets an enter animation only.** Its parents mount it conditionally, so the exit animation can't run without restructuring two forms. That happens in the Today plan.
+7. **Skeleton-to-content 150ms fade is deferred to the per-page redesigns.** Spec §5 asks for content replacing a skeleton to fade in over 150ms. Each page's loaded content is rebuilt in its own redesign plan; a generic fade wrapper now would touch every page twice.
 
 ## File Structure
 
