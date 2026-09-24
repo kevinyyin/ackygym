@@ -265,7 +265,7 @@ function App() {
           data-scroll-root
           className="h-full overflow-y-auto overscroll-y-contain"
         >
-          <div className="mx-auto flex max-w-md flex-col gap-10 px-5 pt-[calc(env(safe-area-inset-top)+3.5rem)] pb-[calc(env(safe-area-inset-bottom)+9rem)]">
+          <div className="mx-auto flex max-w-md flex-col gap-10 px-6 pt-[calc(env(safe-area-inset-top)+3.5rem)] pb-[calc(env(safe-area-inset-bottom)+9rem)]">
             <header className="flex items-end justify-between gap-3">
               <div className="min-w-0">
                 <p className="h-5 text-caption text-chalk-dim">{tabKey === '/' ? todayCaption : ''}</p>
