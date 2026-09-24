@@ -99,7 +99,7 @@ function MuscleVolume({ userId, onError }) {
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+        <p className="text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
           Muscle volume
         </p>
         <div className="inline-flex shrink-0 rounded-full border border-line bg-surface-2 p-0.5">

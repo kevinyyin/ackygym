@@ -116,7 +116,7 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+        <p className="text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
           Active routine — {routine.name}
         </p>
         <button
