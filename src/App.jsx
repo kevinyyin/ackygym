@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Routes, Route, NavLink, Link, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from './supabaseClient'
@@ -219,6 +219,11 @@ function App() {
     return () => observer.disconnect()
   }, [session])
 
+  // Each tab starts at the top — the scroll container persists across tabs.
+  useLayoutEffect(() => {
+    scrollRootRef.current?.scrollTo(0, 0)
+  }, [tabKey])
+
   // Errors used to sit in the page flow until the next action cleared them;
   // as a floating pill it would cover the header forever, so it times out.
   useEffect(() => {
@@ -289,19 +294,12 @@ function App() {
             </header>
             <div ref={titleSentinelRef} aria-hidden="true" className="-mt-10 h-0" />
 
-            {/* Each tab starts at the top — the scroll container persists
-              across tab switches. Reset once the old page has faded out, so
-              it doesn't visibly jump mid-fade. */}
-            <AnimatePresence
-              mode="wait"
-              initial={false}
-              onExitComplete={() => scrollRootRef.current?.scrollTo(0, 0)}
-            >
+            {/* No exit animation: waiting for the old page to fade out before
+              mounting the new one made every tab tap feel laggy. */}
               <motion.div
                 key={tabKey}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
                 transition={{ ...smooth, opacity: { duration: 0.18 } }}
               >
                 <Routes location={location}>
@@ -413,7 +411,6 @@ function App() {
                   />
                 </Routes>
               </motion.div>
-            </AnimatePresence>
           </div>
         </main>
 

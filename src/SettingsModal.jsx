@@ -102,7 +102,7 @@ function SettingsModal({
         />
       </div>
 
-      <p className="mt-8 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+      <p className="mt-8 text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
         Username
       </p>
       <div className="mt-2 flex gap-2">
@@ -128,7 +128,7 @@ function SettingsModal({
       </div>
       {usernameStatus && <p className="mt-1.5 text-xs text-chalk-dim">{usernameStatus}</p>}
 
-      <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+      <p className="mt-5 text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
         Visible cards
       </p>
       <div className="mt-2 flex flex-col gap-2">
@@ -148,7 +148,7 @@ function SettingsModal({
         ))}
       </div>
 
-      <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+      <p className="mt-5 text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
         Weight unit
       </p>
       <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
@@ -182,7 +182,7 @@ function SettingsModal({
         />
       </label>
 
-      <p className="mt-5 text-[11px] font-semibold tracking-[0.2em] text-chalk-dim uppercase">
+      <p className="mt-5 text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
         Water tracking
       </p>
       <p className="mt-1 text-xs text-chalk-dim">
