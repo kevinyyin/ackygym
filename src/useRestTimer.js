@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { loadRestDuration, saveRestDuration } from './autoRestSettings'
 
 function beep(ctx, startTime) {
   const oscillator = ctx.createOscillator()
@@ -32,8 +33,8 @@ function playAlert(ctx) {
 // log a set mid-rest, which is the single most common thing to do while
 // resting.
 export function useRestTimer() {
-  const [duration, setDuration] = useState(60)
-  const [remaining, setRemaining] = useState(60)
+  const [duration, setDuration] = useState(loadRestDuration)
+  const [remaining, setRemaining] = useState(duration)
   const [status, setStatus] = useState('idle')
   const endTimeRef = useRef(null)
   const audioCtxRef = useRef(null)
@@ -79,6 +80,7 @@ export function useRestTimer() {
 
   function selectDuration(seconds) {
     if (!Number.isFinite(seconds) || seconds <= 0) return
+    saveRestDuration(seconds)
     endTimeRef.current = null
     setDuration(seconds)
     setRemaining(seconds)

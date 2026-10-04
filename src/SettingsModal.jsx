@@ -4,6 +4,7 @@ import { supabase } from './supabaseClient'
 import { TOGGLEABLE_CARDS } from './cardVisibility'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import SegmentedControl from './SegmentedControl'
+import { REST_PRESETS } from './autoRestSettings'
 
 const WATER_MODES = [
   { key: 'volume', label: 'Volume' },
@@ -22,6 +23,8 @@ function SettingsModal({
   onWeightUnitChange,
   autoRest,
   onAutoRestChange,
+  restDuration,
+  onRestDurationChange,
   onClose,
   profile,
   userId,
@@ -180,6 +183,24 @@ function SettingsModal({
           onChange={(e) => onAutoRestChange(e.target.checked)}
           className="h-5 w-5 accent-blue-500"
         />
+      </label>
+      <label className="mt-2 flex items-center justify-between gap-3 rounded-field bg-surface-2 px-4 py-3.5">
+        <span className="text-[15px] text-chalk">Rest length</span>
+        <select
+          value={restDuration}
+          onChange={(e) => onRestDurationChange(Number(e.target.value))}
+          className="rounded-md border border-line bg-surface px-2 py-1 text-sm text-chalk focus:border-blue-500 focus:outline-none"
+        >
+          {/* A custom length set from the timer sheet isn't a preset — keep it selectable. */}
+          {!REST_PRESETS.some((p) => p.seconds === restDuration) && (
+            <option value={restDuration}>{restDuration}s</option>
+          )}
+          {REST_PRESETS.map((p) => (
+            <option key={p.seconds} value={p.seconds}>
+              {p.label}
+            </option>
+          ))}
+        </select>
       </label>
 
       <p className="mt-5 text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
