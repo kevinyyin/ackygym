@@ -2,13 +2,8 @@ import { useState } from 'react'
 import Card from './Card'
 import Button from './Button'
 import SegmentedControl from './SegmentedControl'
+import { REST_PRESETS } from './autoRestSettings'
 
-const PRESETS = [
-  { label: '60s', seconds: 60 },
-  { label: '90s', seconds: 90 },
-  { label: '2 min', seconds: 120 },
-  { label: '3 min', seconds: 180 },
-]
 
 const STATUS_LABEL = {
   idle: 'Ready',
@@ -58,7 +53,7 @@ function TimerPanel({ duration, remaining, status, selectDuration, onStart, onPa
         layoutId="timer-presets"
         value={duration}
         onChange={selectDuration}
-        segments={PRESETS.map((p) => ({ key: p.seconds, label: p.label }))}
+        segments={REST_PRESETS.map((p) => ({ key: p.seconds, label: p.label }))}
       />
 
       <form onSubmit={handleCustomSubmit} className="flex gap-2">

@@ -52,6 +52,25 @@ function initials(profile) {
   return displayName(profile).slice(0, 2).toUpperCase()
 }
 
+// Owns its own open state: opening Settings from App re-rendered the whole
+// on-screen page in the same frame the sheet started animating.
+function SettingsButton({ profile, ...settingsProps }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Settings"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-chalk after:absolute after:-inset-1 after:content-['']"
+      >
+        {initials(profile)}
+      </button>
+      <SettingsModal open={open} onClose={() => setOpen(false)} profile={profile} {...settingsProps} />
+    </>
+  )
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [sessionChecked, setSessionChecked] = useState(false)
@@ -64,7 +83,6 @@ function App() {
   const [cardVisibility, setCardVisibility] = useState(loadCardVisibility)
   const [waterSettings, setWaterSettings] = useState(loadWaterSettings)
   const [weightUnit, setWeightUnitState] = useState(loadWeightUnit)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
   // Lifted out of Home so a started routine survives switching tabs — Home
   // unmounts on route change, which would otherwise wipe this like any other
@@ -157,7 +175,6 @@ function App() {
           // one. The rest timer's countdown itself isn't reset here: this
           // effect subscribes once, so it would only hold the first render's
           // restTimer — the sheet closing is what matters.
-          setSettingsOpen(false)
           setTimerOpen(false)
           setActiveRoutine(null)
         }
@@ -282,14 +299,24 @@ function App() {
                     <TimerIcon className="h-5 w-5" />
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setSettingsOpen(true)}
-                  aria-label="Settings"
-                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-chalk after:absolute after:-inset-1 after:content-['']"
-                >
-                  {initials(currentProfile)}
-                </button>
+                <SettingsButton
+                  profile={currentProfile}
+                  theme={theme}
+                  onThemeChange={setTheme}
+                  visibility={cardVisibility}
+                  onToggle={toggleCardVisibility}
+                  waterSettings={waterSettings}
+                  onWaterSettingsChange={updateWaterSettings}
+                  weightUnit={weightUnit}
+                  onWeightUnitChange={setWeightUnit}
+                  autoRest={autoRest}
+                  onAutoRestChange={setAutoRest}
+                  restDuration={restTimer.duration}
+                  onRestDurationChange={restTimer.selectDuration}
+                  userId={session.user.id}
+                  onProfileSaved={() => setProfilesVersion((v) => v + 1)}
+                  onError={handleError}
+                />
               </div>
             </header>
             <div ref={titleSentinelRef} aria-hidden="true" className="-mt-10 h-0" />
@@ -431,25 +458,6 @@ function App() {
 
         <TimerPill timer={restTimer} onOpen={() => setTimerOpen(true)} />
         <TimerSheet open={timerOpen} onClose={() => setTimerOpen(false)} timer={restTimer} />
-
-        <SettingsModal
-          open={settingsOpen}
-          theme={theme}
-          onThemeChange={setTheme}
-          visibility={cardVisibility}
-          onToggle={toggleCardVisibility}
-          waterSettings={waterSettings}
-          onWaterSettingsChange={updateWaterSettings}
-          weightUnit={weightUnit}
-          onWeightUnitChange={setWeightUnit}
-          autoRest={autoRest}
-          onAutoRestChange={setAutoRest}
-          onClose={() => setSettingsOpen(false)}
-          profile={currentProfile}
-          userId={session.user.id}
-          onProfileSaved={() => setProfilesVersion((v) => v + 1)}
-          onError={handleError}
-        />
       </div>
 
       {/* Outside #app-shell on purpose: the shell is fixed, so it forms its own

@@ -195,9 +195,11 @@ html[data-theme="light"] {
      doesn't disturb any fixed-position children. */
   #app-shell {
     transform-origin: 50% 50%;
-    transition:
-      transform 420ms cubic-bezier(0.32, 0.72, 0, 1),
-      border-radius 420ms cubic-bezier(0.32, 0.72, 0, 1);
+    /* Transform only, on its own layer: animating border-radius under
+       overflow:hidden repainted the whole shell (and re-ran both blurred
+       bars' backdrop-filter) every frame. The radius now snaps. */
+    transition: transform 420ms cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform;
   }
 
   html[data-sheet-open] body {
