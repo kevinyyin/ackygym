@@ -193,6 +193,9 @@ function Home({
           if (isForeground) onError(error.message)
           return
         }
+        // Dropped locally before the refetch so the row can't reappear in
+        // the gap between the delete landing and fresh data arriving.
+        setTodaysSets((current) => current.filter((s) => s.id !== set.id))
         setRefreshKey((key) => key + 1)
       },
     })
@@ -236,6 +239,7 @@ function Home({
       onError(error.message)
       return
     }
+    setTodaysSets((current) => current.filter((s) => !selectedSetIds.has(s.id)))
     setSelectMode(false)
     setSelectedSetIds(new Set())
     setRefreshKey((key) => key + 1)
