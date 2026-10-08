@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { motion } from 'motion/react'
 import { supabase } from './supabaseClient'
 import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
 import { groupByMuscle } from './exerciseGrouping'
@@ -9,6 +10,7 @@ import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
 import Skeleton from './Skeleton'
+import { snappy } from './motionPresets'
 
 function GroupHeader({ children }) {
   return (
@@ -110,7 +112,12 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
     const draggingId = draggingIdRef.current
     if (draggingId === null) return
 
-    const row = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-reorder-id]')
+    // Hit-tested against layout offsets, not elementFromPoint: rows are
+    // mid-slide (transformed) right after a swap, and hitting a row as it
+    // passes under the finger would swap it straight back.
+    const list = e.currentTarget.closest('ul')
+    const y = e.clientY - list.getBoundingClientRect().top
+    const row = [...list.children].find((li) => y >= li.offsetTop && y < li.offsetTop + li.offsetHeight)
     if (!row) return
     const targetId = Number(row.dataset.reorderId)
     if (targetId === draggingId) return
@@ -172,10 +179,12 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
   }
 
   return (
-    <ul className="flex flex-col gap-1.5">
+    <ul className="relative flex flex-col gap-1.5">
       {items.map((re, index) => (
-        <li
+        <motion.li
           key={re.id}
+          layout="position"
+          transition={snappy}
           data-reorder-id={re.id}
           className="flex items-center gap-2 rounded-md border border-line bg-surface px-2 py-1.5"
         >
@@ -219,7 +228,7 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
             armedLabel={`Tap again to confirm removing ${re.exercises.name} from ${routine.name}`}
             className="shrink-0"
           />
-        </li>
+        </motion.li>
       ))}
     </ul>
   )
