@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { smooth } from './motionPresets'
+import { useRemaining } from './useRestTimer'
 
 const RING_RADIUS = 9
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
@@ -17,7 +18,8 @@ function formatTime(totalSeconds) {
 // animation, which would override Tailwind's -translate-x-1/2 and render
 // the pill off-center.
 function TimerPill({ timer, onOpen }) {
-  const { status, remaining, duration } = timer
+  const { status, duration } = timer
+  const remaining = useRemaining(timer)
   const visible = status !== 'idle'
   const finished = status === 'finished'
   const fraction = duration > 0 ? remaining / duration : 0

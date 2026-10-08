@@ -34,15 +34,19 @@ function playAlert(ctx) {
 // resting.
 export function useRestTimer() {
   const [duration, setDuration] = useState(loadRestDuration)
-  const [remaining, setRemaining] = useState(duration)
+  // While running, the countdown is stored as an end time and ticked only by
+  // useRemaining() in the pill/panel. Ticking `remaining` here re-rendered App
+  // — and with it every page on screen — every second of every rest.
+  const [endTime, setEndTime] = useState(null)
+  // Seconds left when last paused, or when the current run started.
+  const [startRemaining, setStartRemaining] = useState(duration)
   const [status, setStatus] = useState('idle')
-  const endTimeRef = useRef(null)
   const audioCtxRef = useRef(null)
 
   // AudioContext playback started outside a user gesture is silently
   // blocked on iOS Safari. Creating/resuming it here — inside the Start
   // button's own click handler — unlocks it for the later, gesture-less
-  // setInterval callback that actually plays the alert.
+  // timeout callback that actually plays the alert.
   function unlockAudio() {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext
     if (!AudioContextClass) return
@@ -53,69 +57,56 @@ export function useRestTimer() {
   useEffect(() => {
     if (status !== 'running') return
 
-    function tick() {
-      const secondsLeft = (endTimeRef.current - Date.now()) / 1000
-      if (secondsLeft <= 0) {
-        setRemaining(0)
-        setStatus('finished')
-        playAlert(audioCtxRef.current)
-        return
-      }
-      setRemaining(Math.ceil(secondsLeft))
+    let done = false
+    function finishIfDue() {
+      if (done || Date.now() < endTime) return
+      done = true
+      setStatus('finished')
+      playAlert(audioCtxRef.current)
     }
 
-    tick()
-    const intervalId = setInterval(tick, 250)
-
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'visible') tick()
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    // Backgrounded tabs throttle timers; the visibility check catches up on return.
+    const timeoutId = setTimeout(finishIfDue, endTime - Date.now())
+    document.addEventListener('visibilitychange', finishIfDue)
 
     return () => {
-      clearInterval(intervalId)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearTimeout(timeoutId)
+      document.removeEventListener('visibilitychange', finishIfDue)
     }
-  }, [status])
+  }, [status, endTime])
 
   function selectDuration(seconds) {
     if (!Number.isFinite(seconds) || seconds <= 0) return
     saveRestDuration(seconds)
-    endTimeRef.current = null
     setDuration(seconds)
-    setRemaining(seconds)
     setStatus('idle')
   }
 
   function start() {
     unlockAudio()
-    const secondsToRun = status === 'paused' ? remaining : duration
-    endTimeRef.current = Date.now() + secondsToRun * 1000
-    setRemaining(secondsToRun)
+    const secondsToRun = status === 'paused' ? startRemaining : duration
+    setStartRemaining(secondsToRun)
+    setEndTime(Date.now() + secondsToRun * 1000)
     setStatus('running')
   }
 
   function pause() {
     if (status !== 'running') return
-    const secondsLeft = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000))
-    endTimeRef.current = null
-    setRemaining(secondsLeft)
+    setStartRemaining(Math.max(0, Math.round((endTime - Date.now()) / 1000)))
     setStatus('paused')
   }
 
   function reset() {
-    endTimeRef.current = null
-    setRemaining(duration)
     setStatus('idle')
   }
 
   // For auto-rest after logging a set: always a fresh full countdown, even
-  // mid-rest or paused. start() can't do this — it resumes from `remaining`
-  // when paused, and reads `status` from this render's closure.
+  // mid-rest or paused. start() can't do this — it resumes from the paused
+  // remainder, and reads `status` from this render's closure.
   function restart() {
     unlockAudio()
-    endTimeRef.current = Date.now() + duration * 1000
-    setRemaining(duration)
+    setStartRemaining(duration)
+    setEndTime(Date.now() + duration * 1000)
     setStatus('running')
   }
 
@@ -128,5 +119,27 @@ export function useRestTimer() {
     return () => window.removeEventListener('pointerdown', unlockAudio)
   }, [])
 
-  return { duration, remaining, status, selectDuration, start, pause, reset, restart }
+  // Static; while running useRemaining() derives the live value from endTime.
+  const remaining =
+    status === 'idle' ? duration : status === 'finished' ? 0 : startRemaining
+
+  return { duration, remaining, endTime, status, selectDuration, start, pause, reset, restart }
+}
+
+// Live seconds left, re-rendering only the component that calls it.
+export function useRemaining({ status, endTime, remaining }) {
+  // Tagged with the endTime it was measured against, so a new run shows its
+  // starting value until the first tick instead of the last run's leftover.
+  const [tick, setTick] = useState({ endTime: null, seconds: 0 })
+
+  useEffect(() => {
+    if (status !== 'running') return
+    const intervalId = setInterval(() => {
+      const seconds = Math.max(0, Math.ceil((endTime - Date.now()) / 1000))
+      setTick((prev) => (prev.endTime === endTime && prev.seconds === seconds ? prev : { endTime, seconds }))
+    }, 250)
+    return () => clearInterval(intervalId)
+  }, [status, endTime])
+
+  return status === 'running' && tick.endTime === endTime ? tick.seconds : remaining
 }

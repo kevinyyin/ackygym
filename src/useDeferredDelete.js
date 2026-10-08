@@ -18,14 +18,39 @@ const stores = new Map()
 function getStore(key) {
   let store = stores.get(key)
   if (!store) {
-    store = { pending: null, timeoutId: null, mountedCount: 0, listeners: new Set() }
+    // `committing` holds ids whose delete request is in flight: they must stay
+    // hidden after leaving `pending`, or the row flashes back until the
+    // request (and the caller's refetch) lands. `hidden` is the union, rebuilt
+    // on every change so useSyncExternalStore sees a new snapshot.
+    store = {
+      pending: null,
+      committing: new Set(),
+      hidden: new Set(),
+      timeoutId: null,
+      mountedCount: 0,
+      listeners: new Set(),
+    }
     stores.set(key, store)
   }
   return store
 }
 
 function notify(key) {
-  getStore(key).listeners.forEach((listener) => listener())
+  const store = getStore(key)
+  store.hidden = new Set([...(store.pending?.ids ?? []), ...store.committing])
+  store.listeners.forEach((listener) => listener())
+}
+
+async function runCommit(key, { ids, commit }) {
+  const store = getStore(key)
+  ids.forEach((id) => store.committing.add(id))
+  notify(key)
+  try {
+    await commit(isForeground(key))
+  } finally {
+    ids.forEach((id) => store.committing.delete(id))
+    notify(key)
+  }
 }
 
 function subscribe(key, listener) {
@@ -34,8 +59,12 @@ function subscribe(key, listener) {
   return () => store.listeners.delete(listener)
 }
 
-function getPending(key) {
-  return getStore(key).pending
+function getHidden(key) {
+  return getStore(key).hidden
+}
+
+function getMessage(key) {
+  return getStore(key).pending?.message ?? ''
 }
 
 function mount(key) {
@@ -56,13 +85,13 @@ function stageDeleteFor(key, { ids, message, commit }, delay) {
     // A second delete staged before the first's grace period elapsed —
     // commit the earlier one immediately rather than losing track of it.
     clearTimeout(store.timeoutId)
-    store.pending.commit(isForeground(key))
+    runCommit(key, store.pending)
   }
 
-  store.timeoutId = setTimeout(async () => {
-    await commit(isForeground(key))
+  store.timeoutId = setTimeout(() => {
+    const staged = store.pending
     store.pending = null
-    notify(key)
+    runCommit(key, staged)
   }, delay)
 
   store.pending = { ids: new Set(ids), message, commit }
@@ -97,10 +126,9 @@ export function useDeferredDelete(key, { delay = DEFAULT_DELAY_MS } = {}) {
     return () => unmount(key)
   }, [key])
 
-  const pending = useSyncExternalStore(
-    useCallback((listener) => subscribe(key, listener), [key]),
-    () => getPending(key)
-  )
+  const subscribeToKey = useCallback((listener) => subscribe(key, listener), [key])
+  const hidden = useSyncExternalStore(subscribeToKey, () => getHidden(key))
+  const message = useSyncExternalStore(subscribeToKey, () => getMessage(key))
 
   function stageDelete({ ids, message, commit }) {
     stageDeleteFor(key, { ids, message, commit }, delay)
@@ -111,8 +139,8 @@ export function useDeferredDelete(key, { delay = DEFAULT_DELAY_MS } = {}) {
   }
 
   return {
-    isPending: (id) => pending?.ids.has(id) ?? false,
-    message: pending?.message ?? '',
+    isPending: (id) => hidden.has(id),
+    message,
     stageDelete,
     undo,
   }

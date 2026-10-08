@@ -18,14 +18,18 @@ async function fetchPriorMaxWeight(userId, exerciseId) {
 export async function logSet({ userId, exerciseId, weight, reps }) {
   const today = getTodayDateString()
 
-  const { data: existingWorkout, error: workoutSelectError } = await supabase
-    .from('workouts')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .maybeSingle()
+  // Independent lookups, run together: each sequential round trip was a
+  // visible chunk of the "Logging…" wait on a phone connection.
+  const [
+    { data: existingWorkout, error: workoutSelectError },
+    { data: priorMaxWeight, error: maxWeightError },
+  ] = await Promise.all([
+    supabase.from('workouts').select('id').eq('user_id', userId).eq('date', today).maybeSingle(),
+    fetchPriorMaxWeight(userId, exerciseId),
+  ])
 
   if (workoutSelectError) return { error: workoutSelectError }
+  if (maxWeightError) return { error: maxWeightError }
 
   let workoutId = existingWorkout?.id
 
@@ -39,12 +43,6 @@ export async function logSet({ userId, exerciseId, weight, reps }) {
     if (workoutInsertError) return { error: workoutInsertError }
     workoutId = newWorkout.id
   }
-
-  const { data: priorMaxWeight, error: maxWeightError } = await fetchPriorMaxWeight(
-    userId,
-    exerciseId
-  )
-  if (maxWeightError) return { error: maxWeightError }
 
   const isPr = priorMaxWeight === null || weight > priorMaxWeight
 
