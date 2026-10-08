@@ -5,6 +5,7 @@ import WorkoutForm from './WorkoutForm'
 import Card from './Card'
 import ActiveRoutine from './ActiveRoutine'
 import WaterTracker from './WaterTracker'
+import CreatineTracker from './CreatineTracker'
 import { groupByUser } from './groupByUser'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
@@ -52,6 +53,7 @@ function Home({
   schedule,
   onError,
   showWaterTracker,
+  showCreatineTracker,
   waterSettings,
   weightUnit,
   activeRoutine,
@@ -543,6 +545,10 @@ function Home({
           bottleSizeMl={waterSettings.bottleSizeMl}
           goalMl={waterSettings.goalMl}
         />
+      )}
+
+      {showCreatineTracker && (
+        <CreatineTracker session={session} profiles={profiles} onError={onError} />
       )}
 
       <ConfirmModal

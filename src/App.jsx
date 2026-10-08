@@ -339,6 +339,7 @@ function App() {
                         schedule={schedule}
                         onError={handleError}
                         showWaterTracker={cardVisibility.water}
+                        showCreatineTracker={cardVisibility.creatine}
                         waterSettings={waterSettings}
                         weightUnit={weightUnit}
                         activeRoutine={activeRoutine}
