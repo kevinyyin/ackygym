@@ -19,7 +19,7 @@ export function useModalFocusTrap(active) {
     previouslyFocusedRef.current = document.activeElement
     const container = containerRef.current
     const focusable = container?.querySelectorAll(FOCUSABLE_SELECTOR)
-    ;(focusable?.[0] ?? container)?.focus()
+    ;(focusable?.[0] ?? container)?.focus({ preventScroll: true })
 
     function handleKeyDown(e) {
       if (e.key !== 'Tab' || !container) return

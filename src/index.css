@@ -200,6 +200,10 @@ html[data-theme="light"] {
        bars' backdrop-filter) every frame. The radius now snaps. */
     transition: transform 420ms cubic-bezier(0.32, 0.72, 0, 1);
     will-change: transform;
+    /* Always on (the shell is viewport-sized, so it clips nothing): toggling
+       overflow on open rebuilt the clip over every composited child —
+       the scroller and both blurred bars — in the sheet's first frames. */
+    overflow: hidden;
   }
 
   html[data-sheet-open] body {
@@ -209,7 +213,6 @@ html[data-theme="light"] {
   html[data-sheet-open] #app-shell {
     transform: scale(0.94);
     border-radius: 16px;
-    overflow: hidden;
   }
 
   @media (prefers-reduced-motion: reduce) {
