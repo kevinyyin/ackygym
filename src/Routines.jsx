@@ -11,6 +11,7 @@ import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
 import Skeleton from './Skeleton'
 import { snappy } from './motionPresets'
+import { toggled } from './useSelection'
 
 function GroupHeader({ children }) {
   return (
@@ -310,12 +311,7 @@ function Routines({
   const { isPending, message, stageDelete, undo } = useDeferredDelete('routines')
 
   function toggleAddExerciseOpen(routineId) {
-    setAddExerciseOpenIds((current) => {
-      const next = new Set(current)
-      if (next.has(routineId)) next.delete(routineId)
-      else next.add(routineId)
-      return next
-    })
+    setAddExerciseOpenIds((current) => toggled(current, routineId))
   }
 
   // Routines start collapsed on each fresh load of the app. Once applied,
@@ -328,12 +324,7 @@ function Routines({
   }, [routines])
 
   function toggleCollapsed(routineId) {
-    setCollapsedIds((current) => {
-      const next = new Set(current)
-      if (next.has(routineId)) next.delete(routineId)
-      else next.add(routineId)
-      return next
-    })
+    setCollapsedIds((current) => toggled(current, routineId))
   }
 
   async function handleCreate(e) {

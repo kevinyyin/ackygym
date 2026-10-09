@@ -1,13 +1,4 @@
 import { useEffect, useState } from 'react'
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from 'recharts'
 import { supabase } from './supabaseClient'
 import { TrophyIcon, CheckIcon, CloseIcon } from './icons'
 import { estimatedOneRepMax } from './oneRepMax'
@@ -15,6 +6,7 @@ import { formatDate } from './dateUtils'
 import { recomputeIsPr, byDateThenId } from './logSet'
 import { groupSetsByDate } from './groupByUser'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
+import TrendChart from './TrendChart'
 import { isValidSet } from './validation'
 import { toDisplayWeight, toStorageWeightKg } from './weightUnits'
 
@@ -107,7 +99,7 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
 
   const chartData = sessions.map((session) => ({
     date: formatDate(session.date),
-    weight: toDisplayWeight(Math.max(...session.sets.map((s) => s.weight)), weightUnit),
+    value: toDisplayWeight(Math.max(...session.sets.map((s) => s.weight)), weightUnit),
   }))
 
   // Computed from raw stored (kg) weights — estimatedOneRepMax is a physical
@@ -148,45 +140,11 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
       {sessions.length === 1 ? (
         <p className="text-xs text-chalk-dim">Log another session to see a trend.</p>
       ) : (
-        <div className="h-48 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
-              <CartesianGrid stroke="var(--color-line)" strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="date"
-                tick={{ fill: 'var(--color-chalk-dim)', fontSize: 11 }}
-                tickLine={false}
-                axisLine={{ stroke: 'var(--color-line)' }}
-              />
-              <YAxis
-                tick={{ fill: 'var(--color-chalk-dim)', fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                width={36}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'var(--color-surface-2)',
-                  border: '1px solid var(--color-line)',
-                  borderRadius: 6,
-                  color: 'var(--color-chalk)',
-                  fontSize: 12,
-                }}
-                labelStyle={{ color: 'var(--color-chalk-dim)' }}
-                formatter={(value) => [`${value} ${weightUnit}`, 'Weight']}
-              />
-              <Line
-                type="monotone"
-                dataKey="weight"
-                name={`Weight (${weightUnit})`}
-                stroke="var(--color-blue-500)"
-                strokeWidth={2}
-                dot={{ r: 3, fill: 'var(--color-blue-500)' }}
-                activeDot={{ r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <TrendChart
+          className="h-48 w-full"
+          data={chartData}
+          formatTooltip={(value) => [`${value} ${weightUnit}`, 'Weight']}
+        />
       )}
 
       <ul className="flex flex-col gap-3">

@@ -7,8 +7,8 @@ import { DropletIcon } from './icons'
 import WaterBottle from './WaterBottle'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { formatBottles } from './waterUnits'
+import { usePersistedState } from './usePersistedState'
 
-const SHOW_WATER_KEY = 'gym-tracker:home-show-water'
 const QUICK_ADD_ML = [250, 500, 750]
 const QUICK_ADD_BOTTLE_FRACTIONS = [
   { fraction: 0.5, label: '+½ bottle' },
@@ -21,12 +21,7 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
   const [logs, setLogs] = useState([])
   const [refreshKey, setRefreshKey] = useState(0)
   const [customValue, setCustomValue] = useState('')
-  const [expanded, setExpandedState] = useState(() => localStorage.getItem(SHOW_WATER_KEY) === 'true')
-
-  function setExpanded(next) {
-    setExpandedState(next)
-    localStorage.setItem(SHOW_WATER_KEY, String(next))
-  }
+  const [expanded, setExpanded] = usePersistedState('gym-tracker:home-show-water', false)
 
   useEffect(() => {
     async function fetchLogs() {

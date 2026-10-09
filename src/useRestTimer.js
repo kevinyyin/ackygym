@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadRestDuration, saveRestDuration } from './autoRestSettings'
+import { usePersistedState } from './usePersistedState'
 
 function beep(ctx, startTime) {
   const oscillator = ctx.createOscillator()
@@ -27,6 +27,13 @@ function playAlert(ctx) {
   }
 }
 
+export const REST_PRESETS = [
+  { label: '60s', seconds: 60 },
+  { label: '90s', seconds: 90 },
+  { label: '2 min', seconds: 120 },
+  { label: '3 min', seconds: 180 },
+]
+
 export function formatTime(totalSeconds) {
   const clamped = Math.max(0, Math.round(totalSeconds))
   return `${Math.floor(clamped / 60)}:${String(clamped % 60).padStart(2, '0')}`
@@ -42,7 +49,7 @@ function secondsUntil(endTime) {
 // log a set mid-rest, which is the single most common thing to do while
 // resting.
 export function useRestTimer() {
-  const [duration, setDuration] = useState(loadRestDuration)
+  const [duration, setDuration] = usePersistedState('gym-tracker:rest-duration', 60, (s) => Number.isFinite(s) && s > 0)
   // While running, the countdown is stored as an end time and ticked only by
   // useRemaining() in the pill/panel. Ticking `remaining` here re-rendered App
   // — and with it every page on screen — every second of every rest.
@@ -86,7 +93,6 @@ export function useRestTimer() {
 
   function selectDuration(seconds) {
     if (!Number.isFinite(seconds) || seconds <= 0) return
-    saveRestDuration(seconds)
     setDuration(seconds)
     setStatus('idle')
   }

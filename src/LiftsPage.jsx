@@ -10,6 +10,7 @@ import { formatDate } from './dateUtils'
 import { toDisplayWeight } from './weightUnits'
 import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
+import { fetchExercises } from './library'
 
 // Which muscle_groups.name values count as "lower body" for the purpose of
 // this grouping — everything else (including core) is bucketed as upper body.
@@ -58,11 +59,8 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
   const [setsVersion, setSetsVersion] = useState(0)
 
   useEffect(() => {
-    async function fetchExercises() {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('id, name, exercise_muscles(muscle, role, muscle_groups(label))')
-        .order('name')
+    async function loadExercises() {
+      const { data, error } = await fetchExercises()
 
       if (error) {
         onError(error.message)
@@ -72,7 +70,7 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
       setExercisesLoaded(true)
     }
 
-    fetchExercises()
+    loadExercises()
   }, [onError, setExercises, setExercisesLoaded])
 
   useEffect(() => {

@@ -5,19 +5,13 @@ import MuscleBodyMap from './MuscleBodyMap'
 import { sortMuscleGroups } from './muscleGroupOrder'
 import { getDateDaysAgoString } from './dateUtils'
 import Skeleton from './Skeleton'
-
-const RANGE_STORAGE_KEY = 'gym-tracker:muscle-volume-range-days'
+import { usePersistedState } from './usePersistedState'
 
 const RANGE_OPTIONS = [
   { days: 7, pillLabel: '7D', summaryLabel: 'last 7 days' },
   { days: 14, pillLabel: '2W', summaryLabel: 'last 2 weeks' },
   { days: 30, pillLabel: '1M', summaryLabel: 'last month' },
 ]
-
-function getStoredRangeDays() {
-  const stored = Number(localStorage.getItem(RANGE_STORAGE_KEY))
-  return RANGE_OPTIONS.some((o) => o.days === stored) ? stored : 7
-}
 
 function aggregateVolume(sets) {
   const byMuscle = new Map()
@@ -42,15 +36,12 @@ function aggregateVolume(sets) {
 }
 
 function MuscleVolume({ userId, onError }) {
-  const [rangeDays, setRangeDays] = useState(getStoredRangeDays)
+  const [rangeDays, setRangeDays] = usePersistedState('gym-tracker:muscle-volume-range-days', 7, (days) =>
+    RANGE_OPTIONS.some((o) => o.days === days)
+  )
   const [workoutCount, setWorkoutCount] = useState(0)
   const [sets, setSets] = useState(null)
   const [expanded, setExpanded] = useState(false)
-
-  function handleRangeChange(days) {
-    setRangeDays(days)
-    localStorage.setItem(RANGE_STORAGE_KEY, String(days))
-  }
 
   useEffect(() => {
     let cancelled = false
@@ -107,7 +98,7 @@ function MuscleVolume({ userId, onError }) {
             <button
               key={option.days}
               type="button"
-              onClick={() => handleRangeChange(option.days)}
+              onClick={() => setRangeDays(option.days)}
               className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
                 rangeDays === option.days ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
               }`}
