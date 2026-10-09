@@ -1,5 +1,4 @@
 import Model from 'react-body-highlighter'
-import { MUSCLE_GROUP_ORDER } from './muscleGroupOrder'
 
 // Maps our muscle_groups.name values onto react-body-highlighter's Muscle slugs.
 // One of our names may fan out to multiple slugs (e.g. "shoulders" has no single
@@ -22,14 +21,8 @@ const MUSCLE_SLUG_MAP = {
   abductors: ['abductors'],
   lower_back: ['lower-back'],
   neck: ['neck'],
-  // "lats" has no react-body-highlighter equivalent — left unmapped on purpose,
-  // see the console.warn below rather than folding it into another region.
-}
-
-for (const muscle of MUSCLE_GROUP_ORDER) {
-  if (!MUSCLE_SLUG_MAP[muscle]) {
-    console.warn(`MuscleBodyMap: no react-body-highlighter slug mapped for muscle group "${muscle}"`)
-  }
+  // "lats" has no react-body-highlighter equivalent — left unmapped on purpose
+  // rather than folded into another region.
 }
 
 // CSS var() references so the diagram reacts to the light/dark theme toggle live.

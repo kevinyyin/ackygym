@@ -8,7 +8,6 @@ function WeightHistoryModal({ group, unit, onClose }) {
       valueKey="weight"
       getValue={(entry) => roundWeight(convertWeight(entry.weight_kg, 'kg', unit))}
       formatTooltip={(value) => [`${value} ${unit}`, 'Weight']}
-      emptyLabel="No body weight logged yet."
       onClose={onClose}
     />
   )

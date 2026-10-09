@@ -102,7 +102,6 @@ function SetsHistoryPage({ userId, weightUnit, onError }) {
               value={exerciseFilter}
               onChange={setExerciseFilter}
               placeholder="All exercises"
-              inputClassName={inputClasses}
             />
             {exerciseFilter && (
               <button

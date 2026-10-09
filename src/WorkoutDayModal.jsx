@@ -122,7 +122,6 @@ function WorkoutDayModal({ date, userId, weightUnit, onClose, onError, onRepeate
 
         {exerciseGroups && exerciseGroups.length > 0 && (
           <Button
-            size="lg"
             className="mt-6"
             onClick={() => setConfirmRepeat(true)}
             loading={repeating}

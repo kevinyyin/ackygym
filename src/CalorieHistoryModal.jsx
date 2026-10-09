@@ -7,7 +7,6 @@ function CalorieHistoryModal({ group, target, onClose }) {
       valueKey="calories"
       getValue={(entry) => Math.round(Number(entry.calories))}
       formatTooltip={(value) => [`${value} kcal`, 'Calories']}
-      emptyLabel="No calories logged yet."
       referenceValue={target}
       onClose={onClose}
     />

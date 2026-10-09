@@ -134,13 +134,13 @@ function TimerPanel({ duration, remaining, status, selectDuration, onStart, onPa
       </Card>
 
       <div className="grid grid-cols-3 gap-2">
-        <Button size="lg" onClick={onStart} disabled={status === 'running'}>
+        <Button onClick={onStart} disabled={status === 'running'}>
           {status === 'paused' ? 'Resume' : 'Start'}
         </Button>
-        <Button size="lg" variant="secondary" onClick={onPause} disabled={status !== 'running'}>
+        <Button variant="secondary" onClick={onPause} disabled={status !== 'running'}>
           Pause
         </Button>
-        <Button size="lg" variant="secondary" onClick={onReset}>
+        <Button variant="secondary" onClick={onReset}>
           Reset
         </Button>
       </div>

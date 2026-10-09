@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { groupByMuscle } from './exerciseGrouping'
 
 const DEFAULT_INPUT_CLASSES =
-  'w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none disabled:opacity-40'
+  'w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none'
 
 // A searchable exercise dropdown: types like a text field but behaves like a
 // <select>, so long exercise lists don't need to be scrolled through to find

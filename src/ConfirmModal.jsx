@@ -10,10 +10,10 @@ function ConfirmModal({ open, title, message, confirmLabel = 'Delete', onConfirm
     <Sheet open={open} onClose={onCancel} title={title}>
       <p className="text-[15px] text-chalk-dim">{message}</p>
       <div className="mt-6 flex flex-col gap-2">
-        <Button variant="destructive" size="lg" onClick={onConfirm}>
+        <Button variant="destructive" onClick={onConfirm}>
           {confirmLabel}
         </Button>
-        <Button variant="secondary" size="lg" onClick={onCancel}>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
       </div>
