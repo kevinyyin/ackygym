@@ -4,7 +4,7 @@ import { supabase } from './supabaseClient'
 import { TOGGLEABLE_CARDS } from './cardVisibility'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import SegmentedControl from './SegmentedControl'
-import { REST_PRESETS } from './autoRestSettings'
+import { REST_PRESETS } from './useRestTimer'
 
 const WATER_MODES = [
   { key: 'volume', label: 'Volume' },

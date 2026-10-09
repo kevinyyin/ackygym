@@ -2,7 +2,6 @@ import { useState } from 'react'
 import Card from './Card'
 import { formatDate } from './dateUtils'
 import { FlameIcon } from './icons'
-import CalorieHistoryModal from './CalorieHistoryModal'
 import HistoryLogSection from './HistoryLogSection'
 
 function CalorieTracker({ profiles, userId, target, onError }) {
@@ -40,7 +39,6 @@ function CalorieTracker({ profiles, userId, target, onError }) {
         userId={userId}
         onError={onError}
         tableName="calorie_logs"
-        selectColumns="id, user_id, date, calories"
         valueColumn="calories"
         logLabel="Log today's calories"
         placeholder="Calories (kcal)"
@@ -53,9 +51,8 @@ function CalorieTracker({ profiles, userId, target, onError }) {
           setEntries(data)
           setEntriesLoaded(true)
         }}
-        renderChartModal={(group, onClose) => (
-          <CalorieHistoryModal group={group} target={group?.userId === userId ? target : null} onClose={onClose} />
-        )}
+        chartLabel="Calories"
+        chartTarget={target}
       />
     </div>
   )

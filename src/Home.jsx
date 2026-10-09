@@ -18,19 +18,12 @@ import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
 import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
+import { useSelection, toggled } from './useSelection'
+import SelectControls from './SelectControls'
+import { usePersistedState } from './usePersistedState'
+import { fetchExercises, fetchRoutines } from './library'
 
 const TODAYS_SETS_COLLAPSED_COUNT = 8
-const SHOW_LOG_SET_KEY = 'gym-tracker:home-show-log-set'
-const SHOW_TODAYS_SETS_KEY = 'gym-tracker:home-show-todays-sets'
-
-// Show/Hide on Home's sections used to reset to their default on every
-// mount, which meant the first section a returning user actually wanted
-// open (usually Today's sets, right after logging) had to be re-opened
-// every visit. Persisting the choice per section makes that a one-time cost.
-function loadShown(key, fallback) {
-  const stored = localStorage.getItem(key)
-  return stored === null ? fallback : stored === 'true'
-}
 
 function Home({
   session,
@@ -55,35 +48,21 @@ function Home({
   const [refreshKey, setRefreshKey] = useState(0)
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [noteDraft, setNoteDraft] = useState('')
-  // Default to expanded (not collapsed like other optional cards) — these are
-  // the two things people actually open the app to do, and a first-time user
-  // with no stored preference yet shouldn't have to find a "Show" tap before
-  // they can log anything.
-  const [showLogSet, setShowLogSetState] = useState(() => loadShown(SHOW_LOG_SET_KEY, true))
-  const [showTodaysSets, setShowTodaysSetsState] = useState(() => loadShown(SHOW_TODAYS_SETS_KEY, true))
-
-  function setShowLogSet(next) {
-    setShowLogSetState(next)
-    localStorage.setItem(SHOW_LOG_SET_KEY, String(next))
-  }
-
-  function setShowTodaysSets(next) {
-    setShowTodaysSetsState(next)
-    localStorage.setItem(SHOW_TODAYS_SETS_KEY, String(next))
-  }
+  // Persisted so a returning user's open sections stay open, and expanded by
+  // default (unlike other optional cards) — these are the two things people
+  // open the app to do, so a first-timer shouldn't need a "Show" tap first.
+  const [showLogSet, setShowLogSet] = usePersistedState('gym-tracker:home-show-log-set', true)
+  const [showTodaysSets, setShowTodaysSets] = usePersistedState('gym-tracker:home-show-todays-sets', true)
   const [routines, setRoutines] = useCachedState('home:routines', [])
   const [expandedTodaysUserIds, setExpandedTodaysUserIds] = useState(() => new Set())
-  const [selectMode, setSelectMode] = useState(false)
-  const [selectedSetIds, setSelectedSetIds] = useState(() => new Set())
+  const selection = useSelection()
+  const { selectMode, selectedIds: selectedSetIds } = selection
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
   const { isPending, message, stageDelete, undo } = useDeferredDelete('home-sets')
 
   useEffect(() => {
-    async function fetchExercises() {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('id, name, exercise_muscles(muscle, role, muscle_groups(label))')
-        .order('name')
+    async function loadExercises() {
+      const { data, error } = await fetchExercises()
       if (error) {
         onError(error.message)
         return
@@ -91,32 +70,20 @@ function Home({
       setExercises(data)
     }
 
-    fetchExercises()
+    loadExercises()
   }, [onError, setExercises])
 
   useEffect(() => {
-    async function fetchRoutines() {
-      const { data, error } = await supabase
-        .from('routines')
-        .select(
-          'id, user_id, name, routine_exercises(id, position, exercise_id, exercises(name, exercise_muscles(muscle, role, muscle_groups(label))))'
-        )
-        .order('name')
+    async function loadRoutines() {
+      const { data, error } = await fetchRoutines()
       if (error) {
         onError(error.message)
         return
       }
-      // Sorted client-side — `.order(col, { foreignTable })` is a no-op on
-      // this project's PostgREST version, see lastSet.js for details.
-      setRoutines(
-        data.map((routine) => ({
-          ...routine,
-          routine_exercises: [...routine.routine_exercises].sort((a, b) => a.position - b.position),
-        }))
-      )
+      setRoutines(data)
     }
 
-    fetchRoutines()
+    loadRoutines()
   }, [onError, setRoutines])
 
   useEffect(() => {
@@ -192,30 +159,9 @@ function Home({
     })
   }
 
-  function toggleSelectMode() {
-    setSelectMode((v) => !v)
-    setSelectedSetIds(new Set())
-  }
-
   function toggleShowTodaysSets() {
     setShowTodaysSets(!showTodaysSets)
-    setSelectMode(false)
-    setSelectedSetIds(new Set())
-  }
-
-  function toggleSetSelected(setId) {
-    setSelectedSetIds((current) => {
-      const next = new Set(current)
-      if (next.has(setId)) next.delete(setId)
-      else next.add(setId)
-      return next
-    })
-  }
-
-  function toggleSelectAll(ownSetIds) {
-    setSelectedSetIds((current) =>
-      current.size === ownSetIds.length ? new Set() : new Set(ownSetIds)
-    )
+    selection.exit()
   }
 
   async function handleBulkDelete() {
@@ -231,18 +177,12 @@ function Home({
       return
     }
     setTodaysSets((current) => current.filter((s) => !selectedSetIds.has(s.id)))
-    setSelectMode(false)
-    setSelectedSetIds(new Set())
+    selection.exit()
     setRefreshKey((key) => key + 1)
   }
 
   function toggleTodaysExpanded(userId) {
-    setExpandedTodaysUserIds((current) => {
-      const next = new Set(current)
-      if (next.has(userId)) next.delete(userId)
-      else next.add(userId)
-      return next
-    })
+    setExpandedTodaysUserIds((current) => toggled(current, userId))
   }
 
   function openNoteEditor(set) {
@@ -361,22 +301,7 @@ function Home({
         </div>
         {showTodaysSets && ownSetIds.length > 0 && (
           <div className="flex justify-end gap-3">
-            {selectMode && (
-              <button
-                type="button"
-                onClick={() => toggleSelectAll(ownSetIds)}
-                className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-              >
-                {selectedSetIds.size === ownSetIds.length ? 'Select none' : 'Select all'}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={toggleSelectMode}
-              className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-            >
-              {selectMode ? 'Cancel' : 'Select'}
-            </button>
+            <SelectControls selection={selection} ids={ownSetIds} />
           </div>
         )}
         {!showTodaysSets ? null : !todaysSetsLoaded ? (
@@ -436,7 +361,7 @@ function Home({
                                       <input
                                         type="checkbox"
                                         checked={selectedSetIds.has(set.id)}
-                                        onChange={() => toggleSetSelected(set.id)}
+                                        onChange={() => selection.toggle(set.id)}
                                         aria-label={`Select ${exerciseGroup.name} set`}
                                         className="h-4 w-4 accent-blue-500"
                                       />

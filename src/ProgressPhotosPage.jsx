@@ -11,6 +11,8 @@ import { useDeferredDelete } from './useDeferredDelete'
 import { smooth } from './motionPresets'
 import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
+import { useSelection } from './useSelection'
+import SelectControls from './SelectControls'
 
 const BUCKET = 'progress-photos'
 const SIGNED_URL_TTL = 60 * 60
@@ -31,8 +33,8 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   const [uploading, setUploading] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState(null)
   const [photoToDelete, setPhotoToDelete] = useState(null)
-  const [selectMode, setSelectMode] = useState(false)
-  const [selectedPhotoIds, setSelectedPhotoIds] = useState(() => new Set())
+  const selection = useSelection()
+  const { selectMode, selectedIds: selectedPhotoIds } = selection
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
   const { isPending, message, stageDelete, undo } = useDeferredDelete('progress-photos')
 
@@ -158,79 +160,11 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     setRefreshKey((k) => k + 1)
   }
 
-  function handleDelete(photo) {
-    setPhotoToDelete(null)
-    stageDelete({
-      ids: [photo.id],
-      message: 'Photo deleted',
-      commit: async (isForeground) => {
-        if (isForeground) onError('')
-
-        const { error: removeError } = await supabase.storage.from(BUCKET).remove([photo.path])
-        if (removeError) {
-          if (isForeground) onError(removeError.message)
-          return
-        }
-
-        const { error: deleteError } = await supabase.from('progress_photos').delete().eq('id', photo.id)
-        if (deleteError) {
-          if (isForeground) onError(deleteError.message)
-          return
-        }
-
-        setRefreshKey((k) => k + 1)
-      },
-    })
-  }
-
-  function toggleSelectMode() {
-    setSelectMode((v) => !v)
-    setSelectedPhotoIds(new Set())
-  }
-
-  function togglePhotoSelected(photoId) {
-    setSelectedPhotoIds((current) => {
-      const next = new Set(current)
-      if (next.has(photoId)) next.delete(photoId)
-      else next.add(photoId)
-      return next
-    })
-  }
-
-  function toggleSelectAll(ownPhotoIds) {
-    setSelectedPhotoIds((current) =>
-      current.size === ownPhotoIds.length ? new Set() : new Set(ownPhotoIds)
-    )
-  }
-
-  async function handleBulkShare() {
-    onError('')
-    const { error } = await supabase
-      .from('progress_photos')
-      .update({ shared: true })
-      .in('id', [...selectedPhotoIds])
-      .eq('user_id', userId)
-
-    if (error) {
-      onError(error.message)
-      return
-    }
-
-    setSelectMode(false)
-    setSelectedPhotoIds(new Set())
-    setRefreshKey((k) => k + 1)
-  }
-
-  function handleBulkDelete() {
-    const ids = [...selectedPhotoIds]
-    const paths = photos.filter((p) => selectedPhotoIds.has(p.id)).map((p) => p.path)
-    setConfirmBulkDelete(false)
-    setSelectMode(false)
-    setSelectedPhotoIds(new Set())
-
+  // Single and bulk deletes share one path: the files first, then the rows.
+  function stagePhotoDelete(ids, paths, message) {
     stageDelete({
       ids,
-      message: `${ids.length} photo${ids.length === 1 ? '' : 's'} deleted`,
+      message,
       commit: async (isForeground) => {
         if (isForeground) onError('')
 
@@ -256,6 +190,36 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     })
   }
 
+  function handleDelete(photo) {
+    setPhotoToDelete(null)
+    stagePhotoDelete([photo.id], [photo.path], 'Photo deleted')
+  }
+
+  async function handleBulkShare() {
+    onError('')
+    const { error } = await supabase
+      .from('progress_photos')
+      .update({ shared: true })
+      .in('id', [...selectedPhotoIds])
+      .eq('user_id', userId)
+
+    if (error) {
+      onError(error.message)
+      return
+    }
+
+    selection.exit()
+    setRefreshKey((k) => k + 1)
+  }
+
+  function handleBulkDelete() {
+    const ids = [...selectedPhotoIds]
+    const paths = photos.filter((p) => selectedPhotoIds.has(p.id)).map((p) => p.path)
+    setConfirmBulkDelete(false)
+    selection.exit()
+    stagePhotoDelete(ids, paths, `${ids.length} photo${ids.length === 1 ? '' : 's'} deleted`)
+  }
+
   return (
     <>
     <div className="flex flex-col gap-4">
@@ -263,26 +227,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-headline text-chalk">Progress photos</h2>
           <div className="flex shrink-0 items-center gap-3">
-            {ownPhotoIds.length > 0 && (
-              <>
-                {selectMode && (
-                  <button
-                    type="button"
-                    onClick={() => toggleSelectAll(ownPhotoIds)}
-                    className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-                  >
-                    {selectedPhotoIds.size === ownPhotoIds.length ? 'Select none' : 'Select all'}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={toggleSelectMode}
-                  className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-                >
-                  {selectMode ? 'Cancel' : 'Select'}
-                </button>
-              </>
-            )}
+            {ownPhotoIds.length > 0 && <SelectControls selection={selection} ids={ownPhotoIds} />}
             <label className="cursor-pointer rounded-md bg-blue-500 px-4 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600">
               {uploading ? 'Uploading…' : 'Add photo'}
               <input
@@ -323,7 +268,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                       src={signedUrlByPath[photo.path]}
                       alt={`Progress photo from ${formatDate(photo.date, { year: true })}`}
                       onClick={() =>
-                        isOwn && selectMode ? togglePhotoSelected(photo.id) : setViewingPhoto(photo)
+                        isOwn && selectMode ? selection.toggle(photo.id) : setViewingPhoto(photo)
                       }
                       className={`h-full w-full cursor-pointer object-cover ${
                         selectMode && selectedPhotoIds.has(photo.id) ? 'opacity-50' : ''
@@ -359,7 +304,7 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                     <input
                       type="checkbox"
                       checked={selectedPhotoIds.has(photo.id)}
-                      onChange={() => togglePhotoSelected(photo.id)}
+                      onChange={() => selection.toggle(photo.id)}
                       aria-label={`Select photo from ${formatDate(photo.date, { year: true })}`}
                       className="absolute top-2 right-2 h-5 w-5 accent-blue-500"
                     />

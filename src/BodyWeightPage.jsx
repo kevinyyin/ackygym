@@ -4,7 +4,6 @@ import { toDisplayWeight, toStorageWeightKg } from './weightUnits'
 import CalorieCalculator from './CalorieCalculator'
 import { calculateCalorieTargets, inToCm, loadStoredProfile } from './calorieMath'
 import MuscleVolume from './MuscleVolume'
-import WeightHistoryModal from './WeightHistoryModal'
 import CalorieTracker from './CalorieTracker'
 import HistoryLogSection from './HistoryLogSection'
 import { useCachedState } from './pageCache'
@@ -61,7 +60,6 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
         userId={userId}
         onError={onError}
         tableName="body_weights"
-        selectColumns="id, user_id, date, weight_kg"
         valueColumn="weight_kg"
         logLabel="Log today's weight"
         placeholder={`Weight (${unit})`}
@@ -74,7 +72,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
           setEntries(data)
           setEntriesLoaded(true)
         }}
-        renderChartModal={(group, onClose) => <WeightHistoryModal group={group} unit={unit} onClose={onClose} />}
+        chartLabel="Weight"
       />
 
       {showCalorieTracker && (

@@ -13,6 +13,9 @@ import { CloseIcon } from './icons'
 import Skeleton from './Skeleton'
 import SegmentedControl from './SegmentedControl'
 import { useCachedState } from './pageCache'
+import { useSelection } from './useSelection'
+import SelectControls from './SelectControls'
+import { fetchExercises, fetchRoutines } from './library'
 
 // Routine and exercise-library management, split out of Home so that page
 // can stay focused on today's status/logging — this is occasional
@@ -33,17 +36,14 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
   const [routinesVersion, setRoutinesVersion] = useState(0)
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [exerciseToDelete, setExerciseToDelete] = useState(null)
-  const [selectMode, setSelectMode] = useState(false)
-  const [selectedExerciseIds, setSelectedExerciseIds] = useState(() => new Set())
+  const selection = useSelection()
+  const { selectMode, selectedIds: selectedExerciseIds } = selection
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
   const { isPending, message, stageDelete, undo } = useDeferredDelete('exercises')
 
   useEffect(() => {
-    async function fetchExercises() {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('id, name, exercise_muscles(muscle, role, muscle_groups(label))')
-        .order('name')
+    async function loadExercises() {
+      const { data, error } = await fetchExercises()
       if (error) {
         onError(error.message)
         return
@@ -52,86 +52,28 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
       setExercisesLoaded(true)
     }
 
-    fetchExercises()
+    loadExercises()
   }, [exercisesVersion, onError, setExercises, setExercisesLoaded])
 
   useEffect(() => {
-    async function fetchRoutines() {
-      const { data, error } = await supabase
-        .from('routines')
-        .select(
-          'id, user_id, name, routine_exercises(id, position, exercise_id, exercises(name, exercise_muscles(muscle, role, muscle_groups(label))))'
-        )
-        .order('name')
+    async function loadRoutines() {
+      const { data, error } = await fetchRoutines()
       if (error) {
         onError(error.message)
         return
       }
-      // Sorted client-side — `.order(col, { foreignTable })` is a no-op on
-      // this project's PostgREST version, see lastSet.js for details.
-      setRoutines(
-        data.map((routine) => ({
-          ...routine,
-          routine_exercises: [...routine.routine_exercises].sort((a, b) => a.position - b.position),
-        }))
-      )
+      setRoutines(data)
       setRoutinesLoaded(true)
     }
 
-    fetchRoutines()
+    loadRoutines()
   }, [routinesVersion, onError, setRoutines, setRoutinesLoaded])
 
-  function handleDeleteExercise(exercise) {
-    setExerciseToDelete(null)
-    stageDelete({
-      ids: [exercise.id],
-      message: `"${exercise.name}" deleted`,
-      commit: async (isForeground) => {
-        if (isForeground) onError('')
-        const { error } = await supabase.from('exercises').delete().eq('id', exercise.id)
-        if (error) {
-          if (isForeground) {
-            onError(
-              error.code === '23503'
-                ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
-                : error.message
-            )
-          }
-          return
-        }
-        setExercisesVersion((v) => v + 1)
-      },
-    })
-  }
-
-  function toggleSelectMode() {
-    setSelectMode((v) => !v)
-    setSelectedExerciseIds(new Set())
-  }
-
-  function toggleExerciseSelected(exerciseId) {
-    setSelectedExerciseIds((current) => {
-      const next = new Set(current)
-      if (next.has(exerciseId)) next.delete(exerciseId)
-      else next.add(exerciseId)
-      return next
-    })
-  }
-
-  function toggleSelectAll(allExerciseIds) {
-    setSelectedExerciseIds((current) =>
-      current.size === allExerciseIds.length ? new Set() : new Set(allExerciseIds)
-    )
-  }
-
-  function handleBulkDelete() {
-    const ids = [...selectedExerciseIds]
-    setConfirmBulkDelete(false)
-    setSelectMode(false)
-    setSelectedExerciseIds(new Set())
+  // Single and bulk deletes share one path; a single delete is one id.
+  function stageExerciseDelete(ids, message) {
     stageDelete({
       ids,
-      message: `${ids.length} exercise${ids.length === 1 ? '' : 's'} deleted`,
+      message,
       commit: async (isForeground) => {
         if (isForeground) onError('')
         const { error } = await supabase.from('exercises').delete().in('id', ids)
@@ -148,6 +90,18 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
         setExercisesVersion((v) => v + 1)
       },
     })
+  }
+
+  function handleDeleteExercise(exercise) {
+    setExerciseToDelete(null)
+    stageExerciseDelete([exercise.id], `"${exercise.name}" deleted`)
+  }
+
+  function handleBulkDelete() {
+    const ids = [...selectedExerciseIds]
+    setConfirmBulkDelete(false)
+    selection.exit()
+    stageExerciseDelete(ids, `${ids.length} exercise${ids.length === 1 ? '' : 's'} deleted`)
   }
 
   function handleStart(routine) {
@@ -188,22 +142,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
           <h2 className="text-headline text-chalk">Exercises</h2>
           {visibleExercises.length > 0 && (
             <div className="flex shrink-0 items-center gap-3">
-              {selectMode && (
-                <button
-                  type="button"
-                  onClick={() => toggleSelectAll(visibleExercises.map((e) => e.id))}
-                  className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-                >
-                  {selectedExerciseIds.size === visibleExercises.length ? 'Select none' : 'Select all'}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={toggleSelectMode}
-                className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-              >
-                {selectMode ? 'Cancel' : 'Select'}
-              </button>
+              <SelectControls selection={selection} ids={visibleExercises.map((e) => e.id)} />
             </div>
           )}
         </div>
@@ -229,7 +168,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
                 <button
                   type="button"
                   onClick={() =>
-                    selectMode ? toggleExerciseSelected(exercise.id) : setSelectedExercise(exercise)
+                    selectMode ? selection.toggle(exercise.id) : setSelectedExercise(exercise)
                   }
                   className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left"
                 >
@@ -240,7 +179,7 @@ function RoutinesPage({ session, schedule, onScheduleSaved, onError, onActiveRou
                   <input
                     type="checkbox"
                     checked={selectedExerciseIds.has(exercise.id)}
-                    onChange={() => toggleExerciseSelected(exercise.id)}
+                    onChange={() => selection.toggle(exercise.id)}
                     aria-label={`Select ${exercise.name}`}
                     className="h-4 w-4 shrink-0 accent-blue-500"
                   />

@@ -16,14 +16,12 @@ import TabSection from './TabSection'
 import { smooth } from './motionPresets'
 import { LEGACY_REDIRECTS } from './legacyRoutes'
 import { displayName } from './displayName'
-import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
-import { loadWaterSettings, saveWaterSettings } from './waterSettings'
-import { loadWeightUnit, saveWeightUnit } from './weightUnitSettings'
+import { DEFAULT_CARD_VISIBILITY } from './cardVisibility'
+import { usePersistedState } from './usePersistedState'
 import { useRestTimer } from './useRestTimer'
 import Sheet from './Sheet'
 import TimerPanel from './TimerPanel'
 import TimerPill from './TimerPill'
-import { loadAutoRest, saveAutoRest } from './autoRestSettings'
 import { GridIcon, BarbellIcon, CalendarIcon, ScaleIcon, TimerIcon, CloseIcon } from './icons'
 
 const TABS = [
@@ -47,6 +45,8 @@ const BODY_SEGMENTS = [
   { key: 'weight', label: 'Weight', to: '/body', end: true },
   { key: 'photos', label: 'Photos', to: '/body/photos' },
 ]
+
+const DEFAULT_WATER_SETTINGS = { mode: 'volume', bottleSizeMl: 750, goalMl: 2000 }
 
 function initials(profile) {
   if (!profile) return ''
@@ -80,10 +80,10 @@ function App() {
   const [error, setError] = useState('')
   const [scheduleVersion, setScheduleVersion] = useState(0)
   const [profilesVersion, setProfilesVersion] = useState(0)
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
-  const [cardVisibility, setCardVisibility] = useState(loadCardVisibility)
-  const [waterSettings, setWaterSettings] = useState(loadWaterSettings)
-  const [weightUnit, setWeightUnitState] = useState(loadWeightUnit)
+  const [theme, setTheme] = usePersistedState('theme', 'dark', Boolean)
+  const [cardVisibility, setCardVisibility] = usePersistedState('gym-tracker:card-visibility', DEFAULT_CARD_VISIBILITY)
+  const [waterSettings, setWaterSettings] = usePersistedState('gym-tracker:water-settings', DEFAULT_WATER_SETTINGS)
+  const [weightUnit, setWeightUnit] = usePersistedState('gym-tracker:weight-unit', 'kg', (u) => u === 'kg' || u === 'lb')
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
   // Lifted out of Home so a started routine survives switching tabs — Home
   // unmounts on route change, which would otherwise wipe this like any other
@@ -94,15 +94,10 @@ function App() {
   // survives tab switches.
   const restTimer = useRestTimer()
   const [timerOpen, setTimerOpen] = useState(false)
-  const [autoRest, setAutoRestState] = useState(loadAutoRest)
+  const [autoRest, setAutoRest] = usePersistedState('gym-tracker:auto-rest', true)
   const scrollRootRef = useRef(null)
   const titleSentinelRef = useRef(null)
   const [titleCollapsed, setTitleCollapsed] = useState(false)
-
-  function setAutoRest(next) {
-    setAutoRestState(next)
-    saveAutoRest(next)
-  }
 
   function handleSetLogged() {
     if (autoRest) restTimer.restart()
@@ -110,7 +105,6 @@ function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
   }, [theme])
 
   useEffect(() => {
@@ -140,24 +134,11 @@ function App() {
   }, [])
 
   function toggleCardVisibility(key) {
-    setCardVisibility((current) => {
-      const next = { ...current, [key]: !current[key] }
-      saveCardVisibility(next)
-      return next
-    })
+    setCardVisibility((current) => ({ ...current, [key]: !current[key] }))
   }
 
   function updateWaterSettings(changes) {
-    setWaterSettings((current) => {
-      const next = { ...current, ...changes }
-      saveWaterSettings(next)
-      return next
-    })
-  }
-
-  function setWeightUnit(next) {
-    setWeightUnitState(next)
-    saveWeightUnit(next)
+    setWaterSettings((current) => ({ ...current, ...changes }))
   }
 
   useEffect(() => {

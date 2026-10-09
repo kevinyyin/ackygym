@@ -8,18 +8,16 @@ import { CheckIcon, CloseIcon } from './icons'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
+import HistoryChartModal from './HistoryChartModal'
 
 // Shared by CalorieTracker.jsx and BodyWeightPage.jsx — both used to
 // duplicate this entire log/edit/delete/history-list block verbatim aside
-// from table/column names and weight's extra unit dimension. Follows the
-// same "shared logic, thin per-type wrapper" shape already established by
-// HistoryChartModal.jsx underlying WeightHistoryModal/CalorieHistoryModal.
+// from table/column names and weight's extra unit dimension.
 function HistoryLogSection({
   profiles,
   userId,
   onError,
   tableName,
-  selectColumns,
   valueColumn,
   logLabel,
   placeholder,
@@ -29,7 +27,8 @@ function HistoryLogSection({
   unitSuffix,
   emptyLogMessage,
   onEntriesChange,
-  renderChartModal,
+  chartLabel,
+  chartTarget,
 }) {
   const [entries, setEntries] = useCachedState(`history:${tableName}:entries`, [])
   const [entriesLoaded, setEntriesLoaded] = useCachedState(`history:${tableName}:entriesLoaded`, false)
@@ -46,7 +45,7 @@ function HistoryLogSection({
     async function fetchEntries() {
       const { data, error } = await supabase
         .from(tableName)
-        .select(selectColumns)
+        .select(`id, user_id, date, ${valueColumn}`)
         .order('date', { ascending: false })
 
       if (error) {
@@ -59,7 +58,7 @@ function HistoryLogSection({
     }
 
     fetchEntries()
-    // tableName/selectColumns/valueColumn/onEntriesChange are fixed for the
+    // tableName/valueColumn/onEntriesChange are fixed for the
     // lifetime of a given call site (a page never switches which table it
     // logs), so they're deliberately excluded to avoid an unstable-callback
     // identity (onEntriesChange) causing a refetch loop.
@@ -273,7 +272,13 @@ function HistoryLogSection({
         )}
       </div>
 
-      {renderChartModal(chartGroup, () => setChartGroup(null))}
+      <HistoryChartModal
+        group={chartGroup}
+        getValue={(entry) => formatValue(entry[valueColumn])}
+        formatTooltip={(value) => [`${value} ${unitSuffix}`, chartLabel]}
+        referenceValue={chartGroup?.userId === userId ? chartTarget : null}
+        onClose={() => setChartGroup(null)}
+      />
     </>
   )
 }

@@ -2,8 +2,7 @@ import { useState } from 'react'
 import Card from './Card'
 import Button from './Button'
 import SegmentedControl from './SegmentedControl'
-import { REST_PRESETS } from './autoRestSettings'
-import { formatTime, useRemaining } from './useRestTimer'
+import { REST_PRESETS, formatTime, useRemaining } from './useRestTimer'
 
 const STATUS_LABEL = {
   idle: 'Ready',

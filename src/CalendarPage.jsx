@@ -10,8 +10,7 @@ import WorkoutDayModal from './WorkoutDayModal'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons'
 import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
-
-const VIEW_MODE_KEY = 'calendarViewMode'
+import { usePersistedState } from './usePersistedState'
 
 const DOT_COLORS = ['bg-blue-400', 'bg-emerald', 'bg-amber', 'bg-purple']
 const STREAK_WINDOW_DAYS = 90
@@ -283,12 +282,8 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
   const [scheduleMap, setScheduleMap] = useCachedState('calendar:scheduleMap', new Map())
   const [setsVersion, setSetsVersion] = useState(0)
   const [viewingDate, setViewingDate] = useState(null)
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem(VIEW_MODE_KEY) || 'heatmap')
+  const [viewMode, setViewMode] = usePersistedState('calendarViewMode', 'heatmap', Boolean)
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()))
-
-  useEffect(() => {
-    localStorage.setItem(VIEW_MODE_KEY, viewMode)
-  }, [viewMode])
 
   useEffect(() => {
     async function fetchSchedule() {
