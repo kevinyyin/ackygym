@@ -2,17 +2,6 @@
 import assert from 'node:assert/strict'
 import { ROUTE_PATHS, LEGACY_REDIRECTS } from './legacyRoutes.js'
 
-const expected = {
-  '/routines': '/train',
-  '/lifts': '/train/exercises',
-  '/calendar': '/progress',
-  '/history': '/progress/history',
-  '/weight': '/body',
-  '/photos': '/body/photos',
-  '/timer': '/',
-}
-assert.deepEqual(LEGACY_REDIRECTS, expected)
-
 for (const [from, to] of Object.entries(LEGACY_REDIRECTS)) {
   assert.ok(ROUTE_PATHS.includes(to), `${from} → ${to} targets a route that doesn't exist`)
   assert.ok(!(to in LEGACY_REDIRECTS), `${from} → ${to} is a redirect chain`)

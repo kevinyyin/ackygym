@@ -128,9 +128,7 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onErro
         exercises={availableExercises}
         value={selectedExerciseId}
         onChange={setExerciseId}
-        placeholder="Search exercises"
         emptyMessage={selectedRoutine ? 'No exercises in this routine' : 'No exercises yet'}
-        inputClassName={inputClasses}
       />
       <div className="flex gap-3">
         <input

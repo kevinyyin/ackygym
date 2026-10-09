@@ -79,7 +79,6 @@ function AddExerciseToRoutine({ routine, availableExercises, onAdded, onError })
         exercises={availableExercises}
         value={selected}
         onChange={setExerciseId}
-        placeholder="Search exercises"
         inputClassName="w-full min-w-0 rounded-md border border-line bg-surface px-2 py-1.5 font-body text-xs text-chalk focus:border-blue-500 focus:outline-none"
       />
       <button

@@ -11,7 +11,7 @@ import {
 import Sheet from './Sheet'
 import { formatDate } from './dateUtils'
 
-function HistoryChartModal({ group, valueKey, getValue, formatTooltip, emptyLabel, referenceValue, onClose }) {
+function HistoryChartModal({ group, valueKey, getValue, formatTooltip, referenceValue, onClose }) {
   return (
     <Sheet open={!!group} onClose={onClose} title={group?.name}>
       {group && (
@@ -20,7 +20,6 @@ function HistoryChartModal({ group, valueKey, getValue, formatTooltip, emptyLabe
           valueKey={valueKey}
           getValue={getValue}
           formatTooltip={formatTooltip}
-          emptyLabel={emptyLabel}
           referenceValue={referenceValue}
         />
       )}
@@ -28,7 +27,7 @@ function HistoryChartModal({ group, valueKey, getValue, formatTooltip, emptyLabe
   )
 }
 
-function HistoryChartBody({ group, valueKey, getValue, formatTooltip, emptyLabel, referenceValue }) {
+function HistoryChartBody({ group, valueKey, getValue, formatTooltip, referenceValue }) {
   const sorted = [...group.entries].sort((a, b) => (a.date < b.date ? -1 : 1))
   const chartData = sorted.map((entry) => ({
     date: formatDate(entry.date),
@@ -37,9 +36,7 @@ function HistoryChartBody({ group, valueKey, getValue, formatTooltip, emptyLabel
 
   return (
     <div className="mt-4">
-      {chartData.length === 0 ? (
-        <p className="text-sm text-chalk-dim">{emptyLabel}</p>
-      ) : chartData.length === 1 ? (
+      {chartData.length === 1 ? (
         <p className="text-xs text-chalk-dim">Log another entry to see a trend.</p>
       ) : (
         <div className="h-56 w-full">

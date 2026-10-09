@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
 
-const DEFAULT_DELAY_MS = 5500
+const DELAY_MS = 5500
 
 // One store per caller-supplied `key`, module-level rather than React state,
 // so the pending delete survives that key's own page unmounting/remounting
@@ -79,7 +79,7 @@ function isForeground(key) {
   return getStore(key).mountedCount > 0
 }
 
-function stageDeleteFor(key, { ids, message, commit }, delay) {
+function stageDeleteFor(key, { ids, message, commit }) {
   const store = getStore(key)
   if (store.pending) {
     // A second delete staged before the first's grace period elapsed —
@@ -92,7 +92,7 @@ function stageDeleteFor(key, { ids, message, commit }, delay) {
     const staged = store.pending
     store.pending = null
     runCommit(key, staged)
-  }, delay)
+  }, DELAY_MS)
 
   store.pending = { ids: new Set(ids), message, commit }
   notify(key)
@@ -110,7 +110,7 @@ function undoFor(key) {
 // ConfirmModal/ConfirmDeleteButton) — this is an additional safety net for
 // "I meant to confirm but regret it a few seconds later," not a replacement
 // for that confirmation step. Nothing is actually removed from Supabase (or
-// Storage) until `delay` elapses with no Undo tap; `commit` is the caller's
+// Storage) until DELAY_MS elapses with no Undo tap; `commit` is the caller's
 // real delete logic, so a failure there still surfaces via the caller's own
 // onError, just after the delay rather than immediately.
 //
@@ -120,7 +120,7 @@ function undoFor(key) {
 // `isForeground` (whether a component for this `key` is currently mounted)
 // so callers can skip surfacing errors through a page-level banner for a
 // delete that finished while nobody was looking at this feature.
-export function useDeferredDelete(key, { delay = DEFAULT_DELAY_MS } = {}) {
+export function useDeferredDelete(key) {
   useEffect(() => {
     mount(key)
     return () => unmount(key)
@@ -130,18 +130,10 @@ export function useDeferredDelete(key, { delay = DEFAULT_DELAY_MS } = {}) {
   const hidden = useSyncExternalStore(subscribeToKey, () => getHidden(key))
   const message = useSyncExternalStore(subscribeToKey, () => getMessage(key))
 
-  function stageDelete({ ids, message, commit }) {
-    stageDeleteFor(key, { ids, message, commit }, delay)
-  }
-
-  function undo() {
-    undoFor(key)
-  }
-
   return {
     isPending: (id) => hidden.has(id),
     message,
-    stageDelete,
-    undo,
+    stageDelete: (staged) => stageDeleteFor(key, staged),
+    undo: () => undoFor(key),
   }
 }
