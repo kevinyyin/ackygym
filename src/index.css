@@ -247,12 +247,6 @@ html[data-theme="light"] {
     animation: skeleton-shimmer 1.4s ease-in-out infinite;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .skeleton {
-      animation: none;
-    }
-  }
-
   @keyframes water-sway {
     from {
       transform: translateX(-6px);
@@ -267,6 +261,7 @@ html[data-theme="light"] {
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .skeleton,
     .water-wave {
       animation: none;
     }

@@ -27,6 +27,15 @@ function playAlert(ctx) {
   }
 }
 
+export function formatTime(totalSeconds) {
+  const clamped = Math.max(0, Math.round(totalSeconds))
+  return `${Math.floor(clamped / 60)}:${String(clamped % 60).padStart(2, '0')}`
+}
+
+function secondsUntil(endTime) {
+  return Math.max(0, Math.ceil((endTime - Date.now()) / 1000))
+}
+
 // Lifted out of TimerPanel so the countdown keeps running (and fires its
 // alert at the right wall-clock moment) no matter which tab is on screen —
 // a component-local timer is destroyed the instant the user taps away to
@@ -82,12 +91,15 @@ export function useRestTimer() {
     setStatus('idle')
   }
 
-  function start() {
+  function run(seconds) {
     unlockAudio()
-    const secondsToRun = status === 'paused' ? startRemaining : duration
-    setStartRemaining(secondsToRun)
-    setEndTime(Date.now() + secondsToRun * 1000)
+    setStartRemaining(seconds)
+    setEndTime(Date.now() + seconds * 1000)
     setStatus('running')
+  }
+
+  function start() {
+    run(status === 'paused' ? startRemaining : duration)
   }
 
   function pause() {
@@ -104,10 +116,7 @@ export function useRestTimer() {
   // mid-rest or paused. start() can't do this — it resumes from the paused
   // remainder, and reads `status` from this render's closure.
   function restart() {
-    unlockAudio()
-    setStartRemaining(duration)
-    setEndTime(Date.now() + duration * 1000)
-    setStatus('running')
+    run(duration)
   }
 
   // restart() usually runs after an awaited Supabase insert — no longer
@@ -130,12 +139,13 @@ export function useRestTimer() {
 export function useRemaining({ status, endTime, remaining }) {
   // Tagged with the endTime it was measured against, so a new run shows its
   // starting value until the first tick instead of the last run's leftover.
-  const [tick, setTick] = useState({ endTime: null, seconds: 0 })
+  // Seeded from the clock, so a panel opened mid-rest is right on its first frame.
+  const [tick, setTick] = useState(() => ({ endTime, seconds: secondsUntil(endTime) }))
 
   useEffect(() => {
     if (status !== 'running') return
     const intervalId = setInterval(() => {
-      const seconds = Math.max(0, Math.ceil((endTime - Date.now()) / 1000))
+      const seconds = secondsUntil(endTime)
       setTick((prev) => (prev.endTime === endTime && prev.seconds === seconds ? prev : { endTime, seconds }))
     }, 250)
     return () => clearInterval(intervalId)

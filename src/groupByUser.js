@@ -1,5 +1,28 @@
 import { displayName } from './displayName'
 
+// Map.groupBy (keys in first-seen order), minus its iOS 17.4 floor.
+export function groupBy(list, keyOf) {
+  const groups = new Map()
+  for (const item of list) {
+    const key = keyOf(item)
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(item)
+  }
+  return groups
+}
+
+export function groupSetsByDate(sets) {
+  return [...groupBy(sets, (set) => set.workouts.date)].map(([date, daySets]) => ({ date, sets: daySets }))
+}
+
+export function groupSetsByExercise(sets) {
+  return [...groupBy(sets, (set) => set.exercise_id)].map(([exerciseId, exerciseSets]) => ({
+    exerciseId,
+    name: exerciseSets[0].exercises.name,
+    sets: exerciseSets,
+  }))
+}
+
 export function sortProfilesSelfFirst(profiles, currentUserId) {
   return [...profiles].sort((a, b) => {
     if (a.id === currentUserId) return -1
@@ -11,13 +34,7 @@ export function sortProfilesSelfFirst(profiles, currentUserId) {
 export function groupByUser(rows, profiles, currentUserId, itemsKey = 'items') {
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
 
-  const byUserId = new Map()
-  for (const row of rows) {
-    if (!byUserId.has(row.user_id)) byUserId.set(row.user_id, [])
-    byUserId.get(row.user_id).push(row)
-  }
-
-  return [...byUserId.entries()]
+  return [...groupBy(rows, (row) => row.user_id)]
     .map(([userId, items]) => ({
       userId,
       name: profileByUserId[userId] ? displayName(profileByUserId[userId]) : userId,

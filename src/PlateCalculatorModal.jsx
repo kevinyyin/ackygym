@@ -1,16 +1,6 @@
 import { useState } from 'react'
 import Sheet from './Sheet'
-import {
-  calculatePlates,
-  STANDARD_PLATES_KG,
-  STANDARD_BAR_KG,
-  STANDARD_PLATES_LB,
-  STANDARD_BAR_LB,
-} from './plateCalculator'
-
-function standardBarFor(unit) {
-  return unit === 'kg' ? STANDARD_BAR_KG : STANDARD_BAR_LB
-}
+import { calculatePlates, STANDARD_SETUP } from './plateCalculator'
 
 function plateSizeClass(weight) {
   if (weight >= 20) return 'h-24 w-3.5'
@@ -30,16 +20,11 @@ function Plate({ weight }) {
 
 function PlateCalculatorModal({ initialWeight, unit, onClose }) {
   const [weight, setWeight] = useState(String(initialWeight || ''))
-  const [barWeight, setBarWeight] = useState(String(standardBarFor(unit)))
+  const [barWeight, setBarWeight] = useState(String(STANDARD_SETUP[unit].bar))
 
   const targetWeight = Number(weight) || 0
   const bar = Number(barWeight) || 0
-  const standardPlates = unit === 'kg' ? STANDARD_PLATES_KG : STANDARD_PLATES_LB
-  const { platesPerSide, achievedWeight, remainder } = calculatePlates(
-    targetWeight,
-    bar,
-    standardPlates
-  )
+  const { platesPerSide, achievedWeight, remainder } = calculatePlates(targetWeight, bar, STANDARD_SETUP[unit].plates)
 
   const leftSide = [...platesPerSide].reverse()
 

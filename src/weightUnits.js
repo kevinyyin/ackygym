@@ -1,16 +1,8 @@
 const KG_PER_LB = 0.45359237
 
-export function kgToLb(kg) {
-  return kg / KG_PER_LB
-}
-
-export function lbToKg(lb) {
-  return lb * KG_PER_LB
-}
-
 export function convertWeight(value, fromUnit, toUnit) {
   if (fromUnit === toUnit) return value
-  return toUnit === 'kg' ? lbToKg(value) : kgToLb(value)
+  return toUnit === 'kg' ? value * KG_PER_LB : value / KG_PER_LB
 }
 
 export function roundWeight(value) {
@@ -22,6 +14,12 @@ export function toDisplayWeight(weightKg, unit) {
 }
 
 export function toStorageWeightKg(displayValue, unit) {
-  const numeric = Number(displayValue)
-  return unit === 'kg' ? numeric : convertWeight(numeric, 'lb', 'kg')
+  return convertWeight(Number(displayValue), unit, 'kg')
+}
+
+// A typed weight re-expressed after a unit flip; blank or non-numeric input
+// is left as typed.
+export function convertWeightInput(input, fromUnit, toUnit) {
+  const numeric = Number(input)
+  return input === '' || Number.isNaN(numeric) ? input : String(roundWeight(convertWeight(numeric, fromUnit, toUnit)))
 }

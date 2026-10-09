@@ -53,19 +53,12 @@ function SettingsModal({
     }
   }
 
-  function handleBottleSizeChange(value) {
-    setBottleSizeInput(value)
+  // The field shows whatever is typed; only a positive number is saved.
+  function handleWaterNumberChange(key, setInput, value) {
+    setInput(value)
     const numeric = Number(value)
     if (value !== '' && Number.isFinite(numeric) && numeric > 0) {
-      onWaterSettingsChange({ bottleSizeMl: numeric })
-    }
-  }
-
-  function handleGoalChange(value) {
-    setGoalInput(value)
-    const numeric = Number(value)
-    if (value !== '' && Number.isFinite(numeric) && numeric > 0) {
-      onWaterSettingsChange({ goalMl: numeric })
+      onWaterSettingsChange({ [key]: numeric })
     }
   }
 
@@ -235,7 +228,7 @@ function SettingsModal({
           type="number"
           min="1"
           value={goalInput}
-          onChange={(e) => handleGoalChange(e.target.value)}
+          onChange={(e) => handleWaterNumberChange('goalMl', setGoalInput, e.target.value)}
           className="w-24 rounded-md border border-line bg-surface px-2 py-1.5 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
         />
       </div>
@@ -249,7 +242,7 @@ function SettingsModal({
             type="number"
             min="1"
             value={bottleSizeInput}
-            onChange={(e) => handleBottleSizeChange(e.target.value)}
+            onChange={(e) => handleWaterNumberChange('bottleSizeMl', setBottleSizeInput, e.target.value)}
             className="w-24 rounded-md border border-line bg-surface px-2 py-1.5 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
           />
         </div>

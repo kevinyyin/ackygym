@@ -7,22 +7,8 @@ import { getDateDaysAgoString, getTodayDateString, formatDate } from './dateUtil
 import { toDisplayWeight } from './weightUnits'
 import { TrophyIcon } from './icons'
 import Skeleton from './Skeleton'
-
-function groupSetsByDate(sets) {
-  const order = []
-  const byDate = new Map()
-
-  for (const set of sets) {
-    const date = set.workouts.date
-    if (!byDate.has(date)) {
-      byDate.set(date, { date, sets: [] })
-      order.push(date)
-    }
-    byDate.get(date).sets.push(set)
-  }
-
-  return order.map((date) => byDate.get(date))
-}
+import { groupSetsByDate } from './groupByUser'
+import { byDateThenId } from './logSet'
 
 // Cross-day, cross-exercise browsing of the current user's own logged sets —
 // unlike Calendar (one day at a time) or Lifts (one exercise at a time),
@@ -75,10 +61,7 @@ function SetsHistoryPage({ userId, weightUnit, onError }) {
 
       // Sorted client-side, newest first — `.order(col, { foreignTable })`
       // is a no-op on this project's PostgREST version, see lastSet.js.
-      const sorted = [...data].sort((a, b) =>
-        a.workouts.date !== b.workouts.date ? (a.workouts.date < b.workouts.date ? 1 : -1) : b.id - a.id
-      )
-      setResults(sorted)
+      setResults([...data].sort((a, b) => byDateThenId(b, a)))
     }
 
     fetchResults()

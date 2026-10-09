@@ -6,7 +6,7 @@ import Card from './Card'
 import ActiveRoutine from './ActiveRoutine'
 import WaterTracker from './WaterTracker'
 import CreatineTracker from './CreatineTracker'
-import { groupByUser } from './groupByUser'
+import { groupByUser, groupSetsByExercise } from './groupByUser'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
@@ -30,21 +30,6 @@ const SHOW_TODAYS_SETS_KEY = 'gym-tracker:home-show-todays-sets'
 function loadShown(key, fallback) {
   const stored = localStorage.getItem(key)
   return stored === null ? fallback : stored === 'true'
-}
-
-function groupSetsByExercise(sets) {
-  const order = []
-  const byExerciseId = new Map()
-
-  for (const set of sets) {
-    if (!byExerciseId.has(set.exercise_id)) {
-      byExerciseId.set(set.exercise_id, { exerciseId: set.exercise_id, name: set.exercises.name, sets: [] })
-      order.push(set.exercise_id)
-    }
-    byExerciseId.get(set.exercise_id).sets.push(set)
-  }
-
-  return order.map((exerciseId) => byExerciseId.get(exerciseId))
 }
 
 function Home({
@@ -179,6 +164,10 @@ function Home({
       onError(error.message)
       return
     }
+    handleLogged()
+  }
+
+  function handleLogged() {
     setRefreshKey((key) => key + 1)
     setShowTodaysSets(true)
     onSetLogged()
@@ -341,11 +330,7 @@ function Home({
               routines={routines}
               userId={session.user.id}
               weightUnit={weightUnit}
-              onLogged={() => {
-                setRefreshKey((key) => key + 1)
-                setShowTodaysSets(true)
-                onSetLogged()
-              }}
+              onLogged={handleLogged}
               onError={onError}
             />
           </div>
@@ -358,11 +343,7 @@ function Home({
           userId={session.user.id}
           weightUnit={weightUnit}
           onExit={() => onActiveRoutineChange(null)}
-          onLogged={() => {
-            setRefreshKey((key) => key + 1)
-            setShowTodaysSets(true)
-            onSetLogged()
-          }}
+          onLogged={handleLogged}
           onError={onError}
         />
       )}

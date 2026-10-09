@@ -11,8 +11,7 @@ async function fetchPriorMaxWeight(userId, exerciseId) {
     .limit(1)
     .maybeSingle()
 
-  if (error) return { data: null, error }
-  return { data: data ? data.weight : null, error: null }
+  return { data: data?.weight ?? null, error }
 }
 
 export async function logSet({ userId, exerciseId, weight, reps }) {
@@ -58,6 +57,12 @@ export async function logSet({ userId, exerciseId, weight, reps }) {
   return { error: setInsertError, isPr }
 }
 
+// Chronological: workout date, then insert order within a day.
+export function byDateThenId(a, b) {
+  if (a.workouts.date !== b.workouts.date) return a.workouts.date < b.workouts.date ? -1 : 1
+  return a.id - b.id
+}
+
 // Re-derives is_pr for every set of this user+exercise, in chronological
 // order — needed after an edit or delete, since is_pr is only ever computed
 // once at insert time above and would otherwise go stale (e.g. deleting the
@@ -73,12 +78,7 @@ export async function recomputeIsPr(userId, exerciseId) {
 
   // Sorted client-side — `.order(col, { foreignTable })` is a no-op on
   // this project's PostgREST version, see lastSet.js for details.
-  const sorted = [...data].sort((a, b) => {
-    if (a.workouts.date !== b.workouts.date) {
-      return a.workouts.date < b.workouts.date ? -1 : 1
-    }
-    return a.id - b.id
-  })
+  const sorted = [...data].sort(byDateThenId)
 
   let maxWeight = null
   for (const set of sorted) {

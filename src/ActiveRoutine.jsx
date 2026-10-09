@@ -5,7 +5,7 @@ import { logSet } from './logSet'
 import { BarbellIcon, TrophyIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 import { isValidSet } from './validation'
-import { toDisplayWeight, toStorageWeightKg, convertWeight, roundWeight } from './weightUnits'
+import { toDisplayWeight, toStorageWeightKg, convertWeightInput } from './weightUnits'
 import Skeleton from './Skeleton'
 
 function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError }) {
@@ -26,14 +26,7 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
   if (prevWeightUnit !== weightUnit) {
     setPrevWeightUnit(weightUnit)
     setRows((current) =>
-      current === null
-        ? current
-        : current.map((row) => {
-            if (row.weight === '') return row
-            const numeric = Number(row.weight)
-            if (Number.isNaN(numeric)) return row
-            return { ...row, weight: String(roundWeight(convertWeight(numeric, prevWeightUnit, weightUnit))) }
-          })
+      current && current.map((row) => ({ ...row, weight: convertWeightInput(row.weight, prevWeightUnit, weightUnit) }))
     )
   }
 

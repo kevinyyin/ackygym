@@ -1,8 +1,7 @@
-export const STANDARD_PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25]
-export const STANDARD_BAR_KG = 20
-
-export const STANDARD_PLATES_LB = [45, 35, 25, 10, 5, 2.5]
-export const STANDARD_BAR_LB = 45
+export const STANDARD_SETUP = {
+  kg: { bar: 20, plates: [25, 20, 15, 10, 5, 2.5, 1.25] },
+  lb: { bar: 45, plates: [45, 35, 25, 10, 5, 2.5] },
+}
 
 const EPSILON = 0.001
 

@@ -6,21 +6,7 @@ import Sheet from './Sheet'
 import Button from './Button'
 import ConfirmModal from './ConfirmModal'
 import { toDisplayWeight } from './weightUnits'
-
-function groupSetsByExercise(sets) {
-  const order = []
-  const byExerciseId = new Map()
-
-  for (const set of sets) {
-    if (!byExerciseId.has(set.exercise_id)) {
-      byExerciseId.set(set.exercise_id, { exerciseId: set.exercise_id, name: set.exercises.name, sets: [] })
-      order.push(set.exercise_id)
-    }
-    byExerciseId.get(set.exercise_id).sets.push(set)
-  }
-
-  return order.map((exerciseId) => byExerciseId.get(exerciseId))
-}
+import { groupSetsByExercise } from './groupByUser'
 
 // Shows one past day's logged sets and offers to re-log all of them as
 // today's sets — a whole-session repeat, distinct from the existing

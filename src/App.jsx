@@ -20,7 +20,8 @@ import { loadCardVisibility, saveCardVisibility } from './cardVisibility'
 import { loadWaterSettings, saveWaterSettings } from './waterSettings'
 import { loadWeightUnit, saveWeightUnit } from './weightUnitSettings'
 import { useRestTimer } from './useRestTimer'
-import TimerSheet from './TimerSheet'
+import Sheet from './Sheet'
+import TimerPanel from './TimerPanel'
 import TimerPill from './TimerPill'
 import { loadAutoRest, saveAutoRest } from './autoRestSettings'
 import { GridIcon, BarbellIcon, CalendarIcon, ScaleIcon, TimerIcon, CloseIcon } from './icons'
@@ -89,7 +90,7 @@ function App() {
   // component-local state.
   const [activeRoutine, setActiveRoutine] = useState(null)
   const location = useLocation()
-  // Kept mounted here (not inside TimerSheet) so a running rest timer
+  // Kept mounted here (not inside the timer sheet) so a running rest timer
   // survives tab switches.
   const restTimer = useRestTimer()
   const [timerOpen, setTimerOpen] = useState(false)
@@ -113,17 +114,12 @@ function App() {
   }, [theme])
 
   useEffect(() => {
-    function handleOnline() {
-      setIsOnline(true)
-    }
-    function handleOffline() {
-      setIsOnline(false)
-    }
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
+    const sync = () => setIsOnline(navigator.onLine)
+    window.addEventListener('online', sync)
+    window.addEventListener('offline', sync)
     return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', sync)
+      window.removeEventListener('offline', sync)
     }
   }, [])
 
@@ -458,7 +454,9 @@ function App() {
         </nav>
 
         <TimerPill timer={restTimer} onOpen={() => setTimerOpen(true)} />
-        <TimerSheet open={timerOpen} onClose={() => setTimerOpen(false)} timer={restTimer} />
+        <Sheet open={timerOpen} onClose={() => setTimerOpen(false)} title="Rest">
+          <TimerPanel timer={restTimer} />
+        </Sheet>
       </div>
 
       {/* Outside #app-shell on purpose: the shell is fixed, so it forms its own
