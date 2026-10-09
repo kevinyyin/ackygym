@@ -12,7 +12,6 @@ import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
 
 const VIEW_MODE_KEY = 'calendarViewMode'
-const MONTH_WEEKDAY_HEADER = [0, 1, 2, 3, 4, 5, 6].map((d) => WEEKDAY_SHORT[d])
 
 const DOT_COLORS = ['bg-blue-400', 'bg-emerald', 'bg-amber', 'bg-purple']
 const STREAK_WINDOW_DAYS = 90
@@ -206,35 +205,21 @@ function ContributionGraph({ weeks, monthLabels, onDayClick }) {
           <div className="flex gap-[3px]">
             {weeks.map((week, weekIndex) => (
               <div key={weekIndex} className="flex flex-col gap-[3px]">
-                {week.map((day) =>
-                  day.isFuture ? (
-                    <div key={day.dateStr} style={{ height: CELL_PX, width: CELL_PX }} />
-                  ) : onDayClick && day.level > 0 ? (
-                    <button
+                {week.map((day) => {
+                  if (day.isFuture) return <div key={day.dateStr} style={{ height: CELL_PX, width: CELL_PX }} />
+                  const clickable = onDayClick && day.level > 0
+                  const Cell = clickable ? 'button' : 'div'
+                  return (
+                    <Cell
                       key={day.dateStr}
-                      type="button"
-                      onClick={() => onDayClick(day.dateStr)}
-                      title={`${day.label ?? 'No sets'} · ${formatDate(day.dateStr)} — tap to view or repeat`}
-                      style={{
-                        height: CELL_PX,
-                        width: CELL_PX,
-                        backgroundColor: `var(--color-heat-${day.level})`,
-                      }}
-                      className="cursor-pointer rounded-[2px]"
-                    />
-                  ) : (
-                    <div
-                      key={day.dateStr}
-                      title={`${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}`}
-                      style={{
-                        height: CELL_PX,
-                        width: CELL_PX,
-                        backgroundColor: `var(--color-heat-${day.level})`,
-                      }}
-                      className="rounded-[2px]"
+                      type={clickable ? 'button' : undefined}
+                      onClick={clickable ? () => onDayClick(day.dateStr) : undefined}
+                      title={`${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}${clickable ? ' — tap to view or repeat' : ''}`}
+                      style={{ height: CELL_PX, width: CELL_PX, backgroundColor: `var(--color-heat-${day.level})` }}
+                      className={clickable ? 'cursor-pointer rounded-[2px]' : 'rounded-[2px]'}
                     />
                   )
-                )}
+                })}
               </div>
             ))}
           </div>
@@ -248,7 +233,7 @@ function MonthGrid({ weeks, onDayClick }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="grid grid-cols-7 gap-1">
-        {MONTH_WEEKDAY_HEADER.map((label, i) => (
+        {WEEKDAY_SHORT.map((label, i) => (
           <div key={i} className="text-center font-mono text-[10px] tracking-wide text-chalk-dim uppercase">
             {label}
           </div>
@@ -265,9 +250,17 @@ function MonthGrid({ weeks, onDayClick }) {
               : day.isToday
                 ? 'font-bold text-blue-400'
                 : 'text-chalk'
+            const clickable = !day.isFuture && onDayClick && day.level > 0
+            const Cell = clickable ? 'button' : 'div'
 
-            const content = (
-              <>
+            return (
+              <Cell
+                key={dayIndex}
+                type={clickable ? 'button' : undefined}
+                onClick={clickable ? () => onDayClick(day.dateStr) : undefined}
+                title={day.isFuture ? undefined : `${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}${clickable ? ' — tap to view or repeat' : ''}`}
+                className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-md${clickable ? ' cursor-pointer active:bg-surface-2' : ''}`}
+              >
                 <span className={`font-mono text-xs ${numberClass}`}>{day.date.getDate()}</span>
                 {!day.isFuture && day.level > 0 && (
                   <span
@@ -275,31 +268,7 @@ function MonthGrid({ weeks, onDayClick }) {
                     style={{ backgroundColor: `var(--color-heat-${day.level})` }}
                   />
                 )}
-              </>
-            )
-
-            if (!day.isFuture && onDayClick && day.level > 0) {
-              return (
-                <button
-                  key={dayIndex}
-                  type="button"
-                  onClick={() => onDayClick(day.dateStr)}
-                  title={`${day.label ?? 'No sets'} · ${formatDate(day.dateStr)} — tap to view or repeat`}
-                  className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-md active:bg-surface-2"
-                >
-                  {content}
-                </button>
-              )
-            }
-
-            return (
-              <div
-                key={dayIndex}
-                title={day.isFuture ? undefined : `${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}`}
-                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md"
-              >
-                {content}
-              </div>
+              </Cell>
             )
           })}
         </div>

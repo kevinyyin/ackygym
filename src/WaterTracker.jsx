@@ -46,17 +46,21 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
     fetchLogs()
   }, [refreshKey, onError])
 
-  async function handleAdd(amountMl) {
+  // Every write: clear the banner, run it, refetch on success.
+  async function write(query) {
     onError('')
-    const { error } = await supabase
-      .from('water_logs')
-      .insert({ user_id: session.user.id, amount_ml: amountMl, date: getTodayDateString() })
-
+    const { error } = await query
     if (error) {
       onError(error.message)
       return
     }
     setRefreshKey((k) => k + 1)
+  }
+
+  function handleAdd(amountMl) {
+    return write(
+      supabase.from('water_logs').insert({ user_id: session.user.id, amount_ml: amountMl, date: getTodayDateString() })
+    )
   }
 
   async function handleCustomAdd(e) {
@@ -67,32 +71,15 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
     setCustomValue('')
   }
 
-  async function handleUndo() {
+  function handleUndo() {
     const ownLogs = logs.filter((log) => log.user_id === session.user.id)
     const last = ownLogs[ownLogs.length - 1]
     if (!last) return
-
-    onError('')
-    const { error } = await supabase.from('water_logs').delete().eq('id', last.id)
-    if (error) {
-      onError(error.message)
-      return
-    }
-    setRefreshKey((k) => k + 1)
+    return write(supabase.from('water_logs').delete().eq('id', last.id))
   }
 
-  async function handleClear() {
-    onError('')
-    const { error } = await supabase
-      .from('water_logs')
-      .delete()
-      .eq('user_id', session.user.id)
-      .eq('date', getTodayDateString())
-    if (error) {
-      onError(error.message)
-      return
-    }
-    setRefreshKey((k) => k + 1)
+  function handleClear() {
+    return write(supabase.from('water_logs').delete().eq('user_id', session.user.id).eq('date', getTodayDateString()))
   }
 
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
@@ -116,6 +103,10 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
       totalMl,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
+
+  const quickAdds = isBottles
+    ? QUICK_ADD_BOTTLE_FRACTIONS.map(({ fraction, label }) => ({ key: fraction, ml: Math.round(bottleSizeMl * fraction), label }))
+    : QUICK_ADD_ML.map((ml) => ({ key: ml, ml, label: `+${ml} ml` }))
 
   return (
     <Card className="p-4">
@@ -155,25 +146,15 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {isBottles
-              ? QUICK_ADD_BOTTLE_FRACTIONS.map(({ fraction, label }) => (
-                  <button
-                    key={fraction}
-                    onClick={() => handleAdd(Math.round(bottleSizeMl * fraction))}
-                    className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk active:border-blue-500 active:text-blue-400"
-                  >
-                    {label}
-                  </button>
-                ))
-              : QUICK_ADD_ML.map((amount) => (
-                  <button
-                    key={amount}
-                    onClick={() => handleAdd(amount)}
-                    className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk active:border-blue-500 active:text-blue-400"
-                  >
-                    +{amount} ml
-                  </button>
-                ))}
+            {quickAdds.map(({ key, ml, label }) => (
+              <button
+                key={key}
+                onClick={() => handleAdd(ml)}
+                className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk active:border-blue-500 active:text-blue-400"
+              >
+                {label}
+              </button>
+            ))}
             <button
               onClick={handleUndo}
               disabled={ownTotalMl === 0}

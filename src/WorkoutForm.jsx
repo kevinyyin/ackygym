@@ -6,7 +6,7 @@ import { BarbellIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 import ExercisePicker from './ExercisePicker'
 import { isValidSet } from './validation'
-import { toDisplayWeight, toStorageWeightKg, convertWeight, roundWeight } from './weightUnits'
+import { toDisplayWeight, toStorageWeightKg, convertWeightInput } from './weightUnits'
 
 function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onError }) {
   const [routineId, setRoutineId] = useState('')
@@ -21,11 +21,7 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onErro
   const [prevWeightUnit, setPrevWeightUnit] = useState(weightUnit)
   if (prevWeightUnit !== weightUnit) {
     setPrevWeightUnit(weightUnit)
-    setWeight((current) => {
-      if (current === '') return current
-      const numeric = Number(current)
-      return Number.isNaN(numeric) ? current : String(roundWeight(convertWeight(numeric, prevWeightUnit, weightUnit)))
-    })
+    setWeight((current) => convertWeightInput(current, prevWeightUnit, weightUnit))
   }
   // Guards re-entrancy for rapid double-taps that land inside the same
   // event-loop tick, before React has re-rendered with `submitting: true` —

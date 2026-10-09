@@ -3,7 +3,7 @@ import Card from './Card'
 import Button from './Button'
 import SegmentedControl from './SegmentedControl'
 import { REST_PRESETS } from './autoRestSettings'
-
+import { formatTime, useRemaining } from './useRestTimer'
 
 const STATUS_LABEL = {
   idle: 'Ready',
@@ -27,14 +27,9 @@ const DIAL_TICKS = Array.from({ length: 12 }, (_, i) => {
   }
 })
 
-function formatTime(totalSeconds) {
-  const clamped = Math.max(0, Math.round(totalSeconds))
-  const minutes = Math.floor(clamped / 60)
-  const seconds = clamped % 60
-  return `${minutes}:${String(seconds).padStart(2, '0')}`
-}
-
-function TimerPanel({ duration, remaining, status, selectDuration, onStart, onPause, onReset }) {
+function TimerPanel({ timer }) {
+  const { duration, status, selectDuration } = timer
+  const remaining = useRemaining(timer)
   const [customValue, setCustomValue] = useState('')
 
   function handleCustomSubmit(e) {
@@ -134,13 +129,13 @@ function TimerPanel({ duration, remaining, status, selectDuration, onStart, onPa
       </Card>
 
       <div className="grid grid-cols-3 gap-2">
-        <Button onClick={onStart} disabled={status === 'running'}>
+        <Button onClick={timer.start} disabled={status === 'running'}>
           {status === 'paused' ? 'Resume' : 'Start'}
         </Button>
-        <Button variant="secondary" onClick={onPause} disabled={status !== 'running'}>
+        <Button variant="secondary" onClick={timer.pause} disabled={status !== 'running'}>
           Pause
         </Button>
-        <Button variant="secondary" onClick={onReset}>
+        <Button variant="secondary" onClick={timer.reset}>
           Reset
         </Button>
       </div>

@@ -15,8 +15,5 @@ export async function fetchLastSet(userId, exerciseId) {
     .limit(1)
     .maybeSingle()
 
-  if (error) return { data: null, error }
-  if (!data) return { data: null, error: null }
-
-  return { data: { weight: data.weight, reps: data.reps }, error: null }
+  return { data, error }
 }

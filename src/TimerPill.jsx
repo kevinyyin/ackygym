@@ -1,14 +1,9 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { smooth } from './motionPresets'
-import { useRemaining } from './useRestTimer'
+import { formatTime, useRemaining } from './useRestTimer'
 
 const RING_RADIUS = 9
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
-
-function formatTime(totalSeconds) {
-  const clamped = Math.max(0, Math.round(totalSeconds))
-  return `${Math.floor(clamped / 60)}:${String(clamped % 60).padStart(2, '0')}`
-}
 
 // Floats above the tab bar on every tab whenever a rest is in progress, so
 // the countdown is never more than a glance away mid-workout.

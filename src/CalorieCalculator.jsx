@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Card from './Card'
-import { convertWeight, roundWeight } from './weightUnits'
+import { toDisplayWeight, toStorageWeightKg, convertWeightInput } from './weightUnits'
 import {
   calculateCalorieTargets,
   ACTIVITY_LEVELS,
@@ -29,9 +29,7 @@ function CalorieCalculator({ userId, latestWeightKg, unit }) {
   const [sex, setSex] = useState(stored.sex ?? 'female')
   const [activityLevel, setActivityLevel] = useState(stored.activityLevel ?? 'sedentary')
   const [goal, setGoal] = useState(stored.goal ?? 'maintain')
-  const [weight, setWeight] = useState(() =>
-    latestWeightKg ? String(roundWeight(convertWeight(latestWeightKg, 'kg', unit))) : ''
-  )
+  const [weight, setWeight] = useState(() => (latestWeightKg ? String(toDisplayWeight(latestWeightKg, unit)) : ''))
 
   // Re-derive weight/height when the latest logged weight or the display
   // unit changes, without a setState-in-effect cascade — this is React's
@@ -55,10 +53,9 @@ function CalorieCalculator({ userId, latestWeightKg, unit }) {
     setPrevWeightKg(latestWeightKg)
 
     if (latestWeightKg) {
-      setWeight(String(roundWeight(convertWeight(latestWeightKg, 'kg', unit))))
+      setWeight(String(toDisplayWeight(latestWeightKg, unit)))
     } else if (unitChanged && weight) {
-      const n = Number(weight)
-      if (!Number.isNaN(n)) setWeight(String(roundWeight(convertWeight(n, prevUnit, unit))))
+      setWeight(convertWeightInput(weight, prevUnit, unit))
     }
 
     if (unitChanged && height) {
@@ -80,7 +77,7 @@ function CalorieCalculator({ userId, latestWeightKg, unit }) {
 
   const heightUnit = unit === 'kg' ? 'cm' : 'in'
 
-  const weightKg = unit === 'kg' ? Number(weight) : convertWeight(Number(weight), 'lb', 'kg')
+  const weightKg = toStorageWeightKg(weight, unit)
   const heightCm = heightUnit === 'cm' ? Number(height) : inToCm(Number(height))
   const ageNum = Number(age)
 

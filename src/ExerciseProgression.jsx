@@ -12,26 +12,11 @@ import { supabase } from './supabaseClient'
 import { TrophyIcon, CheckIcon, CloseIcon } from './icons'
 import { estimatedOneRepMax } from './oneRepMax'
 import { formatDate } from './dateUtils'
-import { recomputeIsPr } from './logSet'
+import { recomputeIsPr, byDateThenId } from './logSet'
+import { groupSetsByDate } from './groupByUser'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { isValidSet } from './validation'
 import { toDisplayWeight, toStorageWeightKg } from './weightUnits'
-
-function groupSetsBySession(sets) {
-  const order = []
-  const byDate = new Map()
-
-  for (const set of sets) {
-    const date = set.workouts.date
-    if (!byDate.has(date)) {
-      byDate.set(date, { date, sets: [] })
-      order.push(date)
-    }
-    byDate.get(date).sets.push(set)
-  }
-
-  return order.map((date) => byDate.get(date))
-}
 
 function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChanged }) {
   const [sets, setSets] = useState(null)
@@ -57,14 +42,7 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
 
       // Sorted client-side — `.order(col, { foreignTable })` is a no-op on
       // this project's PostgREST version, see lastSet.js for details.
-      const sorted = [...data].sort((a, b) => {
-        if (a.workouts.date !== b.workouts.date) {
-          return a.workouts.date < b.workouts.date ? -1 : 1
-        }
-        return a.id - b.id
-      })
-
-      if (!cancelled) setSets(sorted)
+      if (!cancelled) setSets([...data].sort(byDateThenId))
     }
 
     fetchSets()
@@ -87,6 +65,19 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
     return isValidSet({ weight: draftWeight, reps: draftReps })
   }
 
+  // An edit or delete can move the PR, so both re-derive is_pr before
+  // refreshing. Resolves to whether every step succeeded.
+  async function finishWrite(writeError) {
+    const error = writeError ?? (await recomputeIsPr(userId, exerciseId)).error
+    if (error) {
+      onError(error.message)
+      return false
+    }
+    setRefreshKey((k) => k + 1)
+    onChanged?.()
+    return true
+  }
+
   async function saveEdit(setId) {
     if (!isDraftValid()) return
 
@@ -95,46 +86,20 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
       .from('sets')
       .update({ weight: toStorageWeightKg(draftWeight, weightUnit), reps: Number(draftReps) })
       .eq('id', setId)
-
-    if (error) {
-      onError(error.message)
-      return
-    }
-
-    const { error: recomputeError } = await recomputeIsPr(userId, exerciseId)
-    if (recomputeError) {
-      onError(recomputeError.message)
-      return
-    }
-
-    setEditingSetId(null)
-    setRefreshKey((k) => k + 1)
-    onChanged?.()
+    if (await finishWrite(error)) setEditingSetId(null)
   }
 
   async function handleDelete(setId) {
     onError('')
     const { error } = await supabase.from('sets').delete().eq('id', setId)
-    if (error) {
-      onError(error.message)
-      return
-    }
-
-    const { error: recomputeError } = await recomputeIsPr(userId, exerciseId)
-    if (recomputeError) {
-      onError(recomputeError.message)
-      return
-    }
-
-    setRefreshKey((k) => k + 1)
-    onChanged?.()
+    await finishWrite(error)
   }
 
   if (sets === null) {
     return <p className="mt-4 text-sm text-chalk-dim">Loading…</p>
   }
 
-  const sessions = groupSetsBySession(sets)
+  const sessions = groupSetsByDate(sets)
 
   if (sessions.length === 0) {
     return <p className="mt-4 text-sm text-chalk-dim">No sets logged yet for this exercise.</p>

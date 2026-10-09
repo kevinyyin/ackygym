@@ -5,36 +5,23 @@ import { useModalFocusTrap } from './useModalFocusTrap'
 import { smooth } from './motionPresets'
 import { CloseIcon } from './icons'
 
-// Counted, not a boolean, because sheets nest (e.g. WorkoutDayModal opens a
-// ConfirmModal on top of itself) and the background must stay receded until
-// the last one closes. index.css keys the scale-down off this attribute.
-let openSheetCount = 0
-
-function useBackgroundRecede(open) {
-  useEffect(() => {
-    if (!open) return
-    openSheetCount += 1
-    document.documentElement.setAttribute('data-sheet-open', '')
-    return () => {
-      openSheetCount -= 1
-      if (openSheetCount === 0) document.documentElement.removeAttribute('data-sheet-open')
-    }
-  }, [open])
-}
-
-// Open sheets in opening order. Every open sheet listens for Escape, but only
-// the topmost may act on it — otherwise one keypress closes a ConfirmModal
-// and the sheet beneath it together.
+// Open sheets in opening order. Sheets nest (e.g. WorkoutDayModal opens a
+// ConfirmModal on top of itself), so only the topmost may act on Escape —
+// otherwise one keypress closes both — and the background stays receded
+// until the last one closes (index.css keys the scale-down off
+// data-sheet-open).
 const openSheetStack = []
 
-function useEscapeToCloseTopmost(open, onClose, id) {
+function useSheetStack(open, onClose, id) {
   // Membership is keyed on `open` alone: re-running it whenever the caller
   // passes a fresh onClose would move this sheet to the top of the stack.
   useEffect(() => {
     if (!open) return
     openSheetStack.push(id)
+    document.documentElement.setAttribute('data-sheet-open', '')
     return () => {
       openSheetStack.splice(openSheetStack.indexOf(id), 1)
+      if (openSheetStack.length === 0) document.documentElement.removeAttribute('data-sheet-open')
     }
   }, [open, id])
 
@@ -58,8 +45,7 @@ function Sheet({ open, onClose, title, size = 'auto', children }) {
   const titleId = useId()
   const dragControls = useDragControls()
   const containerRef = useModalFocusTrap(open)
-  useEscapeToCloseTopmost(open, onClose, titleId)
-  useBackgroundRecede(open)
+  useSheetStack(open, onClose, titleId)
 
   function handleDragEnd(_event, info) {
     const height = containerRef.current?.offsetHeight ?? 0
