@@ -35,6 +35,7 @@ function PlateCalculatorModal({ initialWeight, unit, onClose }) {
           <span className="text-[11px] text-chalk-dim uppercase">Target weight ({unit})</span>
           <input
             type="number"
+            inputMode="decimal"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
             className="mt-1 w-full rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
@@ -44,6 +45,7 @@ function PlateCalculatorModal({ initialWeight, unit, onClose }) {
           <span className="text-[11px] text-chalk-dim uppercase">Bar weight ({unit})</span>
           <input
             type="number"
+            inputMode="decimal"
             value={barWeight}
             onChange={(e) => setBarWeight(e.target.value)}
             className="mt-1 w-full rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"

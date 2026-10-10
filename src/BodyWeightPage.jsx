@@ -3,7 +3,7 @@ import { formatDate } from './dateUtils'
 import { toDisplayWeight, toStorageWeightKg } from './weightUnits'
 import CalorieCalculator from './CalorieCalculator'
 import { calculateCalorieTargets, inToCm, loadStoredProfile } from './calorieMath'
-import MuscleVolume from './MuscleVolume'
+import TrendChart from './TrendChart'
 import CalorieTracker from './CalorieTracker'
 import HistoryLogSection from './HistoryLogSection'
 import { useCachedState } from './pageCache'
@@ -13,6 +13,13 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
   const [entriesLoaded, setEntriesLoaded] = useCachedState('bodyWeight:entriesLoaded', false)
 
   const latestOwnEntry = entries.find((entry) => entry.user_id === userId)
+  // Last 30 entries, oldest first (entries arrive newest first). The full
+  // history chart is still a tap on your name in the History list.
+  const ownTrend = entries
+    .filter((entry) => entry.user_id === userId)
+    .slice(0, 30)
+    .reverse()
+    .map((entry) => ({ date: formatDate(entry.date), value: toDisplayWeight(entry.weight_kg, unit) }))
 
   let calorieTarget = null
   if (latestOwnEntry) {
@@ -51,9 +58,15 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
               ? formatDate(latestOwnEntry.date, { year: true })
               : 'Nothing logged yet'}
         </p>
+        {ownTrend.length > 1 && (
+          <TrendChart
+            className="mt-4 h-40 w-full"
+            data={ownTrend}
+            yDomain={['auto', 'auto']}
+            formatTooltip={(value) => [`${value} ${unit}`, 'Weight']}
+          />
+        )}
       </Card>
-
-      <MuscleVolume userId={userId} onError={onError} />
 
       <HistoryLogSection
         profiles={profiles}
@@ -63,7 +76,7 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
         valueColumn="weight_kg"
         logLabel="Log today's weight"
         placeholder={`Weight (${unit})`}
-        inputProps={{ min: 0, step: 0.1 }}
+        inputProps={{ min: 0, step: 0.1, inputMode: 'decimal' }}
         parseInput={(v) => toStorageWeightKg(v, unit)}
         formatValue={(raw) => toDisplayWeight(raw, unit)}
         unitSuffix={unit}

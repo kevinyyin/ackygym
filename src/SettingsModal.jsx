@@ -226,6 +226,7 @@ function SettingsModal({
         <input
           id="water-goal"
           type="number"
+          inputMode="numeric"
           min="1"
           value={goalInput}
           onChange={(e) => handleWaterNumberChange('goalMl', setGoalInput, e.target.value)}
@@ -240,6 +241,7 @@ function SettingsModal({
           <input
             id="water-bottle-size"
             type="number"
+            inputMode="numeric"
             min="1"
             value={bottleSizeInput}
             onChange={(e) => handleWaterNumberChange('bottleSizeMl', setBottleSizeInput, e.target.value)}

@@ -111,6 +111,7 @@ function CalorieCalculator({ userId, latestWeightKg, unit }) {
               <span className="text-[11px] text-chalk-dim uppercase">Weight ({unit})</span>
               <input
                 type="number"
+                inputMode="decimal"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
                 className={`mt-1 ${inputClasses}`}
@@ -120,6 +121,7 @@ function CalorieCalculator({ userId, latestWeightKg, unit }) {
               <span className="text-[11px] text-chalk-dim uppercase">Height ({heightUnit})</span>
               <input
                 type="number"
+                inputMode="decimal"
                 value={height}
                 onChange={(e) => setHeight(e.target.value)}
                 className={`mt-1 ${inputClasses}`}
@@ -132,6 +134,7 @@ function CalorieCalculator({ userId, latestWeightKg, unit }) {
               <span className="text-[11px] text-chalk-dim uppercase">Age</span>
               <input
                 type="number"
+                inputMode="numeric"
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
                 className={`mt-1 ${inputClasses}`}

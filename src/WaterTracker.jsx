@@ -175,6 +175,7 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
           <form onSubmit={handleCustomAdd} className="mt-3 flex gap-2">
             <input
               type="number"
+              inputMode="decimal"
               min={isBottles ? '0.1' : '1'}
               step={isBottles ? '0.1' : '1'}
               value={customValue}

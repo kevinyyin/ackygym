@@ -27,8 +27,8 @@ function TimerPill({ timer, onOpen }) {
             key="timer-pill"
             type="button"
             data-press
-            onClick={onOpen}
-            aria-label={finished ? 'Rest finished — open timer' : `Rest timer, ${formatTime(remaining)} left — open timer`}
+            onClick={finished ? timer.reset : onOpen}
+            aria-label={finished ? 'Rest finished — dismiss' : `Rest timer, ${formatTime(remaining)} left — open timer`}
             initial={{ opacity: 0, y: 16, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.9 }}

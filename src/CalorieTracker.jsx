@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Card from './Card'
-import { formatDate } from './dateUtils'
+import { formatDate, getTodayDateString } from './dateUtils'
 import { FlameIcon } from './icons'
 import HistoryLogSection from './HistoryLogSection'
 
@@ -8,7 +8,8 @@ function CalorieTracker({ profiles, userId, target, onError }) {
   const [entries, setEntries] = useState([])
   const [entriesLoaded, setEntriesLoaded] = useState(false)
 
-  const latestOwnEntry = entries.find((entry) => entry.user_id === userId)
+  const today = getTodayDateString()
+  const todaysEntry = entries.find((entry) => entry.user_id === userId && entry.date === today)
 
   return (
     <div className="flex flex-col gap-4">
@@ -20,7 +21,7 @@ function CalorieTracker({ profiles, userId, target, onError }) {
           </p>
         </div>
         <p className="mt-3 font-mono text-5xl font-bold text-blue-400">
-          {latestOwnEntry ? Math.round(Number(latestOwnEntry.calories)) : '—'}
+          {todaysEntry ? Math.round(Number(todaysEntry.calories)) : '—'}
           <span className="ml-2 font-body text-lg font-normal text-chalk-dim">
             {target ? `/ ${target} kcal` : 'kcal'}
           </span>
@@ -28,9 +29,9 @@ function CalorieTracker({ profiles, userId, target, onError }) {
         <p className="mt-1 text-xs text-chalk-dim">
           {!entriesLoaded
             ? 'Loading…'
-            : latestOwnEntry
-              ? formatDate(latestOwnEntry.date, { year: true })
-              : 'Nothing logged yet'}
+            : todaysEntry
+              ? formatDate(today, { year: true })
+              : 'Nothing logged today'}
         </p>
       </Card>
 
@@ -40,9 +41,9 @@ function CalorieTracker({ profiles, userId, target, onError }) {
         onError={onError}
         tableName="calorie_logs"
         valueColumn="calories"
-        logLabel="Log today's calories"
-        placeholder="Calories (kcal)"
-        inputProps={{ min: 1, step: 1 }}
+        logLabel="Add calories"
+        placeholder="Calories eaten (kcal)"
+        inputProps={{ min: 1, step: 1, inputMode: 'numeric' }}
         parseInput={(v) => Number(v)}
         formatValue={(raw) => Math.round(Number(raw))}
         unitSuffix="kcal"
@@ -53,6 +54,7 @@ function CalorieTracker({ profiles, userId, target, onError }) {
         }}
         chartLabel="Calories"
         chartTarget={target}
+        accumulate
       />
     </div>
   )

@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run preview` — serve the production build locally
 - `npm run lint` — run ESLint over the whole repo
 
-There is no test suite and no `npm test` script. A few pure modules carry plain-`node` assert checks instead: `node src/legacyRoutes.check.js` and `node src/pageCache.check.js`. There is no separate typecheck script (JS + JSDoc-free, no TypeScript build step — `@types/react` is present only for editor IntelliSense).
+There is no test suite and no `npm test` script. A few pure modules carry plain-`node` assert checks instead: `node src/legacyRoutes.check.js`, `node src/pageCache.check.js` and `node src/streak.check.js`. There is no separate typecheck script (JS + JSDoc-free, no TypeScript build step — `@types/react` is present only for editor IntelliSense).
 
 ## Architecture
 

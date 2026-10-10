@@ -163,6 +163,7 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
                     <li key={set.id} className="flex items-center gap-1.5 font-mono text-sm text-chalk-dim">
                       <input
                         type="number"
+                        inputMode="decimal"
                         min="0"
                         step="any"
                         value={draftWeight}
@@ -172,6 +173,7 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
                       <span className="text-chalk-dim/60">{weightUnit} ×</span>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         step="1"
                         value={draftReps}
