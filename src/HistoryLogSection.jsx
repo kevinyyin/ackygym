@@ -29,6 +29,8 @@ function HistoryLogSection({
   onEntriesChange,
   chartLabel,
   chartTarget,
+  // Calories add up over a day; body weight replaces the day's value.
+  accumulate = false,
 }) {
   const [entries, setEntries] = useCachedState(`history:${tableName}:entries`, [])
   const [entriesLoaded, setEntriesLoaded] = useCachedState(`history:${tableName}:entriesLoaded`, false)
@@ -76,9 +78,26 @@ function HistoryLogSection({
     onError('')
     setSubmitting(true)
 
-    const { error } = await supabase
-      .from(tableName)
-      .upsert({ user_id: userId, date: getTodayDateString(), [valueColumn]: value }, { onConflict: 'user_id,date' })
+    const today = getTodayDateString()
+    let total = value
+    let error = null
+    if (accumulate) {
+      // ponytail: read-then-write, so two adds landing at the same instant
+      // could drop one; move to a Postgres increment RPC if that ever bites.
+      const { data, error: readError } = await supabase
+        .from(tableName)
+        .select(valueColumn)
+        .eq('user_id', userId)
+        .eq('date', today)
+        .maybeSingle()
+      error = readError
+      total += Number(data?.[valueColumn] ?? 0)
+    }
+    if (!error) {
+      ;({ error } = await supabase
+        .from(tableName)
+        .upsert({ user_id: userId, date: today, [valueColumn]: total }, { onConflict: 'user_id,date' }))
+    }
 
     submittingRef.current = false
     setSubmitting(false)
@@ -140,6 +159,7 @@ function HistoryLogSection({
         <form onSubmit={handleSubmit} className="mt-3 flex gap-3">
           <input
             type="number"
+            inputMode={inputProps.inputMode}
             min={inputProps.min}
             step={inputProps.step}
             value={inputValue}
@@ -153,7 +173,7 @@ function HistoryLogSection({
             disabled={submitting}
             className="shrink-0 rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
           >
-            {submitting ? 'Logging…' : 'Log'}
+            {submitting ? 'Saving…' : accumulate ? 'Add' : 'Log'}
           </button>
         </form>
       </Card>
@@ -211,6 +231,7 @@ function HistoryLogSection({
                             <span className="flex items-center gap-2">
                               <input
                                 type="number"
+                                inputMode={inputProps.inputMode}
                                 min={inputProps.min}
                                 step={inputProps.step}
                                 autoFocus

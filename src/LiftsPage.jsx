@@ -5,12 +5,18 @@ import { sortProfilesSelfFirst } from './groupByUser'
 import Card from './Card'
 import MuscleTags from './MuscleTags'
 import ExerciseDetailModal from './ExerciseDetailModal'
+import AddExerciseForm from './AddExerciseForm'
+import Sheet from './Sheet'
+import ConfirmModal from './ConfirmModal'
+import UndoToast from './UndoToast'
+import { useDeferredDelete } from './useDeferredDelete'
 import { MedalIcon } from './icons'
 import { formatDate } from './dateUtils'
 import { toDisplayWeight } from './weightUnits'
 import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
 import { fetchExercises } from './library'
+import { normalizeExerciseName } from './normalizeExerciseName'
 
 // Which muscle_groups.name values count as "lower body" for the purpose of
 // this grouping — everything else (including core) is bucketed as upper body.
@@ -57,6 +63,10 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
   const [expandedLower, setExpandedLower] = useState(false)
   const [search, setSearch] = useState('')
   const [setsVersion, setSetsVersion] = useState(0)
+  const [exercisesVersion, setExercisesVersion] = useState(0)
+  const [addOpen, setAddOpen] = useState(false)
+  const [exerciseToDelete, setExerciseToDelete] = useState(null)
+  const { isPending, message, stageDelete, undo } = useDeferredDelete('exercises')
 
   useEffect(() => {
     async function loadExercises() {
@@ -71,7 +81,53 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
     }
 
     loadExercises()
-  }, [onError, setExercises, setExercisesLoaded])
+  }, [exercisesVersion, onError, setExercises, setExercisesLoaded])
+
+  // Resolves to whether the sheet can leave rename mode.
+  async function handleRenameExercise(exercise, name) {
+    const trimmed = name.trim()
+    if (trimmed === exercise.name) return true
+    const normalized = normalizeExerciseName(trimmed)
+    if (exercises.some((e) => e.id !== exercise.id && normalizeExerciseName(e.name) === normalized)) {
+      onError('That exercise already exists.')
+      return false
+    }
+
+    onError('')
+    const { error } = await supabase.from('exercises').update({ name: trimmed }).eq('id', exercise.id)
+    if (error) {
+      onError(error.message)
+      return false
+    }
+    // Functional, so a sheet closed mid-save stays closed.
+    setSelectedExercise((current) => (current?.id === exercise.id ? { ...current, name: trimmed } : current))
+    setExercisesVersion((v) => v + 1)
+    return true
+  }
+
+  function handleDeleteExercise(exercise) {
+    setExerciseToDelete(null)
+    setSelectedExercise(null)
+    stageDelete({
+      ids: [exercise.id],
+      message: `"${exercise.name}" deleted`,
+      commit: async (isForeground) => {
+        if (isForeground) onError('')
+        const { error } = await supabase.from('exercises').delete().eq('id', exercise.id)
+        if (error) {
+          if (isForeground) {
+            onError(
+              error.code === '23503'
+                ? 'Can’t delete an exercise that still has logged sets or is used in a routine.'
+                : error.message
+            )
+          }
+          return
+        }
+        setExercisesVersion((v) => v + 1)
+      },
+    })
+  }
 
   useEffect(() => {
     async function fetchBestSets() {
@@ -199,11 +255,12 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
     return aLogged === bLogged ? 0 : aLogged ? -1 : 1
   }
 
+  const libraryExercises = exercises.filter((e) => !isPending(e.id))
   const normalizedSearch = search.trim().toLowerCase()
   const isSearching = normalizedSearch !== ''
   const visibleExercises = isSearching
-    ? exercises.filter((e) => e.name.toLowerCase().includes(normalizedSearch))
-    : exercises
+    ? libraryExercises.filter((e) => e.name.toLowerCase().includes(normalizedSearch))
+    : libraryExercises
 
   const upperExercises = visibleExercises.filter((e) => bodyRegionFor(e) === 'Upper Body').sort(byLoggedFirst)
   const lowerExercises = visibleExercises.filter((e) => bodyRegionFor(e) === 'Lower Body').sort(byLoggedFirst)
@@ -217,24 +274,35 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
           <Skeleton className="h-16" />
           <Skeleton className="h-16" />
         </div>
-      ) : exercises.length === 0 ? (
-        <Card className="p-4">
-          <p className="text-sm text-chalk-dim">No exercises yet.</p>
-        </Card>
       ) : (
         <div className="flex flex-col gap-5">
-          <p className="text-xs text-chalk-dim">
-            Your all-time best set per exercise, and how it compares to everyone else's.
-          </p>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search exercises"
-            autoComplete="off"
-            className="w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
-          />
-          {isSearching && visibleExercises.length === 0 ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-chalk-dim">
+              Your all-time best set per exercise, and how it compares to everyone else's.
+            </p>
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              className="shrink-0 rounded-md bg-blue-500 px-4 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600"
+            >
+              Add exercise
+            </button>
+          </div>
+          {libraryExercises.length > 0 && (
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search exercises"
+              autoComplete="off"
+              className="w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+            />
+          )}
+          {libraryExercises.length === 0 ? (
+            <Card className="p-4">
+              <p className="text-sm text-chalk-dim">No exercises yet.</p>
+            </Card>
+          ) : isSearching && visibleExercises.length === 0 ? (
             <Card className="p-4">
               <p className="text-sm text-chalk-dim">No exercises match “{search.trim()}”.</p>
             </Card>
@@ -254,7 +322,31 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
         onClose={() => setSelectedExercise(null)}
         onError={onError}
         onChanged={() => setSetsVersion((v) => v + 1)}
+        onRename={handleRenameExercise}
+        onDelete={setExerciseToDelete}
       />
+
+      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title="Add exercise">
+        <AddExerciseForm
+          exercises={exercises}
+          showMuscleGroups
+          onAdded={() => {
+            setAddOpen(false)
+            setExercisesVersion((v) => v + 1)
+          }}
+          onError={onError}
+        />
+      </Sheet>
+
+      <ConfirmModal
+        open={exerciseToDelete !== null}
+        title="Delete exercise?"
+        message={`"${exerciseToDelete?.name}" will be removed from your exercise library.`}
+        onConfirm={() => handleDeleteExercise(exerciseToDelete)}
+        onCancel={() => setExerciseToDelete(null)}
+      />
+
+      <UndoToast message={message} onUndo={undo} />
     </>
   )
 }

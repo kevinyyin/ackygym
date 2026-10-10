@@ -143,6 +143,7 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
               <div className="flex items-center justify-between gap-2">
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="any"
                   value={row.weight}
@@ -161,6 +162,7 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
                 <span className="text-chalk-dim/60">×</span>
                 <input
                   type="number"
+                  inputMode="numeric"
                   min="1"
                   step="1"
                   value={row.reps}

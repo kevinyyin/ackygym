@@ -35,7 +35,7 @@ const PAGE_TITLES = Object.fromEntries(TABS.map((tab) => [tab.to, tab.label]))
 
 const TRAIN_SEGMENTS = [
   { key: 'routines', label: 'Routines', to: '/train', end: true },
-  { key: 'exercises', label: 'Lifts', to: '/train/exercises' },
+  { key: 'exercises', label: 'Exercises', to: '/train/exercises' },
 ]
 const PROGRESS_SEGMENTS = [
   { key: 'calendar', label: 'Calendar', to: '/progress', end: true },
@@ -266,16 +266,14 @@ function App() {
                 <h1 className="text-large-title">{pageTitle}</h1>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                {tabKey === '/train' && (
-                  <button
-                    type="button"
-                    onClick={() => setTimerOpen(true)}
-                    aria-label="Rest timer"
-                    className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-chalk after:absolute after:-inset-1 after:content-['']"
-                  >
-                    <TimerIcon className="h-5 w-5" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setTimerOpen(true)}
+                  aria-label="Rest timer"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-chalk after:absolute after:-inset-1 after:content-['']"
+                >
+                  <TimerIcon className="h-5 w-5" />
+                </button>
                 <SettingsButton
                   profile={currentProfile}
                   theme={theme}
@@ -331,11 +329,11 @@ function App() {
                       element={
                         <RoutinesPage
                           session={session}
+                          profiles={profiles}
                           schedule={schedule}
                           onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
                           onError={handleError}
                           onActiveRoutineChange={setActiveRoutine}
-                          weightUnit={weightUnit}
                         />
                       }
                     />

@@ -96,8 +96,7 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onErro
       return
     }
 
-    setWeight('')
-    setReps('')
+    // Values stay put: the next set is usually the same weight and reps.
     onLogged()
   }
 
@@ -129,6 +128,7 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onErro
       <div className="flex gap-3">
         <input
           type="number"
+          inputMode="decimal"
           min="0"
           step="any"
           value={weight}
@@ -147,6 +147,7 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onErro
         </button>
         <input
           type="number"
+          inputMode="numeric"
           min="1"
           step="1"
           value={reps}

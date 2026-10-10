@@ -54,6 +54,7 @@ function Home({
   const [showLogSet, setShowLogSet] = usePersistedState('gym-tracker:home-show-log-set', true)
   const [showTodaysSets, setShowTodaysSets] = usePersistedState('gym-tracker:home-show-todays-sets', true)
   const [routines, setRoutines] = useCachedState('home:routines', [])
+  const [routinesLoaded, setRoutinesLoaded] = useCachedState('home:routinesLoaded', false)
   const [expandedTodaysUserIds, setExpandedTodaysUserIds] = useState(() => new Set())
   const selection = useSelection()
   const { selectMode, selectedIds: selectedSetIds } = selection
@@ -81,10 +82,11 @@ function Home({
         return
       }
       setRoutines(data)
+      setRoutinesLoaded(true)
     }
 
     loadRoutines()
-  }, [onError, setRoutines])
+  }, [onError, setRoutines, setRoutinesLoaded])
 
   useEffect(() => {
     async function fetchTodaysSets() {
@@ -118,6 +120,8 @@ function Home({
   const suggestedRoutine = todaysScheduleEntry?.routine_id
     ? routines.find((r) => r.id === todaysScheduleEntry.routine_id)
     : null
+  // "Rest day" only means something once a week has been planned.
+  const hasSchedule = schedule.some((s) => s.user_id === session.user.id && s.routine_id)
 
   async function handleRepeatSet(set) {
     onError('')
@@ -140,23 +144,28 @@ function Home({
     onSetLogged()
   }
 
-  function handleDeleteSet(set, exerciseName) {
+  // Single and bulk deletes share one path (and one Undo); a single delete is one id.
+  function stageSetDelete(ids, message) {
     stageDelete({
-      ids: [set.id],
-      message: `${exerciseName} set deleted`,
+      ids,
+      message,
       commit: async (isForeground) => {
         if (isForeground) onError('')
-        const { error } = await supabase.from('sets').delete().eq('id', set.id)
+        const { error } = await supabase.from('sets').delete().in('id', ids).eq('user_id', session.user.id)
         if (error) {
           if (isForeground) onError(error.message)
           return
         }
-        // Dropped locally before the refetch so the row can't reappear in
+        // Dropped locally before the refetch so the rows can't reappear in
         // the gap between the delete landing and fresh data arriving.
-        setTodaysSets((current) => current.filter((s) => s.id !== set.id))
+        setTodaysSets((current) => current.filter((s) => !ids.includes(s.id)))
         setRefreshKey((key) => key + 1)
       },
     })
+  }
+
+  function handleDeleteSet(set, exerciseName) {
+    stageSetDelete([set.id], `${exerciseName} set deleted`)
   }
 
   function toggleShowTodaysSets() {
@@ -164,21 +173,11 @@ function Home({
     selection.exit()
   }
 
-  async function handleBulkDelete() {
-    onError('')
-    const { error } = await supabase
-      .from('sets')
-      .delete()
-      .in('id', [...selectedSetIds])
-      .eq('user_id', session.user.id)
+  function handleBulkDelete() {
+    const ids = [...selectedSetIds]
     setConfirmBulkDelete(false)
-    if (error) {
-      onError(error.message)
-      return
-    }
-    setTodaysSets((current) => current.filter((s) => !selectedSetIds.has(s.id)))
     selection.exit()
-    setRefreshKey((key) => key + 1)
+    stageSetDelete(ids, `${ids.length} set${ids.length === 1 ? '' : 's'} deleted`)
   }
 
   function toggleTodaysExpanded(userId) {
@@ -209,48 +208,42 @@ function Home({
           <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
             {WEEKDAY_NAME[todayDayOfWeek]}
           </p>
-          <p className="mt-3 font-display text-2xl leading-[0.95] tracking-tight text-chalk uppercase">
-            {suggestedRoutine?.name || 'Rest day'}
-          </p>
+          <div className="mt-3 flex flex-col items-start gap-3">
+            <p className="font-display text-2xl leading-[0.95] tracking-tight text-chalk uppercase">
+              {suggestedRoutine?.name || (hasSchedule ? 'Rest day' : 'Nothing scheduled')}
+            </p>
+            {suggestedRoutine && !activeRoutine && (
+              <button
+                type="button"
+                onClick={() => onActiveRoutineChange(suggestedRoutine)}
+                className="rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600"
+              >
+                Start
+              </button>
+            )}
+          </div>
         </Card>
         <Card className="flex flex-col justify-between p-4">
           <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-            Sets today
+            Your sets today
           </p>
-          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">{visibleTodaysSets.length}</p>
+          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">{ownSetIds.length}</p>
         </Card>
       </div>
 
-      {suggestedRoutine && !activeRoutine && (
-        <Card className="flex items-center justify-between gap-2 p-4">
-          <p className="min-w-0 flex-1 truncate text-sm text-chalk">
-            <span className="text-chalk-dim">Scheduled: </span>
-            {suggestedRoutine.name}
-          </p>
-          <button
-            type="button"
-            onClick={() => onActiveRoutineChange(suggestedRoutine)}
-            className="shrink-0 rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600"
-          >
-            Start
-          </button>
-        </Card>
+      {/* Only until the first routine exists: the tab bar covers navigation,
+          but nothing else tells a new user the card above comes from Train. */}
+      {routinesLoaded && routines.length === 0 && (
+        <Link
+          to="/train"
+          className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 shadow-[inset_0_1px_0_var(--card-highlight)] active:border-blue-500"
+        >
+          <span className="text-sm font-medium text-chalk">No routines yet — set one up</span>
+          <span className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+            Open →
+          </span>
+        </Link>
       )}
-
-      {/* Surfaced here, above the fold and outside any collapsed section,
-          because Routines/Schedule is what drives the card above — a
-          brand-new user has no other way to discover it exists otherwise. */}
-      <Link
-        to="/train"
-        className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 shadow-[inset_0_1px_0_var(--card-highlight)] active:border-blue-500"
-      >
-        <span className="text-sm font-medium text-chalk">
-          {routines.length === 0 ? 'No routines yet — set one up' : 'Manage routines & exercises'}
-        </span>
-        <span className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-          Open →
-        </span>
-      </Link>
 
       <Card className="p-4">
         <div className="flex items-center justify-between gap-2">
@@ -460,7 +453,7 @@ function Home({
       <ConfirmModal
         open={confirmBulkDelete}
         title="Delete selected sets?"
-        message={`${selectedSetIds.size} set${selectedSetIds.size === 1 ? '' : 's'} will be permanently deleted.`}
+        message={`${selectedSetIds.size} set${selectedSetIds.size === 1 ? '' : 's'} will be deleted.`}
         onConfirm={handleBulkDelete}
         onCancel={() => setConfirmBulkDelete(false)}
       />

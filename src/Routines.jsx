@@ -12,6 +12,8 @@ import { useDeferredDelete } from './useDeferredDelete'
 import Skeleton from './Skeleton'
 import { snappy } from './motionPresets'
 import { toggled } from './useSelection'
+import { groupBy } from './groupByUser'
+import { displayName } from './displayName'
 
 function GroupHeader({ children }) {
   return (
@@ -47,7 +49,9 @@ function RoutineNameField({ routine, onSaved, onError }) {
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={handleBlur}
-      className="min-w-0 flex-1 truncate bg-transparent font-medium text-chalk focus:text-blue-400 focus:outline-none"
+      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      aria-label="Routine name"
+      className="w-full min-w-0 rounded-md border border-line bg-surface px-3 py-2 font-body text-sm text-chalk focus:border-blue-500 focus:outline-none"
     />
   )
 }
@@ -257,6 +261,15 @@ function DayToggles({ routine, schedule, userId, onChanged, onError }) {
     onChanged()
   }
 
+  // A weekday holds one routine, so tapping a day another routine owns moves
+  // it here — said out loud below instead of happening silently.
+  const takenElsewhere = WEEKDAY_ORDER.map((day) =>
+    schedule.find(
+      (s) => s.user_id === userId && s.day_of_week === day && s.routine_id && s.routine_id !== routine.id
+    )
+  ).filter(Boolean)
+  const takenDays = new Set(takenElsewhere.map((s) => s.day_of_week))
+
   function renderDayButton(day) {
     const linked = schedule.some(
       (s) => s.user_id === userId && s.day_of_week === day && s.routine_id === routine.id
@@ -266,10 +279,13 @@ function DayToggles({ routine, schedule, userId, onChanged, onError }) {
         key={day}
         type="button"
         onClick={() => toggleDay(day)}
+        aria-pressed={linked}
         className={
           linked
             ? 'flex-1 rounded border border-blue-500 bg-blue-500 py-1 font-mono text-[10px] tracking-wide text-onblue uppercase'
-            : 'flex-1 rounded border border-line bg-surface py-1 font-mono text-[10px] tracking-wide text-chalk-dim uppercase'
+            : `flex-1 rounded border bg-surface py-1 font-mono text-[10px] tracking-wide text-chalk-dim uppercase ${
+                takenDays.has(day) ? 'border-dashed border-chalk-dim/60' : 'border-line'
+              }`
         }
       >
         {WEEKDAY_SHORT[day].slice(0, 2)}
@@ -280,12 +296,22 @@ function DayToggles({ routine, schedule, userId, onChanged, onError }) {
   // Split into weekday/weekend clusters (5 + 2) instead of one undifferentiated
   // 7-button row, so this stays within the ~4-items-per-group chunking guideline.
   return (
-    <div className="flex gap-2">
-      <div className="flex flex-1 gap-1">{WEEKDAY_ORDER.slice(0, 5).map(renderDayButton)}</div>
-      <div className="flex gap-1" style={{ flexBasis: '28.5%' }}>
-        {WEEKDAY_ORDER.slice(5).map(renderDayButton)}
+    <>
+      <div className="flex gap-2">
+        <div className="flex flex-1 gap-1">{WEEKDAY_ORDER.slice(0, 5).map(renderDayButton)}</div>
+        <div className="flex gap-1" style={{ flexBasis: '28.5%' }}>
+          {WEEKDAY_ORDER.slice(5).map(renderDayButton)}
+        </div>
       </div>
-    </div>
+      {takenElsewhere.length > 0 && (
+        <p className="text-xs text-chalk-dim">
+          {[...groupBy(takenElsewhere, (s) => s.routines?.name ?? 'another routine')]
+            .map(([name, entries]) => `${entries.map((s) => WEEKDAY_SHORT[s.day_of_week].slice(0, 2)).join(', ')}: ${name}`)
+            .join(' · ')}{' '}
+          — tapping one moves it here.
+        </p>
+      )}
+    </>
   )
 }
 
@@ -293,6 +319,7 @@ function Routines({
   routines,
   loaded = true,
   exercises,
+  profiles,
   schedule,
   userId,
   onRoutinesChanged,
@@ -414,7 +441,11 @@ function Routines({
     onRoutinesChanged()
   }
 
-  const visibleRoutines = routines.filter((r) => !isPending(r.id))
+  // Your own routines first; name order (from the query) kept within each group.
+  const visibleRoutines = routines
+    .filter((r) => !isPending(r.id))
+    .sort((a, b) => Number(b.user_id === userId) - Number(a.user_id === userId))
+  const profileById = Object.fromEntries(profiles.map((p) => [p.id, p]))
 
   return (
     <>
@@ -443,18 +474,18 @@ function Routines({
                   type="button"
                   onClick={() => toggleCollapsed(routine.id)}
                   aria-expanded={!collapsed}
-                  aria-label={collapsed ? `Expand ${routine.name}` : `Collapse ${routine.name}`}
-                  className="shrink-0 text-chalk-dim hover:text-blue-400"
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
                 >
                   <ChevronRightIcon
-                    className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-90'}`}
+                    className={`h-4 w-4 shrink-0 text-chalk-dim transition-transform ${collapsed ? '' : 'rotate-90'}`}
                   />
+                  <span className="min-w-0 truncate font-medium text-chalk">{routine.name}</span>
+                  {!isOwn && profileById[routine.user_id] && (
+                    <span className="shrink-0 text-xs text-chalk-dim">
+                      {displayName(profileById[routine.user_id])}
+                    </span>
+                  )}
                 </button>
-                {isOwn ? (
-                  <RoutineNameField routine={routine} onSaved={onRoutinesChanged} onError={onError} />
-                ) : (
-                  <p className="min-w-0 flex-1 truncate font-medium text-chalk">{routine.name}</p>
-                )}
                 <div className="flex shrink-0 items-center gap-3">
                   <button
                     type="button"
@@ -463,17 +494,16 @@ function Routines({
                   >
                     Start
                   </button>
-                  {isOwn && (
-                    <button
-                      type="button"
-                      onClick={() => handleDuplicateRoutine(routine)}
-                      disabled={duplicatingId === routine.id}
-                      aria-label={`Duplicate ${routine.name}`}
-                      className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400 disabled:opacity-40"
-                    >
-                      {duplicatingId === routine.id ? 'Duplicating…' : 'Duplicate'}
-                    </button>
-                  )}
+                  {/* Anyone's routine can be copied into your own editable one. */}
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicateRoutine(routine)}
+                    disabled={duplicatingId === routine.id}
+                    aria-label={`Duplicate ${routine.name}`}
+                    className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400 disabled:opacity-40"
+                  >
+                    {duplicatingId === routine.id ? 'Duplicating…' : 'Duplicate'}
+                  </button>
                   {isOwn && (
                     <button
                       type="button"
@@ -493,6 +523,11 @@ function Routines({
                 </p>
               ) : (
                 <>
+                  {isOwn && (
+                    <div className="mt-4">
+                      <RoutineNameField routine={routine} onSaved={onRoutinesChanged} onError={onError} />
+                    </div>
+                  )}
                   <div className="mt-4 flex flex-col gap-2">
                     <h2 className="text-headline text-chalk">Exercises</h2>
                     {isOwn ? (

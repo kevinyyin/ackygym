@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { WEEKDAY_SHORT } from './weekdays'
 import { toDateString, formatDate } from './dateUtils'
@@ -7,13 +6,14 @@ import { displayName } from './displayName'
 import { sortProfilesSelfFirst } from './groupByUser'
 import Card from './Card'
 import WorkoutDayModal from './WorkoutDayModal'
+import MuscleVolume from './MuscleVolume'
+import { computeStreak } from './streak'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons'
 import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
 import { usePersistedState } from './usePersistedState'
 
 const DOT_COLORS = ['bg-blue-400', 'bg-emerald', 'bg-amber', 'bg-purple']
-const STREAK_WINDOW_DAYS = 90
 
 const WEEKS_COUNT = 53
 const DAYS_COUNT = WEEKS_COUNT * 7
@@ -138,27 +138,6 @@ function buildMonthScaffold(monthCursor, today) {
   const weeks = []
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
   return weeks
-}
-
-function computeStreak(workoutDates) {
-  let streak = 0
-  const cursor = new Date()
-
-  for (let daysAgo = 0; daysAgo < STREAK_WINDOW_DAYS; daysAgo++) {
-    const dateStr = toDateString(cursor)
-
-    if (workoutDates.has(dateStr)) {
-      streak++
-    } else if (daysAgo > 0) {
-      break
-    }
-    // daysAgo === 0 (today) and not logged yet: the day isn't over,
-    // so it neither extends nor breaks the streak.
-
-    cursor.setDate(cursor.getDate() - 1)
-  }
-
-  return streak
 }
 
 function ContributionGraph({ weeks, monthLabels, onDayClick }) {
@@ -353,7 +332,8 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
   const streaksByUserId = Object.fromEntries(
     rows.map((profile) => {
       const dates = new Set((dayDataByUser.get(profile.id) ?? new Map()).keys())
-      return [profile.id, computeStreak(dates)]
+      const scheduledDays = new Set([0, 1, 2, 3, 4, 5, 6].filter((d) => scheduleMap.has(`${profile.id}:${d}`)))
+      return [profile.id, computeStreak(dates, scheduledDays)]
     })
   )
 
@@ -384,7 +364,7 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
               <p className="font-mono text-3xl font-bold text-blue-400">
                 {streak}
                 <span className="ml-1.5 font-body text-xs font-normal text-chalk-dim">
-                  day{streak === 1 ? '' : 's'}
+                  {streak === 1 ? 'workout' : 'workouts'} in a row
                 </span>
               </p>
               <div className="flex gap-1">
@@ -508,15 +488,7 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
         })}
       </div>
 
-      <Link
-        to="/progress/history"
-        className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-4 shadow-[inset_0_1px_0_var(--card-highlight)] active:border-blue-500"
-      >
-        <span className="text-sm font-medium text-chalk">Search all sets</span>
-        <span className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-          Open →
-        </span>
-      </Link>
+      <MuscleVolume userId={userId} onError={onError} />
     </div>
 
     <WorkoutDayModal

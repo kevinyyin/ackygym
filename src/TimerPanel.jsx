@@ -53,6 +53,7 @@ function TimerPanel({ timer }) {
       <form onSubmit={handleCustomSubmit} className="flex gap-2">
         <input
           type="number"
+          inputMode="numeric"
           min="1"
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
