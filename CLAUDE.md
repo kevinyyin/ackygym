@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run preview` — serve the production build locally
 - `npm run lint` — run ESLint over the whole repo
 
-There is no test suite and no `npm test` script. A few pure modules carry plain-`node` assert checks instead: `node src/legacyRoutes.check.js`, `node src/pageCache.check.js` and `node src/streak.check.js`. There is no separate typecheck script (JS + JSDoc-free, no TypeScript build step — `@types/react` is present only for editor IntelliSense).
+There is no test suite and no `npm test` script. A few pure modules carry plain-`node` assert checks instead: `node src/legacyRoutes.check.js`, `node src/pageCache.check.js`, `node src/streak.check.js` and `node src/pr.check.js`. There is no separate typecheck script (JS + JSDoc-free, no TypeScript build step — `@types/react` is present only for editor IntelliSense).
 
 ## Architecture
 
@@ -39,3 +39,7 @@ This is "Ackygym", a mobile-first multi-user gym tracker: a Vite + React 19 SPA 
 **Routing & shell**: `react-router-dom`, routes declared inline in `App.jsx`. Four tabs — `/` (Today), `/train`, `/progress`, `/body` — each with nested segment routes (`/train/exercises`, `/progress/history`, `/body/photos`) rendered through `TabSection`'s `SegmentedControl`. Pre-revamp URLs redirect via `LEGACY_REDIRECTS` in `src/legacyRoutes.js`; keep its `ROUTE_PATHS` in sync when adding a route and run `node src/legacyRoutes.check.js`. Page titles come from `PAGE_TITLES`, derived from `TABS` and keyed by the top-level path segment. The shell is a fixed `#app-shell` with an inner scrolling `<main>` (the window itself never scrolls — scroll logic targets `scrollRootRef`), a fixed bottom tab bar, and the error/offline banners rendered as a sibling outside the shell so they stay above open sheets.
 
 **Deployment**: Vercel (`vercel.json` is just an SPA rewrite-all-to-`index.html` rule). Env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) are read via `import.meta.env` in `src/supabaseClient.js` and must be set in the Vercel project as well as a local `.env`.
+
+When a step doesn't need my input, keep going. Put status notes in the
+same message as your next action.
+Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository.
