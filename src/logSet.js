@@ -1,18 +1,6 @@
 import { supabase } from './supabaseClient'
 import { getTodayDateString } from './dateUtils'
-
-async function fetchPriorMaxWeight(userId, exerciseId) {
-  const { data, error } = await supabase
-    .from('sets')
-    .select('weight')
-    .eq('user_id', userId)
-    .eq('exercise_id', exerciseId)
-    .order('weight', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  return { data: data?.weight ?? null, error }
-}
+import { prTracker } from './pr'
 
 export async function logSet({ userId, exerciseId, weight, reps }) {
   const today = getTodayDateString()
@@ -21,14 +9,14 @@ export async function logSet({ userId, exerciseId, weight, reps }) {
   // visible chunk of the "Logging…" wait on a phone connection.
   const [
     { data: existingWorkout, error: workoutSelectError },
-    { data: priorMaxWeight, error: maxWeightError },
+    { data: priorSets, error: priorSetsError },
   ] = await Promise.all([
     supabase.from('workouts').select('id').eq('user_id', userId).eq('date', today).maybeSingle(),
-    fetchPriorMaxWeight(userId, exerciseId),
+    supabase.from('sets').select('weight, reps').eq('user_id', userId).eq('exercise_id', exerciseId),
   ])
 
   if (workoutSelectError) return { error: workoutSelectError }
-  if (maxWeightError) return { error: maxWeightError }
+  if (priorSetsError) return { error: priorSetsError }
 
   let workoutId = existingWorkout?.id
 
@@ -43,7 +31,10 @@ export async function logSet({ userId, exerciseId, weight, reps }) {
     workoutId = newWorkout.id
   }
 
-  const isPr = priorMaxWeight === null || weight > priorMaxWeight
+  // Order doesn't matter here: only whether the new set beats every prior one.
+  const track = prTracker()
+  for (const set of priorSets) track(set.weight, set.reps)
+  const isPr = track(weight, reps)
 
   const { error: setInsertError } = await supabase.from('sets').insert({
     workout_id: workoutId,
@@ -70,7 +61,7 @@ export function byDateThenId(a, b) {
 export async function recomputeIsPr(userId, exerciseId) {
   const { data, error } = await supabase
     .from('sets')
-    .select('id, weight, is_pr, workouts!inner(date)')
+    .select('id, weight, reps, is_pr, workouts!inner(date)')
     .eq('user_id', userId)
     .eq('exercise_id', exerciseId)
 
@@ -80,10 +71,9 @@ export async function recomputeIsPr(userId, exerciseId) {
   // this project's PostgREST version, see lastSet.js for details.
   const sorted = [...data].sort(byDateThenId)
 
-  let maxWeight = null
+  const track = prTracker()
   for (const set of sorted) {
-    const isPr = maxWeight === null || set.weight > maxWeight
-    if (isPr) maxWeight = set.weight
+    const isPr = track(set.weight, set.reps)
 
     if (set.is_pr !== isPr) {
       const { error: updateError } = await supabase
