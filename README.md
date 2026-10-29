@@ -6,7 +6,8 @@ It's a React single-page app with Supabase as the whole backend (Postgres, Auth,
 
 ## Features
 
-**Today**
+### Today
+
 - Today's scheduled routine with a one-tap Start, and your set count for the day
 - Log a set: searchable exercise picker (optionally filtered to a routine), weight and reps prefilled from your last set and kept between sets, built-in plate calculator
 - Active routine: every exercise in the routine on one card, each with its own Log button
@@ -14,27 +15,40 @@ It's a React single-page app with Supabase as the whole backend (Postgres, Auth,
 - New personal records are flagged with a trophy
 - Optional water tracker (ml or bottles, daily goal) and creatine check-in
 
-**Train**
+### Train
+
 - Routines: create, rename, reorder (drag or buttons), assign to weekdays, start, and duplicate (including other people's routines, as your own copy)
 - Exercises: each exercise's all-time best set per person, a leaderboard grouped into upper and lower body, plus search
 - Add exercises tagged with primary and secondary muscle groups, with suggestions from a shared catalog
 - Exercise detail: muscle map, estimated one-rep max, a progression chart, and edit or delete any of your past sets
 
-**Progress**
+### Progress
+
 - Streaks that skip your scheduled rest days
 - A year-long heatmap or a month calendar per person; tap one of your days to see it or repeat that whole workout
 - Muscle volume: sets per muscle group over 7 days, 2 weeks, or 1 month, with a body map
 - History: search your sets by exercise and date range
 
-**Body**
+### Body
+
 - Body weight with an inline trend chart, plus everyone's history (tap a name for their chart)
 - Calorie calculator (Mifflin-St Jeor: BMR, maintenance, goal target) and a calorie tracker that adds up over the day
 - Progress photos: private by default, with sharing per photo
 
-**Everywhere**
+### Everywhere
+
 - Rest timer on every tab: presets or custom length, auto-starts after you log a set, sound and vibration alert, keeps running across tabs
 - kg or lb (weights are stored in kg), dark or light theme, optional cards you can hide
 - Offline banner; add to home screen (web app manifest)
+
+## How it works
+
+- The browser talks to Supabase directly through `@supabase/supabase-js`. Access control has to come from row-level security in Supabase (see the access model below).
+- `App.jsx` holds the auth session and loads `profiles` and `schedule` once. Each page fetches its own data and refetches when a version counter in state is bumped. There is no global store.
+- Page data goes through `useCachedState` (`src/pageCache.js`), an in-memory cache, so switching tabs shows the last data right away while a fresh fetch runs. It's cleared on sign-out.
+- A set is a PR when it's a new heaviest weight, or more reps than ever at a weight already lifted (`src/pr.js`). Editing or deleting a set recomputes the PR flags for that exercise.
+- This project's PostgREST version silently ignores `.order(col, { foreignTable })`, so `src/lastSet.js` orders by the `sets` table's own `id` instead of a joined table's date.
+- Theme colors are Tailwind v4 tokens in `src/index.css`. Light and dark mode switch on a `data-theme` attribute on `<html>`.
 
 ## Tech stack
 
@@ -107,10 +121,10 @@ Access model (enforce it with row-level security): signed-in users can read ever
 | `npm run preview` | Serve the production build locally |
 | `npm run lint` | ESLint over the repo |
 
-There's no test suite. A few pure modules have plain-Node assert checks:
+There's no test suite. A few pure modules have plain-Node assert checks (run them after `npm install`):
 
 ```bash
-node src/legacyRoutes.check.js && node src/pageCache.check.js && node src/streak.check.js
+node src/legacyRoutes.check.js && node src/pageCache.check.js && node src/streak.check.js && node src/pr.check.js
 ```
 
 ## Deployment
@@ -137,3 +151,6 @@ src/
 public/                   Web app manifest and icons
 ```
 
+## Status
+
+Personal project. The Supabase schema and row-level security policies are not versioned in this repo, so a new deployment has to recreate them from the table above.
