@@ -36,16 +36,20 @@ export async function logSet({ userId, exerciseId, weight, reps }) {
   for (const set of priorSets) track(set.weight, set.reps)
   const isPr = track(weight, reps)
 
-  const { error: setInsertError } = await supabase.from('sets').insert({
-    workout_id: workoutId,
-    exercise_id: exerciseId,
-    user_id: userId,
-    weight,
-    reps,
-    is_pr: isPr,
-  })
+  const { data: inserted, error: setInsertError } = await supabase
+    .from('sets')
+    .insert({
+      workout_id: workoutId,
+      exercise_id: exerciseId,
+      user_id: userId,
+      weight,
+      reps,
+      is_pr: isPr,
+    })
+    .select('id')
+    .single()
 
-  return { error: setInsertError, isPr }
+  return { error: setInsertError, isPr, id: inserted?.id }
 }
 
 // Chronological: workout date, then insert order within a day.

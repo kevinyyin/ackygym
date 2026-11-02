@@ -11,8 +11,7 @@ import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet } from './logSet'
 import { toDisplayWeight } from './weightUnits'
-import { NoteIcon, TrophyIcon, RepeatIcon } from './icons'
-import ConfirmDeleteButton from './ConfirmDeleteButton'
+import { NoteIcon, TrophyIcon, RepeatIcon, CloseIcon } from './icons'
 import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
@@ -24,6 +23,8 @@ import { usePersistedState } from './usePersistedState'
 import { fetchExercises, fetchRoutines } from './library'
 
 const TODAYS_SETS_COLLAPSED_COUNT = 8
+// 16px icons get a 28px touch target; the 12px row gap keeps neighbours from overlapping.
+const ICON_HIT = "relative shrink-0 after:absolute after:-inset-1.5 after:content-['']"
 
 function Home({
   session,
@@ -111,7 +112,11 @@ function Home({
 
   const visibleTodaysSets = todaysSets.filter((s) => !isPending(s.id))
   const groupedSets = groupByUser(visibleTodaysSets, profiles, session.user.id, 'sets')
-  const ownSetIds = visibleTodaysSets.filter((s) => s.user_id === session.user.id).map((s) => s.id)
+  // String ids are optimistic repeats still saving (see handleRepeatSet).
+  const isSaving = (set) => typeof set.id === 'string'
+  const ownSetIds = visibleTodaysSets
+    .filter((s) => s.user_id === session.user.id && !isSaving(s))
+    .map((s) => s.id)
 
   const todayDayOfWeek = new Date().getDay()
   const todaysScheduleEntry = schedule.find(
@@ -123,14 +128,23 @@ function Home({
   // "Rest day" only means something once a week has been planned.
   const hasSchedule = schedule.some((s) => s.user_id === session.user.id && s.routine_id)
 
+  // Shown immediately as a dimmed row: logSet is several round trips, and
+  // waiting on them left the tap with no visible response.
   async function handleRepeatSet(set) {
     onError('')
-    const { error } = await logSet({
+    const tempId = `saving-${crypto.randomUUID()}`
+    setTodaysSets((current) => [...current, { ...set, id: tempId, note: null, is_pr: false }])
+    const { error, isPr, id } = await logSet({
       userId: session.user.id,
       exerciseId: set.exercise_id,
       weight: set.weight,
       reps: set.reps,
     })
+    setTodaysSets((current) =>
+      error
+        ? current.filter((s) => s.id !== tempId)
+        : current.map((s) => (s.id === tempId ? { ...s, id, is_pr: isPr } : s))
+    )
     if (error) {
       onError(error.message)
       return
@@ -330,7 +344,11 @@ function Home({
                             i === 0 || set.weight !== exerciseGroup.sets[i - 1].weight
 
                           return (
-                            <li key={set.id} className="flex flex-col gap-1">
+                            <li
+                              key={set.id}
+                              aria-busy={isSaving(set)}
+                              className={`flex flex-col gap-1 transition-opacity ${isSaving(set) ? 'opacity-50' : ''}`}
+                            >
                               <div className="flex items-center justify-between gap-2">
                                 <span className="inline-flex items-center gap-1.5 font-mono text-sm text-chalk-dim">
                                   {showWeight && (
@@ -350,6 +368,7 @@ function Home({
                                 </span>
                                 <span className="flex items-center gap-3">
                                   {set.user_id === session.user.id &&
+                                    !isSaving(set) &&
                                     (selectMode ? (
                                       <input
                                         type="checkbox"
@@ -363,22 +382,26 @@ function Home({
                                         <button
                                           onClick={() => openNoteEditor(set)}
                                           aria-label={`Note for ${exerciseGroup.name} set`}
-                                          className="shrink-0 text-chalk-dim hover:text-blue-400"
+                                          className={`${ICON_HIT} text-chalk-dim hover:text-blue-400`}
                                         >
                                           <NoteIcon className="h-4 w-4" />
                                         </button>
                                         <button
                                           onClick={() => handleRepeatSet(set)}
                                           aria-label={`Repeat ${exerciseGroup.name} set`}
-                                          className="shrink-0 text-chalk-dim hover:text-blue-400"
+                                          className={`${ICON_HIT} text-chalk-dim hover:text-blue-400`}
                                         >
                                           <RepeatIcon className="h-4 w-4" />
                                         </button>
-                                        <ConfirmDeleteButton
-                                          onConfirm={() => handleDeleteSet(set, exerciseGroup.name)}
-                                          label={`${exerciseGroup.name} set`}
-                                          className="shrink-0"
-                                        />
+                                        {/* One tap: the Undo toast is the confirmation and the safety net. */}
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteSet(set, exerciseGroup.name)}
+                                          aria-label={`Delete ${exerciseGroup.name} set`}
+                                          className={`${ICON_HIT} text-chalk-dim hover:text-danger`}
+                                        >
+                                          <CloseIcon className="h-4 w-4" />
+                                        </button>
                                       </>
                                     ))}
                                 </span>
