@@ -7,10 +7,19 @@ import PlateCalculatorModal from './PlateCalculatorModal'
 import { isValidSet } from './validation'
 import { toDisplayWeight, toStorageWeightKg, convertWeightInput } from './weightUnits'
 import Skeleton from './Skeleton'
+import { toggled } from './useSelection'
+
+function formatRepRange(min, max) {
+  if (min != null && max != null) return min === max ? `Target: ${min} reps` : `Target: ${min}–${max} reps`
+  if (min != null) return `Target: ${min}+ reps`
+  if (max != null) return `Target: up to ${max} reps`
+  return null
+}
 
 function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError }) {
   const [rows, setRows] = useState(null)
   const [calculatorRowId, setCalculatorRowId] = useState(null)
+  const [expandedExerciseIds, setExpandedExerciseIds] = useState(() => new Set())
   const [prExerciseIds, setPrExerciseIds] = useState(() => new Set())
   const [loggingExerciseIds, setLoggingExerciseIds] = useState(() => new Set())
   // Mirrors loggingExerciseIds but updates synchronously, so a rapid double
@@ -40,6 +49,8 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
           return {
             exerciseId: re.exercise_id,
             name: re.exercises.name,
+            repMin: re.rep_min,
+            repMax: re.rep_max,
             weight: error || !data ? '' : String(toDisplayWeight(data.weight, weightUnit)),
             reps: error || !data ? '' : String(data.reps),
           }
@@ -134,12 +145,22 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
               key={row.exerciseId}
               className="flex flex-col gap-2 rounded-md border border-line bg-surface-2 px-3 py-2.5"
             >
-              <span className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-chalk">
+              <button
+                type="button"
+                onClick={() => setExpandedExerciseIds((current) => toggled(current, row.exerciseId))}
+                aria-expanded={expandedExerciseIds.has(row.exerciseId)}
+                className="flex min-w-0 items-center gap-1.5 text-left text-sm font-semibold text-chalk"
+              >
                 <span className="truncate">{row.name}</span>
                 {prExerciseIds.has(row.exerciseId) && (
                   <TrophyIcon className="h-3.5 w-3.5 shrink-0 text-amber" aria-label="New PR" />
                 )}
-              </span>
+              </button>
+              {expandedExerciseIds.has(row.exerciseId) && (
+                <p className="text-caption text-chalk-dim">
+                  {formatRepRange(row.repMin, row.repMax) ?? 'No rep range set — add one in Train › Routines.'}
+                </p>
+              )}
               <div className="flex items-center justify-between gap-2">
                 <input
                   type="number"

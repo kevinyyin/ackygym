@@ -14,7 +14,7 @@ export async function fetchRoutines() {
   const { data, error } = await supabase
     .from('routines')
     .select(
-      'id, user_id, name, routine_exercises(id, position, exercise_id, exercises(name, exercise_muscles(muscle, role, muscle_groups(label))))'
+      'id, user_id, name, routine_exercises(id, position, exercise_id, rep_min, rep_max, exercises(name, exercise_muscles(muscle, role, muscle_groups(label))))'
     )
     .order('name')
   if (error) return { data: null, error }

@@ -56,6 +56,78 @@ function RoutineNameField({ routine, onSaved, onError }) {
   )
 }
 
+// Target rep range shown when tapping the exercise in ActiveRoutine. Either
+// end may be blank; a reversed pair is saved swapped.
+function RepRangeField({ routineExercise, onSaved, onError }) {
+  const [min, setMin] = useState(routineExercise.rep_min ?? '')
+  const [max, setMax] = useState(routineExercise.rep_max ?? '')
+
+  function reset() {
+    setMin(routineExercise.rep_min ?? '')
+    setMax(routineExercise.rep_max ?? '')
+  }
+
+  async function handleBlur(e) {
+    // Tabbing between the two inputs isn't a finished edit.
+    if (e.currentTarget.parentElement.contains(e.relatedTarget)) return
+    const parse = (v) => (Number.isInteger(Number(v)) && Number(v) > 0 && v !== '' ? Number(v) : null)
+    let [repMin, repMax] = [parse(min), parse(max)]
+    if (repMin !== null && repMax !== null && repMin > repMax) [repMin, repMax] = [repMax, repMin]
+    if (repMin === routineExercise.rep_min && repMax === routineExercise.rep_max) {
+      reset()
+      return
+    }
+
+    onError('')
+    const { error } = await supabase
+      .from('routine_exercises')
+      .update({ rep_min: repMin, rep_max: repMax })
+      .eq('id', routineExercise.id)
+    if (error) {
+      onError(error.message)
+      reset()
+      return
+    }
+    onSaved()
+  }
+
+  const inputClasses =
+    'w-9 rounded border border-line bg-surface-2 px-1 py-0.5 text-center font-mono text-[11px] text-chalk placeholder:text-chalk-dim/60 focus:border-blue-500 focus:outline-none'
+  const name = routineExercise.exercises.name
+
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <input
+        type="number"
+        inputMode="numeric"
+        min="1"
+        step="1"
+        value={min}
+        onChange={(e) => setMin(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        placeholder="min"
+        aria-label={`Minimum reps for ${name}`}
+        className={inputClasses}
+      />
+      <span className="text-chalk-dim/60">–</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min="1"
+        step="1"
+        value={max}
+        onChange={(e) => setMax(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        placeholder="max"
+        aria-label={`Maximum reps for ${name}`}
+        className={inputClasses}
+      />
+    </div>
+  )
+}
+
 function AddExerciseToRoutine({ routine, availableExercises, onAdded, onError }) {
   const [exerciseId, setExerciseId] = useState('')
   const selected = exerciseId || availableExercises[0]?.id || ''
@@ -226,6 +298,12 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
           <span className="min-w-0 flex-1 truncate font-mono text-[10px] tracking-wide text-chalk uppercase">
             {re.exercises.name}
           </span>
+          <RepRangeField
+            key={`${re.rep_min}-${re.rep_max}`}
+            routineExercise={re}
+            onSaved={onReordered}
+            onError={onError}
+          />
           <ConfirmDeleteButton
             onConfirm={() => onRemove(re.id)}
             idleLabel={`Remove ${re.exercises.name} from ${routine.name}`}
@@ -418,6 +496,8 @@ function Routines({
           routine_id: newRoutine.id,
           exercise_id: re.exercise_id,
           position: re.position,
+          rep_min: re.rep_min,
+          rep_max: re.rep_max,
         }))
       )
       if (exercisesError) {
