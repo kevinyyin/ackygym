@@ -57,8 +57,9 @@ function RoutineNameField({ routine, onSaved, onError }) {
 }
 
 // Target rep range shown when tapping the exercise in ActiveRoutine. Either
-// end may be blank; a reversed pair is saved swapped.
-function RepRangeField({ routineExercise, onSaved, onError }) {
+// end may be blank; a reversed pair is saved swapped. The range belongs to the
+// exercise, so saving writes it to every one of the owner's routines that has it.
+function RepRangeField({ routineExercise, ownRoutineIds, onSaved, onError }) {
   const [min, setMin] = useState(routineExercise.rep_min ?? '')
   const [max, setMax] = useState(routineExercise.rep_max ?? '')
 
@@ -82,7 +83,8 @@ function RepRangeField({ routineExercise, onSaved, onError }) {
     const { error } = await supabase
       .from('routine_exercises')
       .update({ rep_min: repMin, rep_max: repMax })
-      .eq('id', routineExercise.id)
+      .eq('exercise_id', routineExercise.exercise_id)
+      .in('routine_id', ownRoutineIds)
     if (error) {
       onError(error.message)
       reset()
@@ -128,7 +130,7 @@ function RepRangeField({ routineExercise, onSaved, onError }) {
   )
 }
 
-function AddExerciseToRoutine({ routine, availableExercises, onAdded, onError }) {
+function AddExerciseToRoutine({ routine, availableExercises, repRangeFor, onAdded, onError }) {
   const [exerciseId, setExerciseId] = useState('')
   const selected = exerciseId || availableExercises[0]?.id || ''
 
@@ -141,6 +143,7 @@ function AddExerciseToRoutine({ routine, availableExercises, onAdded, onError })
       routine_id: routine.id,
       exercise_id: Number(selected),
       position: routine.routine_exercises.length,
+      ...repRangeFor(Number(selected)),
     })
     if (error) {
       onError(error.message)
@@ -169,7 +172,7 @@ function AddExerciseToRoutine({ routine, availableExercises, onAdded, onError })
   )
 }
 
-function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
+function ReorderableExerciseList({ routine, ownRoutineIds, onRemove, onReordered, onError }) {
   const [items, setItems] = useState(routine.routine_exercises)
   const draggingIdRef = useRef(null)
   const orderChangedRef = useRef(false)
@@ -301,6 +304,7 @@ function ReorderableExerciseList({ routine, onRemove, onReordered, onError }) {
           <RepRangeField
             key={`${re.rep_min}-${re.rep_max}`}
             routineExercise={re}
+            ownRoutineIds={ownRoutineIds}
             onSaved={onReordered}
             onError={onError}
           />
@@ -498,6 +502,8 @@ function Routines({
           position: re.position,
           rep_min: re.rep_min,
           rep_max: re.rep_max,
+          // Your existing range for the exercise wins over the source routine's.
+          ...repRangeFor(re.exercise_id),
         }))
       )
       if (exercisesError) {
@@ -526,6 +532,16 @@ function Routines({
     .filter((r) => !isPending(r.id))
     .sort((a, b) => Number(b.user_id === userId) - Number(a.user_id === userId))
   const profileById = Object.fromEntries(profiles.map((p) => [p.id, p]))
+  const ownRoutines = routines.filter((r) => r.user_id === userId)
+  const ownRoutineIds = ownRoutines.map((r) => r.id)
+  // The user's current range for an exercise, from any of their routines that
+  // sets one; {} when none does.
+  function repRangeFor(exerciseId) {
+    const re = ownRoutines
+      .flatMap((r) => r.routine_exercises)
+      .find((x) => x.exercise_id === exerciseId && (x.rep_min != null || x.rep_max != null))
+    return re ? { rep_min: re.rep_min, rep_max: re.rep_max } : {}
+  }
 
   return (
     <>
@@ -614,6 +630,7 @@ function Routines({
                       <>
                         <ReorderableExerciseList
                           routine={routine}
+                          ownRoutineIds={ownRoutineIds}
                           onRemove={handleRemoveExercise}
                           onReordered={onRoutinesChanged}
                           onError={onError}
@@ -622,6 +639,7 @@ function Routines({
                           <AddExerciseToRoutine
                             routine={routine}
                             availableExercises={availableExercises}
+                            repRangeFor={repRangeFor}
                             onAdded={onRoutinesChanged}
                             onError={onError}
                           />
