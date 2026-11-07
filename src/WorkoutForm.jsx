@@ -5,6 +5,7 @@ import { groupByMuscle } from './exerciseGrouping'
 import { BarbellIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 import ExercisePicker from './ExercisePicker'
+import Button from './Button'
 import { isValidSet } from './validation'
 import { toDisplayWeight, toStorageWeightKg, convertWeightInput } from './weightUnits'
 
@@ -96,8 +97,12 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, lastExerciseId, 
     })
   }
 
-  const inputClasses =
-    'w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none'
+  const pickerClasses =
+    'h-11 w-full min-w-0 rounded-field bg-surface-2 px-4 text-base text-chalk placeholder:text-chalk-dim focus:ring-2 focus:ring-blue-500 focus:outline-none'
+  // The two numbers are what you check between sets, so they read large.
+  const numberClasses =
+    'h-14 w-full min-w-0 rounded-field bg-surface-2 px-4 text-[22px] font-semibold tabular-nums text-chalk placeholder:text-[17px] placeholder:font-normal placeholder:text-chalk-dim focus:ring-2 focus:ring-blue-500 focus:outline-none'
+  const labelClasses = 'flex min-w-0 flex-col gap-1.5 text-caption text-chalk-dim'
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -105,7 +110,8 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, lastExerciseId, 
         <select
           value={routineId}
           onChange={(e) => handleRoutineChange(e.target.value)}
-          className={inputClasses}
+          aria-label="Show exercises from"
+          className={pickerClasses}
         >
           <option value="">All exercises</option>
           {routines.map((routine) => (
@@ -119,55 +125,66 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, lastExerciseId, 
         exercises={availableExercises}
         value={selectedExerciseId}
         onChange={setExerciseId}
+        placeholder="Search exercises"
         emptyMessage={selectedRoutine ? 'No exercises in this routine' : 'No exercises yet'}
+        inputClassName={pickerClasses}
       />
-      <div className="flex gap-3">
-        <input
-          type="number"
-          inputMode="decimal"
-          min="0"
-          step="any"
-          value={weight}
-          onChange={(e) => setWeight(e.target.value)}
-          placeholder={`Weight (${weightUnit})`}
-          required
-          className={inputClasses}
-        />
+      {/* Visible labels: the fields prefill from your last set, so a
+          placeholder would never show and "50" alone doesn't say kg or reps. */}
+      <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+        <label className={labelClasses}>
+          Weight ({weightUnit})
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="any"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            placeholder="0"
+            required
+            className={numberClasses}
+          />
+        </label>
         <button
           type="button"
           onClick={() => setShowCalculator(true)}
           aria-label="Plate calculator"
-          className="flex shrink-0 items-center justify-center rounded-md border border-line bg-surface-2 px-3 text-chalk-dim active:border-blue-500 active:text-blue-400"
+          aria-haspopup="dialog"
+          className="flex h-14 w-12 items-center justify-center rounded-field bg-surface-2 text-chalk-dim active:text-chalk"
         >
           <BarbellIcon className="h-5 w-5" />
         </button>
-        <input
-          type="number"
-          inputMode="numeric"
-          min="1"
-          step="1"
-          value={reps}
-          onChange={(e) => setReps(e.target.value)}
-          placeholder="Reps"
-          required
-          className={inputClasses}
-        />
+        <label className={labelClasses}>
+          Reps
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            step="1"
+            value={reps}
+            onChange={(e) => setReps(e.target.value)}
+            placeholder="0"
+            required
+            className={numberClasses}
+          />
+        </label>
       </div>
-      <button
+      <Button
         type="submit"
+        variant="accent"
+        className="mt-1"
         disabled={!selectedExerciseId || !isValidSet({ weight, reps })}
-        className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
       >
         Log set
-      </button>
+      </Button>
 
-      {showCalculator && (
-        <PlateCalculatorModal
-          initialWeight={Number(weight) || 0}
-          unit={weightUnit}
-          onClose={() => setShowCalculator(false)}
-        />
-      )}
+      <PlateCalculatorModal
+        open={showCalculator}
+        initialWeight={Number(weight) || 0}
+        unit={weightUnit}
+        onClose={() => setShowCalculator(false)}
+      />
     </form>
   )
 }

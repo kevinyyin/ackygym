@@ -317,12 +317,13 @@ function Home({
         </button>
       ) : (
         <Card className="p-4">
-          <div className="flex items-center justify-between gap-2">
+          <div className="-my-1.5 flex items-center justify-between gap-2">
             <h2 className="text-headline text-chalk">{activeRoutine ? 'Log something else' : 'Log a set'}</h2>
             <button
               type="button"
               onClick={() => (activeRoutine ? setShowOtherLog(false) : setShowLogSet(!showLogSet))}
-              className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+              aria-expanded={Boolean(activeRoutine || showLogSet)}
+              className="-mr-2 h-11 shrink-0 rounded-full px-3 text-[15px] font-semibold text-blue-400 active:text-blue-300"
             >
               {activeRoutine || showLogSet ? 'Hide' : 'Show'}
             </button>

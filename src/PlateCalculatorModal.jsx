@@ -12,15 +12,22 @@ function plateSizeClass(weight) {
 function Plate({ weight }) {
   return (
     <div className="flex shrink-0 flex-col items-center gap-1">
-      <span className="font-mono text-[9px] text-chalk-dim">{weight}</span>
+      <span className="text-[11px] tabular-nums text-chalk-dim">{weight}</span>
       <div className={`rounded-sm bg-blue-500 ${plateSizeClass(weight)}`} />
     </div>
   )
 }
 
-function PlateCalculatorModal({ initialWeight, unit, onClose }) {
+// Stays mounted (Sheet needs that to animate out), so each open re-seeds the
+// target from the form's current weight.
+function PlateCalculatorModal({ open, initialWeight, unit, onClose }) {
   const [weight, setWeight] = useState(String(initialWeight || ''))
   const [barWeight, setBarWeight] = useState(String(STANDARD_SETUP[unit].bar))
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setWeight(String(initialWeight || ''))
+  }
 
   const targetWeight = Number(weight) || 0
   const bar = Number(barWeight) || 0
@@ -29,26 +36,26 @@ function PlateCalculatorModal({ initialWeight, unit, onClose }) {
   const leftSide = [...platesPerSide].reverse()
 
   return (
-    <Sheet open onClose={onClose} title="Plate calculator">
+    <Sheet open={open} onClose={onClose} title="Plate calculator">
       <div className="mt-3 flex gap-3">
         <label className="flex-1">
-          <span className="text-[11px] text-chalk-dim uppercase">Target weight ({unit})</span>
+          <span className="text-caption text-chalk-dim">Target weight ({unit})</span>
           <input
             type="number"
             inputMode="decimal"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
-            className="mt-1 w-full rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+            className="mt-1.5 h-11 w-full min-w-0 rounded-field bg-surface-2 px-4 text-base tabular-nums text-chalk focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </label>
         <label className="flex-1">
-          <span className="text-[11px] text-chalk-dim uppercase">Bar weight ({unit})</span>
+          <span className="text-caption text-chalk-dim">Bar weight ({unit})</span>
           <input
             type="number"
             inputMode="decimal"
             value={barWeight}
             onChange={(e) => setBarWeight(e.target.value)}
-            className="mt-1 w-full rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+            className="mt-1.5 h-11 w-full min-w-0 rounded-field bg-surface-2 px-4 text-base tabular-nums text-chalk focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </label>
       </div>
@@ -69,21 +76,21 @@ function PlateCalculatorModal({ initialWeight, unit, onClose }) {
 
       <div className="mt-4 flex flex-col gap-1 text-center">
         {platesPerSide.length === 0 ? (
-          <p className="text-sm text-chalk-dim">
+          <p className="text-[15px] text-chalk-dim">
             {targetWeight <= bar
               ? `No plates needed — the bar alone is ${bar}${unit}.`
               : 'Enter a target weight to calculate.'}
           </p>
         ) : (
-          <p className="text-sm text-chalk">
-            Each side:{' '}
-            <span className="font-mono font-bold text-blue-400">
+          <p className="text-[15px] text-chalk-dim">
+            Each side{' '}
+            <span className="text-[17px] font-semibold tabular-nums text-chalk">
               {platesPerSide.join(' + ')} {unit}
             </span>
           </p>
         )}
         {remainder > 0 && (
-          <p className="text-xs text-chalk-dim">
+          <p className="text-caption text-chalk-dim">
             {targetWeight}
             {unit} isn't exactly achievable with these plates — closest is {achievedWeight}
             {unit}.

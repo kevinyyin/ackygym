@@ -283,13 +283,12 @@ function ActiveRoutine({ routine, userId, weightUnit, todaysOwnSets, onExit, onL
         </section>
       )}
 
-      {showCalculator && (
-        <PlateCalculatorModal
-          initialWeight={Number(focused.weight) || 0}
-          unit={weightUnit}
-          onClose={() => setShowCalculator(false)}
-        />
-      )}
+      <PlateCalculatorModal
+        open={showCalculator}
+        initialWeight={Number(focused?.weight) || 0}
+        unit={weightUnit}
+        onClose={() => setShowCalculator(false)}
+      />
     </div>
   )
 }
