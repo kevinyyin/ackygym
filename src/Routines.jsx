@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { supabase } from './supabaseClient'
-import { WEEKDAY_ORDER, WEEKDAY_SHORT } from './weekdays'
+import { WEEKDAY_ORDER, WEEKDAY_SHORT, WEEKDAY_NAME } from './weekdays'
 import { groupByMuscle } from './exerciseGrouping'
-import { GripIcon, ChevronRightIcon, CloseIcon } from './icons'
+import { GripIcon, ChevronRightIcon, MoreIcon, PlusIcon } from './icons'
 import ExercisePicker from './ExercisePicker'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import ConfirmModal from './ConfirmModal'
@@ -15,10 +15,11 @@ import { toggled } from './useSelection'
 import { groupBy } from './groupByUser'
 import { displayName } from './displayName'
 import Button from './Button'
+import Sheet from './Sheet'
 
 function GroupHeader({ children }) {
   return (
-    <p className="mb-1 px-1 font-mono text-[10px] tracking-[0.15em] text-chalk-dim uppercase">
+    <p className="mb-1.5 px-1 text-caption text-chalk-dim">
       {children}
     </p>
   )
@@ -51,124 +52,172 @@ function RoutineNameField({ routine, onSaved, onError }) {
       onChange={(e) => setValue(e.target.value)}
       onBlur={handleBlur}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      aria-label="Routine name"
-      className="w-full min-w-0 rounded-md border border-line bg-surface px-3 py-2 font-body text-sm text-chalk focus:border-blue-500 focus:outline-none"
+      className="h-11 w-full min-w-0 bg-surface-2 px-4 rounded-field text-base text-chalk placeholder:text-chalk-dim focus:outline-none focus:ring-2 focus:ring-blue-500"
     />
   )
 }
 
-// Target rep range shown when tapping the exercise in ActiveRoutine. Either
-// end may be blank; a reversed pair is saved swapped. The range belongs to the
-// exercise, so saving writes it to every one of the owner's routines that has it.
+// Target rep range shown in Today's routine card ("aim for 8–12"). Either end
+// may be blank; a reversed pair is saved swapped. The range belongs to the
+// exercise, so saving writes it to every one of the owner's routines that has
+// it — the sheet says so rather than doing it silently.
 function RepRangeField({ routineExercise, ownRoutineIds, onSaved, onError }) {
-  const [min, setMin] = useState(routineExercise.rep_min ?? '')
-  const [max, setMax] = useState(routineExercise.rep_max ?? '')
+  const [open, setOpen] = useState(false)
+  const [min, setMin] = useState('')
+  const [max, setMax] = useState('')
+  const name = routineExercise.exercises.name
+  const { rep_min: repMin, rep_max: repMax } = routineExercise
 
-  function reset() {
-    setMin(routineExercise.rep_min ?? '')
-    setMax(routineExercise.rep_max ?? '')
+  function openSheet() {
+    setMin(repMin ?? '')
+    setMax(repMax ?? '')
+    setOpen(true)
   }
 
-  async function handleBlur(e) {
-    // Tabbing between the two inputs isn't a finished edit.
-    if (e.currentTarget.parentElement.contains(e.relatedTarget)) return
-    const parse = (v) => (Number.isInteger(Number(v)) && Number(v) > 0 && v !== '' ? Number(v) : null)
-    let [repMin, repMax] = [parse(min), parse(max)]
-    if (repMin !== null && repMax !== null && repMin > repMax) [repMin, repMax] = [repMax, repMin]
-    if (repMin === routineExercise.rep_min && repMax === routineExercise.rep_max) {
-      reset()
-      return
-    }
+  async function handleSave(e) {
+    e.preventDefault()
+    const parse = (v) => (v !== '' && Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : null)
+    let [nextMin, nextMax] = [parse(min), parse(max)]
+    if (nextMin !== null && nextMax !== null && nextMin > nextMax) [nextMin, nextMax] = [nextMax, nextMin]
+    setOpen(false)
+    if (nextMin === repMin && nextMax === repMax) return
 
     onError('')
     const { error } = await supabase
       .from('routine_exercises')
-      .update({ rep_min: repMin, rep_max: repMax })
+      .update({ rep_min: nextMin, rep_max: nextMax })
       .eq('exercise_id', routineExercise.exercise_id)
       .in('routine_id', ownRoutineIds)
     if (error) {
       onError(error.message)
-      reset()
       return
     }
     onSaved()
   }
 
-  const inputClasses =
-    'w-9 rounded border border-line bg-surface-2 px-1 py-0.5 text-center font-mono text-[11px] text-chalk placeholder:text-chalk-dim/60 focus:border-blue-500 focus:outline-none'
-  const name = routineExercise.exercises.name
+  const range =
+    repMin != null && repMax != null
+      ? repMin === repMax
+        ? `${repMin}`
+        : `${repMin}–${repMax}`
+      : repMin != null
+        ? `${repMin}+`
+        : repMax != null
+          ? `≤${repMax}`
+          : null
+  const fieldClasses = "h-12 w-full min-w-0 bg-surface-2 px-4 text-[17px] tabular-nums rounded-field text-base text-chalk placeholder:text-chalk-dim focus:outline-none focus:ring-2 focus:ring-blue-500"
 
   return (
-    <div className="flex shrink-0 items-center gap-1">
-      <input
-        type="number"
-        inputMode="numeric"
-        min="1"
-        step="1"
-        value={min}
-        onChange={(e) => setMin(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-        placeholder="min"
-        aria-label={`Minimum reps for ${name}`}
-        className={inputClasses}
-      />
-      <span className="text-chalk-dim/60">–</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min="1"
-        step="1"
-        value={max}
-        onChange={(e) => setMax(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-        placeholder="max"
-        aria-label={`Maximum reps for ${name}`}
-        className={inputClasses}
-      />
-    </div>
+    <>
+      <button
+        type="button"
+        onClick={openSheet}
+        aria-haspopup="dialog"
+        aria-label={`Rep range for ${name}: ${range ? `${range} reps` : 'not set'}`}
+        className={`flex h-11 shrink-0 items-center rounded-full px-3 text-caption tabular-nums active:bg-surface-2 ${
+          range ? 'text-chalk' : 'text-chalk-dim'
+        }`}
+      >
+        {range ? `${range} reps` : 'Set reps'}
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} title={`${name} · reps`}>
+        <form onSubmit={handleSave} className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1.5 text-caption text-chalk-dim">
+              At least
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                step="1"
+                value={min}
+                onChange={(e) => setMin(e.target.value)}
+                placeholder="—"
+                className={fieldClasses}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-caption text-chalk-dim">
+              At most
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                step="1"
+                value={max}
+                onChange={(e) => setMax(e.target.value)}
+                placeholder="—"
+                className={fieldClasses}
+              />
+            </label>
+          </div>
+          <p className="text-caption text-chalk-dim">
+            Applies to {name} in all your routines. Leave both blank for no target.
+          </p>
+          <Button type="submit" variant="accent">
+            Save
+          </Button>
+        </form>
+      </Sheet>
+    </>
   )
 }
 
-function AddExerciseToRoutine({ routine, availableExercises, repRangeFor, onAdded, onError }) {
+function AddExerciseToRoutine({ routine, availableExercises, repRangeFor, onAdded, onCancel, onError }) {
+  // Nothing preselected: one stray tap on Add used to insert whichever
+  // exercise happened to be first in the list.
   const [exerciseId, setExerciseId] = useState('')
-  const selected = exerciseId || availableExercises[0]?.id || ''
+  const addingRef = useRef(false)
 
   if (availableExercises.length === 0) return null
 
   async function handleAdd() {
-    if (!selected) return
+    if (!exerciseId || addingRef.current) return
+    addingRef.current = true
     onError('')
     const { error } = await supabase.from('routine_exercises').insert({
       routine_id: routine.id,
-      exercise_id: Number(selected),
-      position: routine.routine_exercises.length,
-      ...repRangeFor(Number(selected)),
+      exercise_id: Number(exerciseId),
+      // After the highest position, not at the count: removals leave gaps, so
+      // the count can collide with a position still in use.
+      position: Math.max(-1, ...routine.routine_exercises.map((re) => re.position)) + 1,
+      ...repRangeFor(Number(exerciseId)),
     })
+    addingRef.current = false
     if (error) {
       onError(error.message)
       return
     }
+    // Stays open for the next one: routines are usually built several at a time.
     setExerciseId('')
     onAdded()
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-col gap-2">
       <ExercisePicker
         exercises={availableExercises}
-        value={selected}
+        value={exerciseId}
         onChange={setExerciseId}
-        inputClassName="w-full min-w-0 rounded-md border border-line bg-surface px-2 py-1.5 font-body text-xs text-chalk focus:border-blue-500 focus:outline-none"
+        placeholder="Search exercises to add"
+        inputClassName="h-11 w-full min-w-0 bg-surface px-4 rounded-field text-base text-chalk placeholder:text-chalk-dim focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      <button
-        type="button"
-        onClick={handleAdd}
-        className="shrink-0 rounded-md border border-line px-3 py-1.5 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:border-blue-500 hover:text-blue-400"
-      >
-        Add
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="h-11 flex-1 rounded-full bg-surface text-[15px] font-semibold text-chalk-dim active:text-chalk"
+        >
+          Done
+        </button>
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={!exerciseId}
+          className="h-11 flex-1 rounded-full bg-blue-500 text-[15px] font-semibold text-onblue active:bg-blue-600 disabled:opacity-40"
+        >
+          Add
+        </button>
+      </div>
     </div>
   )
 }
@@ -255,7 +304,7 @@ function ReorderableExerciseList({ routine, ownRoutineIds, onRemove, onReordered
   }
 
   if (items.length === 0) {
-    return <p className="text-xs text-chalk-dim">No exercises yet.</p>
+    return <p className="px-1 text-[15px] text-chalk-dim">No exercises yet.</p>
   }
 
   return (
@@ -266,42 +315,42 @@ function ReorderableExerciseList({ routine, ownRoutineIds, onRemove, onReordered
           layout="position"
           transition={snappy}
           data-reorder-id={re.id}
-          className="flex items-center gap-2 rounded-md border border-line bg-surface px-2 py-1.5"
+          className="flex min-h-14 items-center gap-1 rounded-field bg-surface pr-1"
         >
+          {/* Touch drag only; the arrows below are the keyboard/VoiceOver path. */}
           <button
             type="button"
+            tabIndex={-1}
+            aria-hidden="true"
             onPointerDown={(e) => handlePointerDown(e, re.id)}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
-            aria-label={`Reorder ${re.exercises.name}`}
-            className="shrink-0 touch-none cursor-grab text-chalk-dim active:cursor-grabbing"
+            className="flex h-11 w-9 shrink-0 touch-none cursor-grab items-center justify-center text-chalk-dim active:cursor-grabbing"
           >
-            <GripIcon className="h-4 w-4" />
+            <GripIcon className="h-5 w-5" />
           </button>
-          <div className="flex shrink-0 flex-col">
-            <button
-              type="button"
-              onClick={() => moveItem(re.id, -1)}
-              disabled={index === 0}
-              aria-label={`Move ${re.exercises.name} up`}
-              className="text-chalk-dim hover:text-blue-400 disabled:opacity-30"
-            >
-              <ChevronRightIcon className="h-3 w-3 -rotate-90" />
-            </button>
-            <button
-              type="button"
-              onClick={() => moveItem(re.id, 1)}
-              disabled={index === items.length - 1}
-              aria-label={`Move ${re.exercises.name} down`}
-              className="text-chalk-dim hover:text-blue-400 disabled:opacity-30"
-            >
-              <ChevronRightIcon className="h-3 w-3 rotate-90" />
-            </button>
-          </div>
-          <span className="min-w-0 flex-1 truncate font-mono text-[10px] tracking-wide text-chalk uppercase">
-            {re.exercises.name}
-          </span>
+          {/* 44px arrows don't fit beside the name on a phone, so they appear
+              only when focused — reachable by keyboard and VoiceOver swipes. */}
+          <button
+            type="button"
+            onClick={() => moveItem(re.id, -1)}
+            disabled={index === 0}
+            aria-label={`Move ${re.exercises.name} up`}
+            className="sr-only text-chalk-dim focus:not-sr-only focus:flex focus:h-11 focus:w-11 focus:shrink-0 focus:items-center focus:justify-center"
+          >
+            <ChevronRightIcon className="h-5 w-5 -rotate-90" />
+          </button>
+          <button
+            type="button"
+            onClick={() => moveItem(re.id, 1)}
+            disabled={index === items.length - 1}
+            aria-label={`Move ${re.exercises.name} down`}
+            className="sr-only text-chalk-dim focus:not-sr-only focus:flex focus:h-11 focus:w-11 focus:shrink-0 focus:items-center focus:justify-center"
+          >
+            <ChevronRightIcon className="h-5 w-5 rotate-90" />
+          </button>
+          <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-chalk">{re.exercises.name}</span>
           <RepRangeField
             key={`${re.rep_min}-${re.rep_max}`}
             routineExercise={re}
@@ -317,7 +366,7 @@ function ReorderableExerciseList({ routine, ownRoutineIds, onRemove, onReordered
             }}
             idleLabel={`Remove ${re.exercises.name} from ${routine.name}`}
             armedLabel={`Tap again to confirm removing ${re.exercises.name} from ${routine.name}`}
-            className="shrink-0"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
           />
         </motion.li>
       ))}
@@ -364,13 +413,12 @@ function DayToggles({ routine, schedule, userId, onPlan, onChanged, onError }) {
         type="button"
         onClick={() => toggleDay(day)}
         aria-pressed={linked}
-        className={
+        aria-label={WEEKDAY_NAME[day]}
+        className={`h-11 min-w-0 flex-1 rounded-full border text-[13px] font-semibold transition-colors ${
           linked
-            ? 'flex-1 rounded border border-blue-500 bg-blue-500 py-1 font-mono text-[10px] tracking-wide text-onblue uppercase'
-            : `flex-1 rounded border bg-surface py-1 font-mono text-[10px] tracking-wide text-chalk-dim uppercase ${
-                takenDays.has(day) ? 'border-dashed border-chalk-dim/60' : 'border-line'
-              }`
-        }
+            ? 'border-blue-500 bg-blue-500 text-onblue'
+            : `bg-surface text-chalk-dim ${takenDays.has(day) ? 'border-dashed border-chalk-dim/60' : 'border-transparent'}`
+        }`}
       >
         {WEEKDAY_SHORT[day].slice(0, 2)}
       </button>
@@ -388,7 +436,7 @@ function DayToggles({ routine, schedule, userId, onPlan, onChanged, onError }) {
         </div>
       </div>
       {takenElsewhere.length > 0 && (
-        <p className="text-xs text-chalk-dim">
+        <p className="px-1 text-caption text-chalk-dim">
           {[...groupBy(takenElsewhere, (s) => s.routines?.name ?? 'another routine')]
             .map(([name, entries]) => `${entries.map((s) => WEEKDAY_SHORT[s.day_of_week].slice(0, 2)).join(', ')}: ${name}`)
             .join(' · ')}{' '}
@@ -455,6 +503,9 @@ function Routines({
   const appliedInitialCollapse = useRef(false)
   const [routineToDelete, setRoutineToDelete] = useState(null)
   const [duplicatingId, setDuplicatingId] = useState(null)
+  // The "…" sheet. The routine is kept after closing so the exit animation still shows its name.
+  const [actions, setActions] = useState({ open: false, routine: null })
+  const closeActions = () => setActions((current) => ({ ...current, open: false }))
   const [addExerciseOpenIds, setAddExerciseOpenIds] = useState(() => new Set())
   const { isPending, message, stageDelete, undo } = useDeferredDelete('routines')
 
@@ -665,7 +716,7 @@ function Routines({
           <Skeleton tone="surface-2" className="h-11 rounded-field" />
         </div>
       ) : visibleRoutines.length === 0 ? (
-        <p className="text-sm text-chalk-dim">No routines yet.</p>
+        <p className="px-1 text-[15px] text-chalk-dim">No routines yet. Name one below to start planning your week.</p>
       ) : reordering ? (
         <ReorderRoutinesList
           routines={ownRoutines.filter((r) => !isPending(r.id))}
@@ -682,68 +733,53 @@ function Routines({
           const collapsed = collapsedIds.has(routine.id)
 
           return (
-            <div key={routine.id} className="rounded-md border border-line bg-surface-2 p-3">
-              <div className="flex items-center justify-between gap-2">
+            <div key={routine.id} className="rounded-field bg-surface-2 p-3">
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => toggleCollapsed(routine.id)}
                   aria-expanded={!collapsed}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left"
                 >
                   <ChevronRightIcon
                     className={`h-4 w-4 shrink-0 text-chalk-dim transition-transform ${collapsed ? '' : 'rotate-90'}`}
                   />
-                  <span className="min-w-0 truncate font-medium text-chalk">{routine.name}</span>
-                  {!isOwn && profileById[routine.user_id] && (
-                    <span className="shrink-0 text-xs text-chalk-dim">
-                      {displayName(profileById[routine.user_id])}
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate text-[17px] font-semibold text-chalk">{routine.name}</span>
+                    <span className="truncate text-caption text-chalk-dim">
+                      {[
+                        !isOwn && profileById[routine.user_id] && displayName(profileById[routine.user_id]),
+                        `${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}`,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </span>
-                  )}
+                  </span>
                 </button>
-                <div className="flex shrink-0 items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => onStart(routine)}
-                    className="font-mono text-[11px] tracking-wide text-blue-400 uppercase hover:text-blue-300"
-                  >
-                    Start
-                  </button>
-                  {/* Anyone's routine can be copied into your own editable one. */}
-                  <button
-                    type="button"
-                    onClick={() => handleDuplicateRoutine(routine)}
-                    disabled={duplicatingId === routine.id}
-                    aria-label={`Duplicate ${routine.name}`}
-                    className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400 disabled:opacity-40"
-                  >
-                    {duplicatingId === routine.id ? 'Duplicating…' : 'Duplicate'}
-                  </button>
-                  {isOwn && (
-                    <button
-                      type="button"
-                      onClick={() => setRoutineToDelete(routine)}
-                      aria-label={`Delete ${routine.name}`}
-                      className="rounded px-1 py-0.5 text-chalk-dim hover:text-danger"
-                    >
-                      <CloseIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onStart(routine)}
+                  disabled={exerciseCount === 0}
+                  aria-label={`Start ${routine.name}`}
+                  className="h-11 shrink-0 rounded-full bg-blue-500 px-4 text-[15px] font-semibold text-onblue active:bg-blue-600 disabled:opacity-40"
+                >
+                  Start
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActions({ open: true, routine })}
+                  aria-haspopup="dialog"
+                  aria-label={`More actions for ${routine.name}`}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-chalk-dim active:bg-surface"
+                >
+                  <MoreIcon className="h-5 w-5" />
+                </button>
               </div>
 
-              {collapsed ? (
-                <p className="mt-1 pl-6 font-mono text-[11px] text-chalk-dim">
-                  {exerciseCount} exercise{exerciseCount === 1 ? '' : 's'}
-                </p>
-              ) : (
+              {!collapsed && (
                 <>
-                  {isOwn && (
-                    <div className="mt-4">
-                      <RoutineNameField routine={routine} onSaved={onRoutinesChanged} onError={onError} />
-                    </div>
-                  )}
-                  <div className="mt-4 flex flex-col gap-2">
-                    <h2 className="text-headline text-chalk">Exercises</h2>
+                  <section className="mt-3 flex flex-col gap-2">
+                    <h3 className="px-1 text-caption font-medium text-chalk-dim">Exercises</h3>
                     {isOwn ? (
                       <>
                         <ReorderableExerciseList
@@ -759,6 +795,7 @@ function Routines({
                             availableExercises={availableExercises}
                             repRangeFor={repRangeFor}
                             onAdded={onRoutinesChanged}
+                            onCancel={() => toggleAddExerciseOpen(routine.id)}
                             onError={onError}
                           />
                         ) : (
@@ -766,25 +803,23 @@ function Routines({
                             <button
                               type="button"
                               onClick={() => toggleAddExerciseOpen(routine.id)}
-                              className="self-start font-mono text-[11px] tracking-wide text-blue-400 uppercase hover:text-blue-300"
+                              className="flex h-11 items-center gap-1.5 self-start px-1 text-[15px] font-semibold text-blue-400 active:text-blue-300"
                             >
-                              + Add exercise
+                              <PlusIcon className="h-4 w-4" aria-hidden="true" />
+                              Add exercise
                             </button>
                           )
                         )}
                       </>
                     ) : routine.routine_exercises.length === 0 ? (
-                      <p className="text-xs text-chalk-dim">No exercises yet.</p>
+                      <p className="px-1 text-[15px] text-chalk-dim">No exercises yet.</p>
                     ) : (
                       groupByMuscle(routine.routine_exercises, (re) => re.exercises).map((group) => (
                         <div key={group.key}>
                           <GroupHeader>{group.label}</GroupHeader>
                           <div className="flex flex-wrap gap-1.5">
                             {group.items.map((re) => (
-                              <span
-                                key={re.id}
-                                className="flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 font-mono text-[10px] tracking-wide text-chalk uppercase"
-                              >
+                              <span key={re.id} className="rounded-full bg-surface px-3 py-1.5 text-[13px] text-chalk">
                                 {re.exercises.name}
                               </span>
                             ))}
@@ -792,11 +827,11 @@ function Routines({
                         </div>
                       ))
                     )}
-                  </div>
+                  </section>
 
                   {isOwn && (
-                    <div className="mt-4 flex flex-col gap-2">
-                      <h2 className="text-headline text-chalk">Schedule</h2>
+                    <section className="mt-4 flex flex-col gap-2">
+                      <h3 className="px-1 text-caption font-medium text-chalk-dim">Schedule</h3>
                       <DayToggles
                         routine={routine}
                         schedule={plannedSchedule}
@@ -805,7 +840,7 @@ function Routines({
                         onChanged={onScheduleChanged}
                         onError={onError}
                       />
-                    </div>
+                    </section>
                   )}
                 </>
               )}
@@ -821,18 +856,61 @@ function Routines({
             value={newRoutineName}
             onChange={(e) => setNewRoutineName(e.target.value)}
             placeholder="New routine"
-            className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+            aria-label="New routine name"
+            className="h-11 w-full min-w-0 rounded-field bg-surface-2 px-4 text-base text-chalk placeholder:text-chalk-dim focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="submit"
             disabled={creating}
-            className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
+            className="h-11 shrink-0 rounded-full bg-blue-500 px-5 text-[15px] font-semibold text-onblue active:bg-blue-600 disabled:opacity-40"
           >
             {creating ? 'Creating…' : 'Create'}
           </button>
         </form>
       )}
     </div>
+
+    <Sheet open={actions.open} onClose={closeActions} title={actions.routine?.name}>
+      <div className="flex flex-col gap-3">
+        {/* Renaming lives here rather than as an always-open field under the
+            title, which repeated the name and invited stray keyboard pops. */}
+        {actions.routine?.user_id === userId && (
+          <label className="flex flex-col gap-1.5 px-1 text-caption text-chalk-dim">
+            Name
+            <RoutineNameField
+              key={actions.routine.id}
+              routine={actions.routine}
+              onSaved={onRoutinesChanged}
+              onError={onError}
+            />
+          </label>
+        )}
+        <Button
+          variant="secondary"
+          disabled={duplicatingId !== null}
+          onClick={() => {
+            closeActions()
+            handleDuplicateRoutine(actions.routine)
+          }}
+        >
+          Duplicate
+        </Button>
+        <p className="-mt-1 px-1 text-caption text-chalk-dim">
+          Copies the exercises into a new routine of yours. Days aren’t copied.
+        </p>
+        {actions.routine?.user_id === userId && (
+          <Button
+            variant="destructive"
+            onClick={() => {
+              closeActions()
+              setRoutineToDelete(actions.routine)
+            }}
+          >
+            Delete routine
+          </Button>
+        )}
+      </div>
+    </Sheet>
 
     <ConfirmModal
       open={routineToDelete !== null}
