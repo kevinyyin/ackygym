@@ -85,6 +85,14 @@ html[data-theme="light"] {
 @layer base {
   html {
     color-scheme: dark;
+    /* No double-tap zoom (pinch still works); also drops the tap delay. */
+    touch-action: manipulation;
+  }
+
+  /* Typing: the shell now ends at the keyboard (see visualViewport.js), so the
+     tab bar would ride on top of it. Native apps hide it until the keyboard goes. */
+  html[data-keyboard-open] [data-tab-bar] {
+    display: none;
   }
 
   html[data-theme="light"] {

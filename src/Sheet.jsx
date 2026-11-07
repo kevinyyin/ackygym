@@ -57,7 +57,7 @@ function Sheet({ open, onClose, title, size = 'auto', children }) {
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div key="sheet" className="fixed inset-0 z-40 flex items-end justify-center">
+        <div key="sheet" className="fixed inset-x-0 top-[var(--vv-top,0px)] z-40 flex h-[var(--vv-height,100%)] items-end justify-center">
           <motion.div
             aria-hidden="true"
             className="absolute inset-0 bg-black/40"
@@ -75,7 +75,7 @@ function Sheet({ open, onClose, title, size = 'auto', children }) {
             aria-label={title ? undefined : 'Dialog'}
             tabIndex={-1}
             className={`relative flex w-full max-w-md flex-col rounded-t-card bg-surface pb-[env(safe-area-inset-bottom)] text-chalk shadow-[0_-20px_60px_var(--shadow-tint)] focus:outline-none ${
-              size === 'large' ? 'h-[92svh]' : 'max-h-[92svh]'
+              size === 'large' ? 'h-[92%]' : 'max-h-[92%]'
             }`}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}

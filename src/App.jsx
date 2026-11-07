@@ -270,7 +270,7 @@ function App() {
 
   return (
     <>
-      <div id="app-shell" className="fixed inset-0 bg-ink text-chalk">
+      <div id="app-shell" className="fixed inset-x-0 top-[var(--vv-top,0px)] h-[var(--vv-height,100%)] bg-ink text-chalk">
         <div
           aria-hidden={!titleCollapsed}
           className={`pointer-events-none absolute inset-x-0 top-0 z-10 border-b border-line bg-ink/75 pt-[env(safe-area-inset-top)] backdrop-blur-xl transition-opacity duration-200 ${
@@ -445,7 +445,7 @@ function App() {
           </div>
         </main>
 
-        <nav className="absolute inset-x-0 bottom-0 z-10 border-t border-line bg-ink/75 backdrop-blur-xl">
+        <nav data-tab-bar className="absolute inset-x-0 bottom-0 z-10 border-t border-line bg-ink/75 backdrop-blur-xl">
           <div className="mx-auto flex max-w-md items-stretch justify-around pb-[env(safe-area-inset-bottom)]">
             {TABS.map(({ to, label, icon: Icon, end }) => (
               <NavLink key={to} to={to} end={end} className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 pt-2 pb-1.5">
