@@ -7,6 +7,16 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#000000" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- Draw under the iOS status bar so it shows the app's own background
+         instead of iOS's opaque white bar. black-translucent forces white status
+         text, so light theme falls back to the default (dark-text) bar. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <script>
+      try {
+        if (localStorage.getItem('theme') === 'light')
+          document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content = 'default'
+      } catch {}
+    </script>
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
