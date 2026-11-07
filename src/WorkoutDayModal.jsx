@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
-import { logSet } from './logSet'
+import { logSets } from './logSet'
 import { formatDate } from './dateUtils'
 import Sheet from './Sheet'
 import Button from './Button'
@@ -48,29 +48,24 @@ function WorkoutDayModal({ date, userId, weightUnit, onClose, onError, onRepeate
 
   const exerciseGroups = sets ? groupSetsByExercise(sets) : null
 
-  // Sequential, not Promise.all — logSet's PR check reads the current max
-  // weight at call time, so replaying same-exercise sets in parallel could
-  // race and mis-flag PRs the same way the historical sets never did.
+  // One batch: logSets judges each set's PR against the earlier ones in it,
+  // in two round trips instead of two per set.
   async function handleRepeat() {
     if (repeatingRef.current || !sets || sets.length === 0) return
     repeatingRef.current = true
     setRepeating(true)
     onError('')
 
-    for (const set of sets) {
-      const { error } = await logSet({
-        userId,
-        exerciseId: set.exercise_id,
-        weight: set.weight,
-        reps: set.reps,
-      })
-      if (error) {
-        onError(error.message)
-        repeatingRef.current = false
-        setRepeating(false)
-        setConfirmRepeat(false)
-        return
-      }
+    const { error } = await logSets(
+      userId,
+      sets.map((set) => ({ exerciseId: set.exercise_id, weight: set.weight, reps: set.reps }))
+    )
+    if (error) {
+      onError(error.message)
+      repeatingRef.current = false
+      setRepeating(false)
+      setConfirmRepeat(false)
+      return
     }
 
     repeatingRef.current = false

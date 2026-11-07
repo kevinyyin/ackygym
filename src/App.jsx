@@ -1,16 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Routes, Route, NavLink, Link, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from './supabaseClient'
 import { clearPageCache } from './pageCache'
 import Auth from './Auth'
 import Home from './Home'
-import RoutinesPage from './RoutinesPage'
-import CalendarPage from './CalendarPage'
-import LiftsPage from './LiftsPage'
-import BodyWeightPage from './BodyWeightPage'
-import ProgressPhotosPage from './ProgressPhotosPage'
-import SetsHistoryPage from './SetsHistoryPage'
 import SettingsModal from './SettingsModal'
 import TabSection from './TabSection'
 import { smooth } from './motionPresets'
@@ -23,6 +17,19 @@ import Sheet from './Sheet'
 import TimerPanel from './TimerPanel'
 import TimerPill from './TimerPill'
 import { GridIcon, BarbellIcon, CalendarIcon, ScaleIcon, TimerIcon, CloseIcon } from './icons'
+
+// Only Today is in the startup bundle; the other tabs (and the chart and
+// body-map libraries only they use) load in the background once it's up.
+const PAGE_IMPORTS = [
+  () => import('./RoutinesPage'),
+  () => import('./LiftsPage'),
+  () => import('./CalendarPage'),
+  () => import('./SetsHistoryPage'),
+  () => import('./BodyWeightPage'),
+  () => import('./ProgressPhotosPage'),
+]
+const [RoutinesPage, LiftsPage, CalendarPage, SetsHistoryPage, BodyWeightPage, ProgressPhotosPage] =
+  PAGE_IMPORTS.map((load) => lazy(load))
 
 const TABS = [
   { to: '/', label: 'Today', icon: GridIcon, end: true },
@@ -196,6 +203,13 @@ function App() {
     fetchSchedule()
   }, [session, scheduleVersion, handleError])
 
+  // Warm the other tabs' code after Today has had its turn on the network.
+  useEffect(() => {
+    if (!session) return
+    const id = setTimeout(() => PAGE_IMPORTS.forEach((load) => load()), 1500)
+    return () => clearTimeout(id)
+  }, [session])
+
   const tabKey = '/' + location.pathname.split('/')[1]
 
   // iOS large-title collapse: when the sentinel under the big title scrolls
@@ -304,115 +318,117 @@ function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ ...smooth, opacity: { duration: 0.18 } }}
               >
-                <Routes location={location}>
-                  <Route
-                    path="/"
-                    element={
-                      <Home
-                        session={session}
-                        profiles={profiles}
-                        schedule={schedule}
-                        onError={handleError}
-                        showWaterTracker={cardVisibility.water}
-                        showCreatineTracker={cardVisibility.creatine}
-                        waterSettings={waterSettings}
-                        weightUnit={weightUnit}
-                        activeRoutine={activeRoutine}
-                        onActiveRoutineChange={setActiveRoutine}
-                        onSetLogged={handleSetLogged}
-                      />
-                    }
-                  />
-                  <Route path="/train" element={<TabSection segments={TRAIN_SEGMENTS} layoutId="seg-train" />}>
+                <Suspense fallback={null}>
+                  <Routes location={location}>
                     <Route
-                      index
+                      path="/"
                       element={
-                        <RoutinesPage
+                        <Home
                           session={session}
                           profiles={profiles}
                           schedule={schedule}
-                          onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
                           onError={handleError}
+                          showWaterTracker={cardVisibility.water}
+                          showCreatineTracker={cardVisibility.creatine}
+                          waterSettings={waterSettings}
+                          weightUnit={weightUnit}
+                          activeRoutine={activeRoutine}
                           onActiveRoutineChange={setActiveRoutine}
+                          onSetLogged={handleSetLogged}
                         />
                       }
                     />
+                    <Route path="/train" element={<TabSection segments={TRAIN_SEGMENTS} layoutId="seg-train" />}>
+                      <Route
+                        index
+                        element={
+                          <RoutinesPage
+                            session={session}
+                            profiles={profiles}
+                            schedule={schedule}
+                            onScheduleSaved={() => setScheduleVersion((v) => v + 1)}
+                            onError={handleError}
+                            onActiveRoutineChange={setActiveRoutine}
+                          />
+                        }
+                      />
+                      <Route
+                        path="exercises"
+                        element={
+                          <LiftsPage
+                            profiles={profiles}
+                            userId={session.user.id}
+                            onError={handleError}
+                            weightUnit={weightUnit}
+                          />
+                        }
+                      />
+                    </Route>
+                    <Route path="/progress" element={<TabSection segments={PROGRESS_SEGMENTS} layoutId="seg-progress" />}>
+                      <Route
+                        index
+                        element={
+                          <CalendarPage
+                            profiles={profiles}
+                            userId={session.user.id}
+                            onError={handleError}
+                            weightUnit={weightUnit}
+                          />
+                        }
+                      />
+                      <Route
+                        path="history"
+                        element={
+                          <SetsHistoryPage
+                            userId={session.user.id}
+                            weightUnit={weightUnit}
+                            onError={handleError}
+                          />
+                        }
+                      />
+                    </Route>
+                    <Route path="/body" element={<TabSection segments={BODY_SEGMENTS} layoutId="seg-body" />}>
+                      <Route
+                        index
+                        element={
+                          <BodyWeightPage
+                            profiles={profiles}
+                            userId={session.user.id}
+                            onError={handleError}
+                            showCalorieTracker={cardVisibility.calorie}
+                            showCalorieTracking={cardVisibility.calorieTracker}
+                            weightUnit={weightUnit}
+                          />
+                        }
+                      />
+                      <Route
+                        path="photos"
+                        element={
+                          <ProgressPhotosPage
+                            profiles={profiles}
+                            userId={session.user.id}
+                            onError={handleError}
+                          />
+                        }
+                      />
+                    </Route>
+                    {Object.entries(LEGACY_REDIRECTS).map(([from, to]) => (
+                      <Route key={from} path={from} element={<Navigate to={to} replace />} />
+                    ))}
                     <Route
-                      path="exercises"
+                      path="*"
                       element={
-                        <LiftsPage
-                          profiles={profiles}
-                          userId={session.user.id}
-                          onError={handleError}
-                          weightUnit={weightUnit}
-                        />
+                        <div className="flex flex-col items-center gap-3 py-16 text-center">
+                          <p className="text-title">Page not found</p>
+                          <p className="text-[15px] text-chalk-dim">There's nothing at this address.</p>
+                          <Link to="/" className="mt-3 rounded-full bg-chalk px-5 py-2.5 text-[15px] font-semibold text-ink">
+                            Go to Today
+                          </Link>
+                        </div>
                       }
                     />
-                  </Route>
-                  <Route path="/progress" element={<TabSection segments={PROGRESS_SEGMENTS} layoutId="seg-progress" />}>
-                    <Route
-                      index
-                      element={
-                        <CalendarPage
-                          profiles={profiles}
-                          userId={session.user.id}
-                          onError={handleError}
-                          weightUnit={weightUnit}
-                        />
-                      }
-                    />
-                    <Route
-                      path="history"
-                      element={
-                        <SetsHistoryPage
-                          userId={session.user.id}
-                          weightUnit={weightUnit}
-                          onError={handleError}
-                        />
-                      }
-                    />
-                  </Route>
-                  <Route path="/body" element={<TabSection segments={BODY_SEGMENTS} layoutId="seg-body" />}>
-                    <Route
-                      index
-                      element={
-                        <BodyWeightPage
-                          profiles={profiles}
-                          userId={session.user.id}
-                          onError={handleError}
-                          showCalorieTracker={cardVisibility.calorie}
-                          showCalorieTracking={cardVisibility.calorieTracker}
-                          weightUnit={weightUnit}
-                        />
-                      }
-                    />
-                    <Route
-                      path="photos"
-                      element={
-                        <ProgressPhotosPage
-                          profiles={profiles}
-                          userId={session.user.id}
-                          onError={handleError}
-                        />
-                      }
-                    />
-                  </Route>
-                  {Object.entries(LEGACY_REDIRECTS).map(([from, to]) => (
-                    <Route key={from} path={from} element={<Navigate to={to} replace />} />
-                  ))}
-                  <Route
-                    path="*"
-                    element={
-                      <div className="flex flex-col items-center gap-3 py-16 text-center">
-                        <p className="text-title">Page not found</p>
-                        <p className="text-[15px] text-chalk-dim">There's nothing at this address.</p>
-                        <Link to="/" className="mt-3 rounded-full bg-chalk px-5 py-2.5 text-[15px] font-semibold text-ink">
-                          Go to Today
-                        </Link>
-                      </div>
-                    }
-                  />
-                </Routes>
+                  </Routes>
+                </Suspense>
               </motion.div>
           </div>
         </main>

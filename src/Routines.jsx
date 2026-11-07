@@ -309,7 +309,11 @@ function ReorderableExerciseList({ routine, ownRoutineIds, onRemove, onReordered
             onError={onError}
           />
           <ConfirmDeleteButton
-            onConfirm={() => onRemove(re.id)}
+            onConfirm={() => {
+              // Gone at once; a failed delete refetches, which brings it back.
+              setItems((current) => current.filter((it) => it.id !== re.id))
+              onRemove(re.id)
+            }}
             idleLabel={`Remove ${re.exercises.name} from ${routine.name}`}
             armedLabel={`Tap again to confirm removing ${re.exercises.name} from ${routine.name}`}
             className="shrink-0"
@@ -320,23 +324,20 @@ function ReorderableExerciseList({ routine, ownRoutineIds, onRemove, onReordered
   )
 }
 
-function DayToggles({ routine, schedule, userId, onChanged, onError }) {
+function DayToggles({ routine, schedule, userId, onPlan, onChanged, onError }) {
   async function toggleDay(day) {
     onError('')
     const existing = schedule.find((s) => s.user_id === userId && s.day_of_week === day)
-    const currentlyLinked = existing?.routine_id === routine.id
+    const routineId = existing?.routine_id === routine.id ? null : routine.id
+    onPlan(day, routineId)
 
     const { error } = await supabase.from('schedule').upsert(
-      {
-        user_id: userId,
-        day_of_week: day,
-        label: '',
-        routine_id: currentlyLinked ? null : routine.id,
-      },
+      { user_id: userId, day_of_week: day, label: '', routine_id: routineId },
       { onConflict: 'user_id,day_of_week' }
     )
 
     if (error) {
+      onPlan(day, undefined)
       onError(error.message)
       return
     }
@@ -418,6 +419,35 @@ function Routines({
   const [duplicatingId, setDuplicatingId] = useState(null)
   const [addExerciseOpenIds, setAddExerciseOpenIds] = useState(() => new Set())
   const { isPending, message, stageDelete, undo } = useDeferredDelete('routines')
+
+  // Day taps light up at once: planned[day] is the routine id (or null) just
+  // saved, shown over the schedule prop until App's refetch of it arrives.
+  // Kept here, not per routine, so a day moving between routines updates both.
+  const [planned, setPlanned] = useState({})
+  const [plannedFor, setPlannedFor] = useState(schedule)
+  if (plannedFor !== schedule) {
+    setPlannedFor(schedule)
+    setPlanned({})
+  }
+  const plannedSchedule = [
+    ...schedule.filter((s) => s.user_id !== userId || !(s.day_of_week in planned)),
+    ...Object.entries(planned).map(([day, routineId]) => ({
+      ...schedule.find((s) => s.user_id === userId && s.day_of_week === Number(day)),
+      user_id: userId,
+      day_of_week: Number(day),
+      routine_id: routineId,
+      routines: { name: routines.find((r) => r.id === routineId)?.name },
+    })),
+  ]
+
+  function planDay(day, routineId) {
+    setPlanned((current) => {
+      const next = { ...current }
+      if (routineId === undefined) delete next[day]
+      else next[day] = routineId
+      return next
+    })
+  }
 
   function toggleAddExerciseOpen(routineId) {
     setAddExerciseOpenIds((current) => toggled(current, routineId))
@@ -520,10 +550,7 @@ function Routines({
   async function handleRemoveExercise(routineExerciseId) {
     onError('')
     const { error } = await supabase.from('routine_exercises').delete().eq('id', routineExerciseId)
-    if (error) {
-      onError(error.message)
-      return
-    }
+    if (error) onError(error.message)
     onRoutinesChanged()
   }
 
@@ -681,8 +708,9 @@ function Routines({
                       <h2 className="text-headline text-chalk">Schedule</h2>
                       <DayToggles
                         routine={routine}
-                        schedule={schedule}
+                        schedule={plannedSchedule}
                         userId={userId}
+                        onPlan={planDay}
                         onChanged={onScheduleChanged}
                         onError={onError}
                       />

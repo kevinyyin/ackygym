@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Card from './Card'
 import { fetchLastSet } from './lastSet'
-import { logSet } from './logSet'
 import { BarbellIcon, TrophyIcon } from './icons'
 import PlateCalculatorModal from './PlateCalculatorModal'
 import { isValidSet } from './validation'
@@ -16,16 +15,15 @@ function formatRepRange(min, max) {
   return null
 }
 
-function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError }) {
+function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogSet }) {
   const [rows, setRows] = useState(null)
   const [calculatorRowId, setCalculatorRowId] = useState(null)
   const [expandedExerciseIds, setExpandedExerciseIds] = useState(() => new Set())
   const [prExerciseIds, setPrExerciseIds] = useState(() => new Set())
-  const [loggingExerciseIds, setLoggingExerciseIds] = useState(() => new Set())
-  // Mirrors loggingExerciseIds but updates synchronously, so a rapid double
-  // tap on the same row's Log button (both landing before React re-renders)
-  // can't both slip past the guard — see the same note in WorkoutForm.jsx.
-  const loggingExerciseIdsRef = useRef(new Set())
+  // Logging doesn't wait on the save (see Home's handleLogSet); this only
+  // swallows an accidental double tap on one row's Log button. A ref, because
+  // both taps can land before React re-renders.
+  const lastLogAtRef = useRef(new Map())
 
   // Re-converts every row's in-progress weight if the global unit is
   // flipped in Settings while this stays mounted underneath it — "adjust
@@ -81,37 +79,24 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
     })
   }
 
-  async function handleLog(row) {
-    if (loggingExerciseIdsRef.current.has(row.exerciseId) || !isValidSet(row)) return
-    loggingExerciseIdsRef.current.add(row.exerciseId)
-    onError('')
-    setLoggingExerciseIds((current) => new Set(current).add(row.exerciseId))
+  async function handleLog(row, timeStamp) {
+    if (!isValidSet(row)) return
+    if (timeStamp - (lastLogAtRef.current.get(row.exerciseId) ?? -Infinity) < 600) return
+    lastLogAtRef.current.set(row.exerciseId, timeStamp)
 
-    const { error, isPr } = await logSet({
-      userId,
+    const { error, isPr } = await onLogSet({
       exerciseId: row.exerciseId,
+      exerciseName: row.name,
       weight: toStorageWeightKg(row.weight, weightUnit),
       reps: Number(row.reps),
     })
-
-    loggingExerciseIdsRef.current.delete(row.exerciseId)
-    setLoggingExerciseIds((current) => {
-      const next = new Set(current)
-      next.delete(row.exerciseId)
-      return next
-    })
-
-    if (error) {
-      onError(error.message)
-      return
-    }
+    if (error) return
     setPrExerciseIds((current) => {
       const next = new Set(current)
       if (isPr) next.add(row.exerciseId)
       else next.delete(row.exerciseId)
       return next
     })
-    onLogged()
   }
 
   const inputClasses =
@@ -193,8 +178,8 @@ function ActiveRoutine({ routine, userId, weightUnit, onExit, onLogged, onError 
                 />
                 <button
                   type="button"
-                  onClick={() => handleLog(row)}
-                  disabled={!isValidSet(row) || loggingExerciseIds.has(row.exerciseId)}
+                  onClick={(e) => handleLog(row, e.timeStamp)}
+                  disabled={!isValidSet(row)}
                   className="shrink-0 rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
                 >
                   Log

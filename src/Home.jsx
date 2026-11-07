@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import WorkoutForm from './WorkoutForm'
@@ -9,7 +9,7 @@ import CreatineTracker from './CreatineTracker'
 import { groupByUser, groupSetsByExercise } from './groupByUser'
 import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
-import { logSet } from './logSet'
+import { logSet, setsSettled } from './logSet'
 import { toDisplayWeight } from './weightUnits'
 import { NoteIcon, TrophyIcon, RepeatIcon, CloseIcon } from './icons'
 import ConfirmModal from './ConfirmModal'
@@ -23,6 +23,8 @@ import { usePersistedState } from './usePersistedState'
 import { fetchExercises, fetchRoutines } from './library'
 
 const TODAYS_SETS_COLLAPSED_COUNT = 8
+// String ids are optimistic rows still saving (see handleLogSet).
+const isSaving = (set) => typeof set.id === 'string'
 // 16px icons get a 28px touch target; the 12px row gap keeps neighbours from overlapping.
 const ICON_HIT = "relative shrink-0 after:absolute after:-inset-1.5 after:content-['']"
 
@@ -61,6 +63,10 @@ function Home({
   const { selectMode, selectedIds: selectedSetIds } = selection
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
   const { isPending, message, stageDelete, undo } = useDeferredDelete('home-sets')
+  // Temp ids this mount is still saving. A temp row restored from the page
+  // cache belongs to an earlier mount that can no longer swap in its real id,
+  // so a refetch drops it (the saved set comes back in the data instead).
+  const savingIdsRef = useRef(new Set())
 
   useEffect(() => {
     async function loadExercises() {
@@ -91,6 +97,8 @@ function Home({
 
   useEffect(() => {
     async function fetchTodaysSets() {
+      // So sets saved by an earlier mount are in the response, not lost between it and the cache.
+      await setsSettled()
       const { data, error } = await supabase
         .from('sets')
         .select(
@@ -103,7 +111,8 @@ function Home({
         onError(error.message)
         return
       }
-      setTodaysSets(data)
+      // Keep rows still saving: a refetch that lands mid-save mustn't drop them.
+      setTodaysSets((current) => [...data, ...current.filter((s) => savingIdsRef.current.has(s.id))])
       setTodaysSetsLoaded(true)
     }
 
@@ -112,8 +121,6 @@ function Home({
 
   const visibleTodaysSets = todaysSets.filter((s) => !isPending(s.id))
   const groupedSets = groupByUser(visibleTodaysSets, profiles, session.user.id, 'sets')
-  // String ids are optimistic repeats still saving (see handleRepeatSet).
-  const isSaving = (set) => typeof set.id === 'string'
   const ownSetIds = visibleTodaysSets
     .filter((s) => s.user_id === session.user.id && !isSaving(s))
     .map((s) => s.id)
@@ -128,34 +135,49 @@ function Home({
   // "Rest day" only means something once a week has been planned.
   const hasSchedule = schedule.some((s) => s.user_id === session.user.id && s.routine_id)
 
-  // Shown immediately as a dimmed row: logSet is several round trips, and
-  // waiting on them left the tap with no visible response.
-  async function handleRepeatSet(set) {
+  // Every log path (form, active routine, repeat) shows the set at once as a
+  // dimmed row and starts the rest timer: logSet is two or three round trips,
+  // and waiting on them left the tap with no visible response. The saved row
+  // gets its real id and PR flag, so no refetch is needed afterwards.
+  async function handleLogSet({ exerciseId, exerciseName, weight, reps }) {
     onError('')
     const tempId = `saving-${crypto.randomUUID()}`
-    setTodaysSets((current) => [...current, { ...set, id: tempId, note: null, is_pr: false }])
-    const { error, isPr, id } = await logSet({
-      userId: session.user.id,
+    savingIdsRef.current.add(tempId)
+    setTodaysSets((current) => [
+      ...current,
+      {
+        id: tempId,
+        weight,
+        reps,
+        note: null,
+        is_pr: false,
+        user_id: session.user.id,
+        exercise_id: exerciseId,
+        exercises: { name: exerciseName },
+        workouts: { date: today },
+      },
+    ])
+    setShowTodaysSets(true)
+    onSetLogged()
+
+    const result = await logSet({ userId: session.user.id, exerciseId, weight, reps })
+    savingIdsRef.current.delete(tempId)
+    setTodaysSets((current) =>
+      result.error
+        ? current.filter((s) => s.id !== tempId)
+        : current.map((s) => (s.id === tempId ? { ...s, id: result.id, is_pr: result.isPr } : s))
+    )
+    if (result.error) onError(result.error.message)
+    return result
+  }
+
+  function handleRepeatSet(set) {
+    handleLogSet({
       exerciseId: set.exercise_id,
+      exerciseName: set.exercises.name,
       weight: set.weight,
       reps: set.reps,
     })
-    setTodaysSets((current) =>
-      error
-        ? current.filter((s) => s.id !== tempId)
-        : current.map((s) => (s.id === tempId ? { ...s, id, is_pr: isPr } : s))
-    )
-    if (error) {
-      onError(error.message)
-      return
-    }
-    handleLogged()
-  }
-
-  function handleLogged() {
-    setRefreshKey((key) => key + 1)
-    setShowTodaysSets(true)
-    onSetLogged()
   }
 
   // Single and bulk deletes share one path (and one Undo); a single delete is one id.
@@ -203,16 +225,21 @@ function Home({
     setNoteDraft(set.note ?? '')
   }
 
+  // Closes and shows the note at once; a failed save puts the old note back.
   async function handleSaveNote(setId, note) {
     onError('')
-    const trimmed = note.trim()
-    const { error } = await supabase.from('sets').update({ note: trimmed || null }).eq('id', setId)
-    if (error) {
-      onError(error.message)
-      return
-    }
+    const nextNote = note.trim() || null
+    const previousNote = todaysSets.find((s) => s.id === setId)?.note ?? null
+    const setNote = (value) =>
+      setTodaysSets((current) => current.map((s) => (s.id === setId ? { ...s, note: value } : s)))
     setEditingNoteId(null)
-    setRefreshKey((key) => key + 1)
+    if (nextNote === previousNote) return
+    setNote(nextNote)
+    const { error } = await supabase.from('sets').update({ note: nextNote }).eq('id', setId)
+    if (error) {
+      setNote(previousNote)
+      onError(error.message)
+    }
   }
 
   return (
@@ -241,7 +268,9 @@ function Home({
           <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
             Your sets today
           </p>
-          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">{ownSetIds.length}</p>
+          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">
+            {visibleTodaysSets.filter((s) => s.user_id === session.user.id).length}
+          </p>
         </Card>
       </div>
 
@@ -277,7 +306,7 @@ function Home({
               routines={routines}
               userId={session.user.id}
               weightUnit={weightUnit}
-              onLogged={handleLogged}
+              onLogSet={handleLogSet}
               onError={onError}
             />
           </div>
@@ -290,8 +319,7 @@ function Home({
           userId={session.user.id}
           weightUnit={weightUnit}
           onExit={() => onActiveRoutineChange(null)}
-          onLogged={handleLogged}
-          onError={onError}
+          onLogSet={handleLogSet}
         />
       )}
 

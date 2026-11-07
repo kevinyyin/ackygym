@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { logSet } from './logSet'
 import { fetchLastSet } from './lastSet'
 import { groupByMuscle } from './exerciseGrouping'
 import { BarbellIcon } from './icons'
@@ -8,13 +7,12 @@ import ExercisePicker from './ExercisePicker'
 import { isValidSet } from './validation'
 import { toDisplayWeight, toStorageWeightKg, convertWeightInput } from './weightUnits'
 
-function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onError }) {
+function WorkoutForm({ exercises, routines, userId, weightUnit, onLogSet, onError }) {
   const [routineId, setRoutineId] = useState('')
   const [exerciseId, setExerciseId] = useState('')
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [showCalculator, setShowCalculator] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   // Re-converts an in-progress weight value if the global unit is flipped in
   // Settings while this form stays mounted underneath it — "adjust state
   // during render" (React's recommended pattern), matching CalorieCalculator.jsx.
@@ -23,12 +21,10 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onErro
     setPrevWeightUnit(weightUnit)
     setWeight((current) => convertWeightInput(current, prevWeightUnit, weightUnit))
   }
-  // Guards re-entrancy for rapid double-taps that land inside the same
-  // event-loop tick, before React has re-rendered with `submitting: true` —
-  // the `submitting` state alone isn't enough because both clicks read the
-  // stale value captured by the render they were dispatched from. A ref
-  // updates synchronously, so the second call sees it immediately.
-  const submittingRef = useRef(false)
+  // Logging no longer waits on the save, so nothing is disabled while it runs;
+  // this only swallows an accidental double tap. A ref, because both taps can
+  // land before React re-renders.
+  const lastSubmitRef = useRef(0)
 
   const selectedRoutine = routineId ? routines.find((r) => r.id === Number(routineId)) : null
   const availableExercises = selectedRoutine
@@ -74,30 +70,20 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onErro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExerciseId, userId, onError])
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault()
-    if (!selectedExerciseId || submittingRef.current || !isValidSet({ weight, reps })) return
-    submittingRef.current = true
-    onError('')
-    setSubmitting(true)
+    if (!selectedExerciseId || !isValidSet({ weight, reps })) return
+    if (e.timeStamp - lastSubmitRef.current < 600) return
+    lastSubmitRef.current = e.timeStamp
 
-    const { error } = await logSet({
-      userId,
+    const exercise = exercises.find((ex) => ex.id === Number(selectedExerciseId))
+    // Values stay put: the next set is usually the same weight and reps.
+    onLogSet({
       exerciseId: Number(selectedExerciseId),
+      exerciseName: exercise?.name ?? '',
       weight: toStorageWeightKg(weight, weightUnit),
       reps: Number(reps),
     })
-
-    submittingRef.current = false
-    setSubmitting(false)
-
-    if (error) {
-      onError(error.message)
-      return
-    }
-
-    // Values stay put: the next set is usually the same weight and reps.
-    onLogged()
   }
 
   const inputClasses =
@@ -159,10 +145,10 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, onLogged, onErro
       </div>
       <button
         type="submit"
-        disabled={!selectedExerciseId || submitting || !isValidSet({ weight, reps })}
+        disabled={!selectedExerciseId || !isValidSet({ weight, reps })}
         className="w-full rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
       >
-        {submitting ? 'Logging…' : 'Log set'}
+        Log set
       </button>
 
       {showCalculator && (

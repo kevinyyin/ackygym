@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Card from './Card'
 import { displayName } from './displayName'
@@ -8,8 +8,11 @@ import WaterBottle from './WaterBottle'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { formatBottles } from './waterUnits'
 import { usePersistedState } from './usePersistedState'
+import { useCachedState } from './pageCache'
 
 const QUICK_ADD_ML = [250, 500, 750]
+// String ids are optimistic entries still saving (see handleAdd).
+const isSaving = (log) => typeof log.id === 'string'
 const QUICK_ADD_BOTTLE_FRACTIONS = [
   { fraction: 0.5, label: '+½ bottle' },
   { fraction: 1, label: '+1 bottle' },
@@ -18,8 +21,13 @@ const QUICK_ADD_BOTTLE_FRACTIONS = [
 
 function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goalMl }) {
   const isBottles = waterMode === 'bottles'
-  const [logs, setLogs] = useState([])
+  // Date-scoped and fixed per mount, like Home's today's sets.
+  const [today] = useState(getTodayDateString)
+  const [logs, setLogs] = useCachedState(`water:logs:${today}`, [])
   const [refreshKey, setRefreshKey] = useState(0)
+  // Temp ids this mount is still saving; a cached temp entry from an earlier
+  // mount can't be swapped for its real row any more, so a refetch drops it.
+  const savingIdsRef = useRef(new Set())
   const [customValue, setCustomValue] = useState('')
   const [expanded, setExpanded] = usePersistedState('gym-tracker:home-show-water', false)
 
@@ -28,53 +36,71 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
       const { data, error } = await supabase
         .from('water_logs')
         .select('id, user_id, amount_ml, created_at')
-        .eq('date', getTodayDateString())
+        .eq('date', today)
         .order('created_at')
 
       if (error) {
         onError(error.message)
         return
       }
-      setLogs(data)
+      setLogs((current) => [...data, ...current.filter((log) => savingIdsRef.current.has(log.id))])
     }
 
     fetchLogs()
-  }, [refreshKey, onError])
+  }, [refreshKey, today, onError, setLogs])
 
-  // Every write: clear the banner, run it, refetch on success.
+  // Every write updates the bottle first and saves after; a failed save
+  // reports the error and refetches, which puts the real total back.
   async function write(query) {
     onError('')
     const { error } = await query
     if (error) {
       onError(error.message)
-      return
+      setRefreshKey((k) => k + 1)
     }
-    setRefreshKey((k) => k + 1)
   }
 
-  function handleAdd(amountMl) {
-    return write(
-      supabase.from('water_logs').insert({ user_id: session.user.id, amount_ml: amountMl, date: getTodayDateString() })
+  async function handleAdd(amountMl) {
+    onError('')
+    const tempId = `saving-${crypto.randomUUID()}`
+    savingIdsRef.current.add(tempId)
+    setLogs((current) => [
+      ...current,
+      { id: tempId, user_id: session.user.id, amount_ml: amountMl, created_at: new Date().toISOString() },
+    ])
+    const { data, error } = await supabase
+      .from('water_logs')
+      .insert({ user_id: session.user.id, amount_ml: amountMl, date: today })
+      .select('id, user_id, amount_ml, created_at')
+      .single()
+    savingIdsRef.current.delete(tempId)
+    setLogs((current) =>
+      error ? current.filter((log) => log.id !== tempId) : current.map((log) => (log.id === tempId ? data : log))
     )
+    if (error) onError(error.message)
   }
 
-  async function handleCustomAdd(e) {
+  function handleCustomAdd(e) {
     e.preventDefault()
     const amount = Number(customValue)
     if (!amount || amount <= 0) return
-    await handleAdd(isBottles ? Math.round(amount * bottleSizeMl) : amount)
+    handleAdd(isBottles ? Math.round(amount * bottleSizeMl) : amount)
     setCustomValue('')
   }
 
+  const ownLogs = logs.filter((log) => log.user_id === session.user.id)
+  const lastOwnLog = ownLogs[ownLogs.length - 1]
+
   function handleUndo() {
-    const ownLogs = logs.filter((log) => log.user_id === session.user.id)
-    const last = ownLogs[ownLogs.length - 1]
-    if (!last) return
-    return write(supabase.from('water_logs').delete().eq('id', last.id))
+    // An entry still saving has no id to delete yet; the button is disabled meanwhile.
+    if (!lastOwnLog || isSaving(lastOwnLog)) return
+    setLogs((current) => current.filter((log) => log.id !== lastOwnLog.id))
+    return write(supabase.from('water_logs').delete().eq('id', lastOwnLog.id))
   }
 
   function handleClear() {
-    return write(supabase.from('water_logs').delete().eq('user_id', session.user.id).eq('date', getTodayDateString()))
+    setLogs((current) => current.filter((log) => log.user_id !== session.user.id))
+    return write(supabase.from('water_logs').delete().eq('user_id', session.user.id).eq('date', today))
   }
 
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
@@ -152,7 +178,7 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
             ))}
             <button
               onClick={handleUndo}
-              disabled={ownTotalMl === 0}
+              disabled={!lastOwnLog || isSaving(lastOwnLog)}
               aria-label="Undo last water entry"
               className="rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-xs font-semibold text-chalk-dim active:border-danger active:text-danger disabled:opacity-40"
             >
