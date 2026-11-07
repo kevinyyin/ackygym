@@ -7,6 +7,7 @@ import { recomputeIsPr, byDateThenId } from './logSet'
 import { groupSetsByDate } from './groupByUser'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import TrendChart from './TrendChart'
+import Skeleton from './Skeleton'
 import { isValidSet } from './validation'
 import { toDisplayWeight, toStorageWeightKg } from './weightUnits'
 
@@ -88,13 +89,19 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
   }
 
   if (sets === null) {
-    return <p className="mt-4 text-sm text-chalk-dim">Loading…</p>
+    return (
+      <div aria-busy="true" className="mt-3 flex flex-col gap-3">
+        <span className="sr-only">Loading</span>
+        <Skeleton tone="surface-2" className="h-24 rounded-field" />
+        <Skeleton tone="surface-2" className="h-40 rounded-field" />
+      </div>
+    )
   }
 
   const sessions = groupSetsByDate(sets)
 
   if (sessions.length === 0) {
-    return <p className="mt-4 text-sm text-chalk-dim">No sets logged yet for this exercise.</p>
+    return <p className="mt-3 text-[15px] text-chalk-dim">No sets logged yet for this exercise.</p>
   }
 
   const chartData = sessions.map((session) => ({
@@ -120,25 +127,29 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
 
   const sessionsNewestFirst = [...sessions].reverse()
 
+  const fieldClasses =
+    'h-11 w-20 min-w-0 rounded-field bg-surface px-3 text-center text-base tabular-nums text-chalk focus:ring-2 focus:ring-blue-500 focus:outline-none'
+
   return (
-    <div className="mt-4 flex flex-col gap-4">
-      <div className="flex items-baseline justify-between rounded-md border border-line bg-surface-2 px-3 py-2">
-        <div>
-          <p className="text-[11px] tracking-wide text-chalk-dim uppercase">Est. 1RM</p>
-          <p className="font-mono text-2xl font-bold text-blue-400">
-            {bestE1rm} <span className="text-base font-normal text-chalk-dim">{weightUnit}</span>
-          </p>
+    <div className="mt-3 flex flex-col gap-5">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-end justify-between gap-3 rounded-field bg-surface-2 p-4">
+          <div>
+            <p className="text-caption text-chalk-dim">Est. 1RM</p>
+            <p className="mt-0.5 text-title tabular-nums text-chalk">
+              {bestE1rm}
+              <span className="ml-1.5 text-[17px] font-normal tracking-normal text-chalk-dim">{weightUnit}</span>
+            </p>
+          </div>
+          {bestE1rmDate && <p className="text-caption text-chalk-dim">{formatDate(bestE1rmDate)}</p>}
         </div>
-        {bestE1rmDate && (
-          <p className="font-mono text-[11px] text-chalk-dim/70">{formatDate(bestE1rmDate)}</p>
-        )}
+        <p className="px-1 text-caption text-chalk-dim">
+          Estimated one-rep max: the heaviest single lift your logged sets suggest you could do.
+        </p>
       </div>
-      <p className="-mt-2 text-xs text-chalk-dim">
-        Estimated one-rep max — the heaviest single lift your logged sets suggest you could do.
-      </p>
 
       {sessions.length === 1 ? (
-        <p className="text-xs text-chalk-dim">Log another session to see a trend.</p>
+        <p className="px-1 text-[15px] text-chalk-dim">Log another session to see a trend.</p>
       ) : (
         <TrendChart
           className="h-48 w-full"
@@ -147,30 +158,29 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
         />
       )}
 
-      <ul className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {sessionsNewestFirst.map((session) => (
-          <li key={session.date}>
-            <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-              {formatDate(session.date)}
-            </p>
-            <ul className="mt-1 flex flex-col gap-1">
-              {session.sets.map((set, i) => {
-                const showWeight = i === 0 || set.weight !== session.sets[i - 1].weight
-                const isEditing = editingSetId === set.id
+          <section key={session.date} className="flex flex-col gap-1.5">
+            <h4 className="px-1 text-caption font-medium text-chalk-dim">{formatDate(session.date, { year: true })}</h4>
+            <ul className="divide-y divide-line rounded-field bg-surface-2">
+              {session.sets.map((set) => {
+                const setLabel = `${toDisplayWeight(set.weight, weightUnit)} ${weightUnit} × ${set.reps} on ${formatDate(session.date)}`
 
-                if (isEditing) {
+                if (editingSetId === set.id) {
                   return (
-                    <li key={set.id} className="flex items-center gap-1.5 font-mono text-sm text-chalk-dim">
+                    <li key={set.id} className="flex min-h-14 items-center gap-1.5 py-1.5 pr-1 pl-3">
                       <input
                         type="number"
                         inputMode="decimal"
                         min="0"
                         step="any"
+                        autoFocus
                         value={draftWeight}
                         onChange={(e) => setDraftWeight(e.target.value)}
-                        className="w-14 rounded-md border border-line bg-surface-2 px-1.5 py-1 text-center text-chalk focus:border-blue-500 focus:outline-none"
+                        aria-label={`Weight (${weightUnit})`}
+                        className={fieldClasses}
                       />
-                      <span className="text-chalk-dim/60">{weightUnit} ×</span>
+                      <span className="text-caption text-chalk-dim">{weightUnit} ×</span>
                       <input
                         type="number"
                         inputMode="numeric"
@@ -178,62 +188,60 @@ function ExerciseProgression({ exerciseId, userId, weightUnit, onError, onChange
                         step="1"
                         value={draftReps}
                         onChange={(e) => setDraftReps(e.target.value)}
-                        className="w-14 rounded-md border border-line bg-surface-2 px-1.5 py-1 text-center text-chalk focus:border-blue-500 focus:outline-none"
+                        aria-label="Reps"
+                        className={`${fieldClasses} w-16`}
                       />
                       <button
                         type="button"
                         onClick={() => saveEdit(set.id)}
                         disabled={!isDraftValid()}
-                        className="ml-auto shrink-0 text-blue-400 disabled:opacity-40"
-                        aria-label="Save set"
+                        className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-blue-400 disabled:opacity-40"
+                        aria-label={`Save ${setLabel}`}
                       >
-                        <CheckIcon className="h-4 w-4" />
+                        <CheckIcon className="h-5 w-5" />
                       </button>
                       <button
                         type="button"
                         onClick={cancelEdit}
-                        className="shrink-0 text-chalk-dim hover:text-danger"
-                        aria-label="Cancel editing set"
+                        className="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-chalk-dim"
+                        aria-label="Cancel editing"
                       >
-                        <CloseIcon className="h-4 w-4" />
+                        <CloseIcon className="h-5 w-5" />
                       </button>
                     </li>
                   )
                 }
 
                 return (
-                  <li key={set.id} className="flex items-center justify-between gap-2 font-mono text-sm text-chalk-dim">
-                    <span className="inline-flex items-center gap-1.5">
-                      {showWeight && (
-                        <>
-                          {toDisplayWeight(set.weight, weightUnit)}
-                          {weightUnit}
-                          <span className="text-chalk-dim/60">×</span>
-                        </>
-                      )}
-                      {set.reps}
+                  <li key={set.id} className="flex min-h-12 items-center justify-between gap-2 py-0.5 pr-1 pl-4">
+                    <span className="flex items-center gap-1.5 text-[15px] tabular-nums text-chalk">
+                      {toDisplayWeight(set.weight, weightUnit)} {weightUnit} × {set.reps}
                       {set.is_pr && (
-                        <TrophyIcon className="h-3 w-3 shrink-0 text-amber" aria-label="New PR" />
+                        <TrophyIcon className="h-4 w-4 shrink-0 text-amber" role="img" aria-label="New PR" />
                       )}
                     </span>
-                    <span className="flex shrink-0 items-center gap-3">
+                    <span className="flex shrink-0 items-center">
                       <button
                         type="button"
                         onClick={() => startEdit(set)}
-                        aria-label="Edit set"
-                        className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                        aria-label={`Edit ${setLabel}`}
+                        className="h-11 rounded-full px-2 text-[15px] text-blue-400 active:text-blue-300"
                       >
                         Edit
                       </button>
-                      <ConfirmDeleteButton onConfirm={() => handleDelete(set.id)} label="set" />
+                      <ConfirmDeleteButton
+                        onConfirm={() => handleDelete(set.id)}
+                        label={setLabel}
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+                      />
                     </span>
                   </li>
                 )
               })}
             </ul>
-          </li>
+          </section>
         ))}
-      </ul>
+      </div>
     </div>
   )
 }

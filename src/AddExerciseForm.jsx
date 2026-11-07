@@ -182,17 +182,18 @@ function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
             onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
             placeholder="Search or add an exercise"
             autoComplete="off"
-            className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+            aria-label="Exercise name"
+            className="h-11 w-full min-w-0 rounded-field bg-surface-2 px-4 text-base text-chalk placeholder:text-chalk-dim focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           {dropdownOpen && suggestions.length > 0 && (
-            <ul className="absolute top-full left-0 z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-line bg-surface-2 shadow-lg">
+            <ul className="absolute top-full left-0 z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-field bg-surface-2 py-1 shadow-[0_10px_30px_var(--shadow-tint)]">
               {suggestions.map((item) => (
                 <li key={item.id}>
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selectSuggestion(item)}
-                    className="block w-full truncate px-3 py-2 text-left text-sm text-chalk hover:bg-surface"
+                    className="block min-h-11 w-full truncate px-4 text-left text-[15px] text-chalk hover:bg-surface active:bg-surface"
                   >
                     {item.name}
                   </button>
@@ -203,17 +204,17 @@ function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
         </div>
         <button
           type="submit"
-          disabled={submitting}
-          className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
+          disabled={submitting || !name.trim()}
+          className="h-11 shrink-0 rounded-full bg-blue-500 px-5 text-[15px] font-semibold text-onblue active:bg-blue-600 disabled:opacity-40"
         >
           {submitting ? 'Adding…' : 'Add'}
         </button>
       </div>
 
       {muscleGroups.length > 0 && showMuscleGroups && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-[11px] text-chalk-dim">
-            Muscle groups worked — tap to mark primary, tap again for secondary
+        <div className="flex flex-col gap-2">
+          <p className="px-1 text-caption text-chalk-dim">
+            Muscles worked. Tap once for primary, again for secondary, again to clear.
           </p>
           <div className="flex flex-wrap gap-1.5">
             {muscleGroups.map((muscle) => {
@@ -223,13 +224,14 @@ function AddExerciseForm({ exercises, showMuscleGroups, onAdded, onError }) {
                   key={muscle.name}
                   type="button"
                   onClick={() => cycleMuscle(muscle.name)}
-                  className={
+                  aria-label={`${muscle.label}: ${role ?? 'not worked'}`}
+                  className={`h-11 rounded-full border px-4 text-[15px] font-medium transition-colors ${
                     role === 'primary'
-                      ? 'rounded-full border border-blue-500 bg-blue-500 px-2.5 py-1 font-mono text-[11px] tracking-wide text-onblue uppercase'
+                      ? 'border-blue-500 bg-blue-500 text-onblue'
                       : role === 'secondary'
-                        ? 'rounded-full border border-blue-500/50 bg-blue-500/15 px-2.5 py-1 font-mono text-[11px] tracking-wide text-blue-300 uppercase'
-                        : 'rounded-full border border-line bg-surface-2 px-2.5 py-1 font-mono text-[11px] tracking-wide text-chalk-dim uppercase'
-                  }
+                        ? 'border-blue-500/50 bg-blue-500/15 text-blue-400'
+                        : 'border-transparent bg-surface-2 text-chalk-dim'
+                  }`}
                 >
                   {muscle.label}
                 </button>

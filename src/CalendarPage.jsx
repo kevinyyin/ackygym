@@ -5,6 +5,7 @@ import { toDateString, formatDate } from './dateUtils'
 import { displayName } from './displayName'
 import { sortProfilesSelfFirst } from './groupByUser'
 import Card from './Card'
+import SegmentedControl from './SegmentedControl'
 import WorkoutDayModal from './WorkoutDayModal'
 import MuscleVolume from './MuscleVolume'
 import { computeStreak } from './streak'
@@ -14,6 +15,10 @@ import { useCachedState } from './pageCache'
 import { usePersistedState } from './usePersistedState'
 
 const DOT_COLORS = ['bg-blue-400', 'bg-emerald', 'bg-amber', 'bg-purple']
+const VIEW_SEGMENTS = [
+  { key: 'heatmap', label: 'Heatmap' },
+  { key: 'month', label: 'Calendar' },
+]
 
 const WEEKS_COUNT = 53
 const DAYS_COUNT = WEEKS_COUNT * 7
@@ -140,7 +145,7 @@ function buildMonthScaffold(monthCursor, today) {
   return weeks
 }
 
-function ContributionGraph({ weeks, monthLabels, onDayClick }) {
+function ContributionGraph({ weeks, monthLabels, onWeekClick }) {
   const gridWidth = WEEKS_COUNT * COLUMN_PITCH_PX - GAP_PX
   const scrollRef = useRef(null)
 
@@ -159,7 +164,7 @@ function ContributionGraph({ weeks, monthLabels, onDayClick }) {
           <div
             key={dayOfWeek}
             style={{ height: CELL_PX }}
-            className="flex items-center font-mono text-[11px] leading-none text-chalk-dim"
+            className="flex items-center text-[11px] leading-none text-chalk-dim"
           >
             {LABELED_WEEKDAYS.has(dayOfWeek) ? WEEKDAY_SHORT[dayOfWeek] : ''}
           </div>
@@ -173,7 +178,7 @@ function ContributionGraph({ weeks, monthLabels, onDayClick }) {
               <span
                 key={weekIndex}
                 style={{ left: weekIndex * COLUMN_PITCH_PX }}
-                className="absolute font-mono text-[11px] leading-none text-chalk-dim"
+                className="absolute text-[11px] leading-none whitespace-nowrap text-chalk-dim"
               >
                 {label}
               </span>
@@ -181,25 +186,32 @@ function ContributionGraph({ weeks, monthLabels, onDayClick }) {
           </div>
 
           <div className="flex gap-[3px]">
-            {weeks.map((week, weekIndex) => (
-              <div key={weekIndex} className="flex flex-col gap-[3px]">
-                {week.map((day) => {
-                  if (day.isFuture) return <div key={day.dateStr} style={{ height: CELL_PX, width: CELL_PX }} />
-                  const clickable = onDayClick && day.level > 0
-                  const Cell = clickable ? 'button' : 'div'
-                  return (
-                    <Cell
-                      key={day.dateStr}
-                      type={clickable ? 'button' : undefined}
-                      onClick={clickable ? () => onDayClick(day.dateStr) : undefined}
-                      title={`${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}${clickable ? ' — tap to view or repeat' : ''}`}
-                      style={{ height: CELL_PX, width: CELL_PX, backgroundColor: `var(--color-heat-${day.level})` }}
-                      className={clickable ? 'cursor-pointer rounded-[2px]' : 'rounded-[2px]'}
-                    />
-                  )
-                })}
-              </div>
-            ))}
+            {/* 13px days are an overview, not targets: a tap anywhere in a week's
+                column opens that month in the Calendar view, where days are
+                full-size. Pointer-only; keyboard users switch views directly. */}
+            {weeks.map((week, weekIndex) => {
+              const lastPastDay = week.filter((day) => !day.isFuture).at(-1)
+              return (
+                <div
+                  key={weekIndex}
+                  onClick={lastPastDay ? () => onWeekClick(lastPastDay.date) : undefined}
+                  className={`flex flex-col gap-[3px]${lastPastDay ? ' cursor-pointer' : ''}`}
+                >
+                  {week.map((day) =>
+                    day.isFuture ? (
+                      <div key={day.dateStr} style={{ height: CELL_PX, width: CELL_PX }} />
+                    ) : (
+                      <div
+                        key={day.dateStr}
+                        title={`${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}`}
+                        style={{ height: CELL_PX, width: CELL_PX, backgroundColor: `var(--color-heat-${day.level})` }}
+                        className="rounded-[2px]"
+                      />
+                    )
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -209,37 +221,40 @@ function ContributionGraph({ weeks, monthLabels, onDayClick }) {
 
 function MonthGrid({ weeks, onDayClick }) {
   return (
-    <div className="flex flex-col gap-1">
-      <div className="grid grid-cols-7 gap-1">
+    <div className="-mx-2 flex flex-col gap-1">
+      <div className="grid grid-cols-7 gap-x-0.5">
         {WEEKDAY_SHORT.map((label, i) => (
-          <div key={i} className="text-center font-mono text-[10px] tracking-wide text-chalk-dim uppercase">
+          <div key={i} className="text-center text-caption text-chalk-dim">
             {label}
           </div>
         ))}
       </div>
 
       {weeks.map((week, weekIndex) => (
-        <div key={weekIndex} className="grid grid-cols-7 gap-1">
+        <div key={weekIndex} className="grid grid-cols-7 gap-x-0.5">
           {week.map((day, dayIndex) => {
             if (!day) return <div key={dayIndex} />
 
             const numberClass = day.isFuture
               ? 'text-chalk-dim/50'
               : day.isToday
-                ? 'font-bold text-blue-400'
+                ? 'font-semibold text-blue-400'
                 : 'text-chalk'
             const clickable = !day.isFuture && onDayClick && day.level > 0
             const Cell = clickable ? 'button' : 'div'
+            const description = day.isFuture ? undefined : `${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}`
 
             return (
               <Cell
                 key={dayIndex}
                 type={clickable ? 'button' : undefined}
                 onClick={clickable ? () => onDayClick(day.dateStr) : undefined}
-                title={day.isFuture ? undefined : `${day.label ?? 'No sets'} · ${formatDate(day.dateStr)}${clickable ? ' — tap to view or repeat' : ''}`}
-                className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-md${clickable ? ' cursor-pointer active:bg-surface-2' : ''}`}
+                title={description}
+                aria-label={clickable ? `View ${description}` : undefined}
+                aria-current={day.isToday ? 'date' : undefined}
+                className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-full${clickable ? ' cursor-pointer active:bg-surface-2' : ''}`}
               >
-                <span className={`font-mono text-xs ${numberClass}`}>{day.date.getDate()}</span>
+                <span className={`text-[15px] tabular-nums ${numberClass}`}>{day.date.getDate()}</span>
                 {!day.isFuture && day.level > 0 && (
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
@@ -329,6 +344,11 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
   const canGoPrevMonth = monthCursor > earliestMonth
   const canGoNextMonth = monthCursor < currentMonth
 
+  function openMonth(date) {
+    setMonthCursor(startOfMonth(date))
+    setViewMode('month')
+  }
+
   const streaksByUserId = Object.fromEntries(
     rows.map((profile) => {
       const dates = new Set((dayDataByUser.get(profile.id) ?? new Map()).keys())
@@ -339,10 +359,14 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
 
   if (!setsLoaded) {
     return (
-      <div aria-busy="true" className="flex flex-col gap-3">
+      <div aria-busy="true" className="flex flex-col gap-4">
         <span className="sr-only">Loading</span>
-        <Skeleton className="h-56" />
-        <Skeleton className="h-32" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+        <Skeleton className="h-9 rounded-full" />
+        <Skeleton className="h-48" />
       </div>
     )
   }
@@ -354,54 +378,30 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
         {rows.map((profile, i) => {
           const streak = streaksByUserId[profile.id]
           return (
-            <Card key={profile.id} className="flex flex-col gap-2 p-4">
+            <Card key={profile.id} className="flex flex-col gap-1 p-4">
               <div className="flex items-center gap-1.5">
-                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]}`} />
-                <p className="truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-                  {displayName(profile)}
-                </p>
+                <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]}`} />
+                <p className="truncate text-caption text-chalk-dim">{displayName(profile)}</p>
               </div>
-              <p className="font-mono text-3xl font-bold text-blue-400">
-                {streak}
-                <span className="ml-1.5 font-body text-xs font-normal text-chalk-dim">
-                  {streak === 1 ? 'workout' : 'workouts'} in a row
-                </span>
-              </p>
-              <div className="flex gap-1">
-                {Array.from({ length: 7 }, (_, tick) => (
-                  <span
-                    key={tick}
-                    className={`h-2.5 w-1.5 rounded-[1px] ${
-                      tick < Math.min(streak, 7) ? 'bg-blue-500' : 'bg-surface-2'
-                    }`}
-                  />
-                ))}
-              </div>
+              <p className="text-title tabular-nums text-chalk">{streak}</p>
+              <p className="text-caption text-chalk-dim">{streak === 1 ? 'workout' : 'workouts'} in a row</p>
             </Card>
           )
         })}
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-chalk-dim">Tap a day to view or repeat that workout.</p>
-
-        <div className="flex shrink-0 gap-1 rounded-md border border-line bg-surface p-1">
-          {[
-            { key: 'heatmap', label: 'Heatmap' },
-            { key: 'month', label: 'Calendar' },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setViewMode(key)}
-              className={`rounded px-2.5 py-1 font-mono text-[11px] tracking-wide uppercase ${
-                viewMode === key ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-col gap-2">
+        <SegmentedControl
+          segments={VIEW_SEGMENTS}
+          value={viewMode}
+          onChange={setViewMode}
+          layoutId="seg-calendar-view"
+        />
+        <p className="px-1 text-caption text-chalk-dim">
+          {viewMode === 'month'
+            ? 'Tap one of your days to view or repeat that workout.'
+            : 'Tap a week to open that month in Calendar.'}
+        </p>
       </div>
 
       {viewMode === 'month' && (
@@ -411,11 +411,11 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
             onClick={() => setMonthCursor((m) => startOfMonth(new Date(m.getFullYear(), m.getMonth() - 1, 1)))}
             disabled={!canGoPrevMonth}
             aria-label="Previous month"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim disabled:opacity-30 active:border-blue-500 active:text-blue-400"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-surface text-chalk active:bg-surface-2 disabled:opacity-30"
           >
-            <ChevronLeftIcon className="h-4 w-4" />
+            <ChevronLeftIcon className="h-5 w-5" />
           </button>
-          <p className="w-32 text-center font-mono text-xs tracking-wide text-chalk uppercase">
+          <p aria-live="polite" className="w-40 text-center text-[17px] font-semibold text-chalk">
             {monthCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
           </p>
           <button
@@ -423,9 +423,9 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
             onClick={() => setMonthCursor((m) => startOfMonth(new Date(m.getFullYear(), m.getMonth() + 1, 1)))}
             disabled={!canGoNextMonth}
             aria-label="Next month"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-line bg-surface text-chalk-dim disabled:opacity-30 active:border-blue-500 active:text-blue-400"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-surface text-chalk active:bg-surface-2 disabled:opacity-30"
           >
-            <ChevronRightIcon className="h-4 w-4" />
+            <ChevronRightIcon className="h-5 w-5" />
           </button>
         </div>
       )}
@@ -447,20 +447,14 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
           const monthWeeks = monthScaffold.map((week) => week.map(withLevels))
 
           return (
-            <Card key={profile.id} className="p-3">
-              <div className="mb-2 flex items-center gap-1.5">
-                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]}`} />
-                <p className="truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-                  {displayName(profile)}
-                </p>
-              </div>
+            <Card key={profile.id} className="p-4">
+              <h2 className="mb-3 flex items-center gap-2 text-[17px] font-semibold text-chalk">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_COLORS[i % DOT_COLORS.length]}`} />
+                <span className="truncate">{displayName(profile)}</span>
+              </h2>
 
               {viewMode === 'heatmap' ? (
-                <ContributionGraph
-                  weeks={weeks}
-                  monthLabels={monthLabels}
-                  onDayClick={profile.id === userId ? setViewingDate : undefined}
-                />
+                <ContributionGraph weeks={weeks} monthLabels={monthLabels} onWeekClick={openMonth} />
               ) : (
                 <MonthGrid
                   weeks={monthWeeks}
@@ -468,8 +462,8 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
                 />
               )}
 
-              <div className="mt-1 flex items-center justify-end gap-1">
-                <span className="font-mono text-[11px] text-chalk-dim">Less</span>
+              <div aria-hidden="true" className="mt-2 flex items-center justify-end gap-1">
+                <span className="mr-0.5 text-[11px] text-chalk-dim">Less</span>
                 {Array.from({ length: LEVEL_COUNT + 1 }, (_, level) => (
                   <span
                     key={level}
@@ -481,7 +475,7 @@ function CalendarPage({ profiles, userId, weightUnit, onError }) {
                     className="rounded-[2px]"
                   />
                 ))}
-                <span className="font-mono text-[11px] text-chalk-dim">More</span>
+                <span className="ml-0.5 text-[11px] text-chalk-dim">More</span>
               </div>
             </Card>
           )

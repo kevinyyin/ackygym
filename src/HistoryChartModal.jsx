@@ -14,7 +14,7 @@ function HistoryChartModal({ group, getValue, formatTooltip, referenceValue, onC
       {group && (
         <div className="mt-4">
           {chartData.length === 1 ? (
-            <p className="text-xs text-chalk-dim">Log another entry to see a trend.</p>
+            <p className="text-[15px] text-chalk-dim">Log another entry to see a trend.</p>
           ) : (
             <TrendChart
               className="h-56 w-full"

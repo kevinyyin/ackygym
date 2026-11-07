@@ -5,7 +5,7 @@ import ExercisePicker from './ExercisePicker'
 import WorkoutDayModal from './WorkoutDayModal'
 import { getDateDaysAgoString, getTodayDateString, formatDate } from './dateUtils'
 import { toDisplayWeight } from './weightUnits'
-import { TrophyIcon } from './icons'
+import { TrophyIcon, ChevronRightIcon } from './icons'
 import Skeleton from './Skeleton'
 import { groupSetsByDate } from './groupByUser'
 import { byDateThenId } from './logSet'
@@ -73,24 +73,27 @@ function SetsHistoryPage({ userId, weightUnit, onError }) {
   const dateGroups = results ? groupSetsByDate(results) : null
 
   const inputClasses =
-    'w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none'
+    'h-11 w-full min-w-0 rounded-field bg-surface-2 px-4 text-base text-chalk placeholder:text-chalk-dim focus:ring-2 focus:ring-blue-500 focus:outline-none'
 
   return (
     <>
       <div className="flex flex-col gap-4">
         <Card className="flex flex-col gap-3 p-4">
-          <div className="flex items-center gap-2">
-            <ExercisePicker
-              exercises={exercises}
-              value={exerciseFilter}
-              onChange={setExerciseFilter}
-              placeholder="All exercises"
-            />
+          <div className="flex items-center gap-1">
+            <div className="min-w-0 flex-1">
+              <ExercisePicker
+                exercises={exercises}
+                value={exerciseFilter}
+                onChange={setExerciseFilter}
+                placeholder="All exercises"
+                inputClassName={inputClasses}
+              />
+            </div>
             {exerciseFilter && (
               <button
                 type="button"
                 onClick={() => setExerciseFilter('')}
-                className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                className="h-11 shrink-0 rounded-full px-3 text-[15px] font-semibold text-blue-400 active:text-blue-300"
               >
                 Clear
               </button>
@@ -102,15 +105,17 @@ function SetsHistoryPage({ userId, weightUnit, onError }) {
               value={startDate}
               max={endDate}
               onChange={(e) => setStartDate(e.target.value)}
+              aria-label="From date"
               className={inputClasses}
             />
-            <span className="shrink-0 text-chalk-dim">to</span>
+            <span className="shrink-0 text-caption text-chalk-dim">to</span>
             <input
               type="date"
               value={endDate}
               min={startDate}
               max={getTodayDateString()}
               onChange={(e) => setEndDate(e.target.value)}
+              aria-label="To date"
               className={inputClasses}
             />
           </div>
@@ -119,13 +124,12 @@ function SetsHistoryPage({ userId, weightUnit, onError }) {
         {dateGroups === null ? (
           <div aria-busy="true" className="flex flex-col gap-3">
             <span className="sr-only">Loading</span>
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
+            <Skeleton className="h-36" />
+            <Skeleton className="h-36" />
           </div>
         ) : dateGroups.length === 0 ? (
           <Card className="p-4">
-            <p className="text-sm text-chalk-dim">No sets logged in this range.</p>
+            <p className="text-[15px] text-chalk-dim">No sets logged in this range.</p>
           </Card>
         ) : (
           dateGroups.map((group) => (
@@ -133,18 +137,21 @@ function SetsHistoryPage({ userId, weightUnit, onError }) {
               <button
                 type="button"
                 onClick={() => setViewingDate(group.date)}
-                className="flex w-full items-center justify-between border-b border-line px-4 py-2 text-left font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                aria-haspopup="dialog"
+                className="flex min-h-12 w-full items-center justify-between gap-2 border-b border-line px-4 text-left active:bg-surface-2"
               >
-                <span>{formatDate(group.date, { year: true })}</span>
-                <span>View day →</span>
+                <span className="text-[17px] font-semibold text-chalk">{formatDate(group.date, { year: true })}</span>
+                <span className="flex shrink-0 items-center gap-0.5 text-[15px] text-blue-400">
+                  View day
+                  <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
+                </span>
               </button>
               <ul className="divide-y divide-line">
                 {group.sets.map((set) => (
-                  <li key={set.id} className="flex items-center justify-between gap-2 px-4 py-3">
-                    <span className="min-w-0 flex-1 truncate text-sm text-chalk">{set.exercises.name}</span>
-                    <span className="flex shrink-0 items-center gap-1.5 font-mono text-sm text-chalk-dim">
-                      {toDisplayWeight(set.weight, weightUnit)}
-                      {weightUnit}×{set.reps}
+                  <li key={set.id} className="flex min-h-12 items-center justify-between gap-2 px-4 py-2">
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-chalk">{set.exercises.name}</span>
+                    <span className="flex shrink-0 items-center gap-1.5 text-[15px] tabular-nums text-chalk-dim">
+                      {toDisplayWeight(set.weight, weightUnit)} {weightUnit} × {set.reps}
                       {set.is_pr && (
                         <TrophyIcon className="h-3.5 w-3.5 shrink-0 text-amber" aria-label="New PR" />
                       )}

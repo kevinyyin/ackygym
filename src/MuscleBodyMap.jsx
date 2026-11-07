@@ -54,7 +54,7 @@ function buildData(muscles) {
 function BodyView({ label, type, data }) {
   return (
     <div className="flex flex-1 flex-col items-center gap-1.5">
-      <p className="font-mono text-[10px] tracking-[0.15em] text-chalk-dim uppercase">{label}</p>
+      <p className="text-caption text-chalk-dim">{label}</p>
       <Model
         data={data}
         type={type}
@@ -76,11 +76,11 @@ function MuscleBodyMap({ muscles }) {
         <BodyView label="Back" type="posterior" data={data} />
       </div>
       <div className="flex items-center justify-center gap-4">
-        <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wide text-chalk-dim uppercase">
+        <span className="flex items-center gap-1.5 text-caption text-chalk-dim">
           <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
           Primary
         </span>
-        <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wide text-chalk-dim uppercase">
+        <span className="flex items-center gap-1.5 text-caption text-chalk-dim">
           <span className="h-2.5 w-2.5 rounded-full bg-blue-500/45" />
           Secondary
         </span>

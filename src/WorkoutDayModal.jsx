@@ -117,6 +117,7 @@ function WorkoutDayModal({ date, userId, weightUnit, onClose, onError, onRepeate
         title="Repeat this workout?"
         message={`${sets?.length ?? 0} set${sets?.length === 1 ? '' : 's'} will be logged as part of today's workout.`}
         confirmLabel="Repeat"
+        confirmVariant="accent"
         onConfirm={handleRepeat}
         onCancel={() => setConfirmRepeat(false)}
       />

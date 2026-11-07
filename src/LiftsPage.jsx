@@ -10,7 +10,7 @@ import Sheet from './Sheet'
 import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
-import { MedalIcon } from './icons'
+import { MedalIcon, PlusIcon } from './icons'
 import { formatDate } from './dateUtils'
 import { toDisplayWeight } from './weightUnits'
 import Skeleton from './Skeleton'
@@ -45,11 +45,11 @@ function bodyRegionFor(exercise) {
       if (LOWER_BODY_MUSCLES.has(m.muscle)) lower += 1
       else upper += 1
     }
-    if (upper > lower) return 'Upper Body'
-    if (lower > upper) return 'Lower Body'
+    if (upper > lower) return 'Upper body'
+    if (lower > upper) return 'Lower body'
   }
 
-  return 'Upper Body'
+  return 'Upper body'
 }
 
 const COLLAPSED_COUNT = 8
@@ -207,46 +207,48 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
       .sort((a, b) => (b.entry?.weight ?? -Infinity) - (a.entry?.weight ?? -Infinity))
   }
 
+  // The whole card opens the exercise: nothing inside it is separately
+  // interactive, and a name-only target was a sliver on a phone.
   function renderExerciseCard(exercise) {
     return (
-      <Card key={exercise.id} className="flex flex-col gap-3 p-4">
-        <button
-          type="button"
-          onClick={() => setSelectedExercise(exercise)}
-          className="flex w-full min-w-0 flex-col items-start gap-1.5 text-left"
-        >
-          <p className="w-full truncate font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-            {exercise.name}
-          </p>
+      <button
+        key={exercise.id}
+        type="button"
+        onClick={() => setSelectedExercise(exercise)}
+        aria-haspopup="dialog"
+        className="flex min-w-0 flex-col gap-4 rounded-card bg-surface p-4 text-left focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+      >
+        <span className="flex w-full min-w-0 flex-col gap-2">
+          <span className="line-clamp-2 text-[17px] leading-snug font-semibold text-chalk">{exercise.name}</span>
           <MuscleTags muscles={exercise.exercise_muscles} />
-        </button>
-        <div className="flex flex-col gap-3">
+        </span>
+        <span className="flex w-full flex-col gap-3">
           {leaderboardFor(exercise.id).map(({ profile, entry }, i) => {
             const isLeader = i === 0 && entry
             return (
-              <div key={profile.id} className="border-l-2 border-line pl-2">
-                <p className="flex items-center gap-1 text-[11px] text-chalk-dim">
-                  {isLeader && <MedalIcon className="h-3.5 w-3.5 shrink-0 text-amber" />}
+              <span key={profile.id} className="flex min-w-0 flex-col">
+                <span className="flex items-center gap-1 text-caption text-chalk-dim">
+                  {isLeader && <MedalIcon className="h-3.5 w-3.5 shrink-0 text-amber" aria-label="Top lift" role="img" />}
                   <span className="min-w-0 flex-1 truncate">{displayName(profile)}</span>
-                </p>
+                </span>
                 {entry ? (
                   <>
-                    <p className="font-mono text-xl font-bold text-blue-400">
+                    <span className="text-[20px] leading-tight font-semibold tabular-nums text-chalk">
                       {toDisplayWeight(entry.weight, weightUnit)}
-                      <span className="ml-1 text-sm font-normal text-chalk-dim">
-                        {weightUnit} ×{entry.reps}
+                      <span className="ml-1 text-caption font-normal text-chalk-dim">
+                        {weightUnit} × {entry.reps}
                       </span>
-                    </p>
-                    <p className="font-mono text-[11px] text-chalk-dim/70">{formatDate(entry.date)}</p>
+                    </span>
+                    <span className="text-caption text-chalk-dim">{formatDate(entry.date)}</span>
                   </>
                 ) : (
-                  <p className="font-mono text-xl font-bold text-chalk-dim/40">—</p>
+                  <span className="text-[15px] text-chalk-dim">No sets yet</span>
                 )}
-              </div>
+              </span>
             )
           })}
-        </div>
-      </Card>
+        </span>
+      </button>
     )
   }
 
@@ -259,22 +261,20 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
     const visible = expanded || isSearching ? sectionExercises : sectionExercises.slice(0, COLLAPSED_COUNT)
 
     return (
-      <div className="flex flex-col gap-3">
-        <h2 className="flex items-center gap-2 px-1 text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
-          <span className="h-2.5 w-0.5 bg-blue-500" />
-          {label}
-        </h2>
+      <section className="flex flex-col gap-3">
+        <h2 className="px-1 text-headline text-chalk">{label}</h2>
         <div className="grid grid-cols-2 gap-3">{visible.map(renderExerciseCard)}</div>
         {hasOverflow && (
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="w-full rounded-md border border-line bg-surface-2 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase active:border-blue-500 active:text-blue-400"
+            aria-expanded={expanded}
+            className="h-11 w-full rounded-full bg-surface text-[15px] font-semibold text-chalk-dim active:text-chalk"
           >
-            {expanded ? 'Show less' : `Show all (${sectionExercises.length})`}
+            {expanded ? 'Show less' : `Show all ${sectionExercises.length}`}
           </button>
         )}
-      </div>
+      </section>
     )
   }
 
@@ -293,29 +293,35 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
     ? libraryExercises.filter((e) => e.name.toLowerCase().includes(normalizedSearch))
     : libraryExercises
 
-  const upperExercises = visibleExercises.filter((e) => bodyRegionFor(e) === 'Upper Body').sort(byLoggedFirst)
-  const lowerExercises = visibleExercises.filter((e) => bodyRegionFor(e) === 'Lower Body').sort(byLoggedFirst)
+  const upperExercises = visibleExercises.filter((e) => bodyRegionFor(e) === 'Upper body').sort(byLoggedFirst)
+  const lowerExercises = visibleExercises.filter((e) => bodyRegionFor(e) === 'Lower body').sort(byLoggedFirst)
 
   return (
     <>
       {!exercisesLoaded ? (
-        <div aria-busy="true" className="flex flex-col gap-3">
+        <div aria-busy="true" className="flex flex-col gap-5">
           <span className="sr-only">Loading</span>
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
+          <Skeleton className="h-11 rounded-field" />
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton className="h-44" />
+            <Skeleton className="h-44" />
+            <Skeleton className="h-44" />
+            <Skeleton className="h-44" />
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-5">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-chalk-dim">
-              Your all-time best set per exercise, and how it compares to everyone else's.
+            <p className="px-1 text-caption text-chalk-dim">
+              Your all-time best set per exercise, and how it compares to everyone else’s.
             </p>
             <button
               type="button"
               onClick={() => setAddOpen(true)}
-              className="shrink-0 rounded-md bg-blue-500 px-4 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600"
+              aria-haspopup="dialog"
+              className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-blue-500 pr-5 pl-4 text-[15px] font-semibold text-onblue active:bg-blue-600"
             >
+              <PlusIcon className="h-4 w-4" aria-hidden="true" />
               Add exercise
             </button>
           </div>
@@ -325,22 +331,23 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search exercises"
+              aria-label="Search exercises"
               autoComplete="off"
-              className="w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+              className="h-11 w-full min-w-0 rounded-field bg-surface px-4 text-base text-chalk placeholder:text-chalk-dim focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           )}
           {libraryExercises.length === 0 ? (
             <Card className="p-4">
-              <p className="text-sm text-chalk-dim">No exercises yet.</p>
+              <p className="text-[15px] text-chalk-dim">No exercises yet. Add one to start tracking your best sets.</p>
             </Card>
           ) : isSearching && visibleExercises.length === 0 ? (
             <Card className="p-4">
-              <p className="text-sm text-chalk-dim">No exercises match “{search.trim()}”.</p>
+              <p className="text-[15px] text-chalk-dim">No exercises match “{search.trim()}”.</p>
             </Card>
           ) : (
             <>
-              {renderSection('Upper Body', upperExercises, expandedUpper, setExpandedUpper, isSearching)}
-              {renderSection('Lower Body', lowerExercises, expandedLower, setExpandedLower, isSearching)}
+              {renderSection('Upper body', upperExercises, expandedUpper, setExpandedUpper, isSearching)}
+              {renderSection('Lower body', lowerExercises, expandedLower, setExpandedLower, isSearching)}
             </>
           )}
         </div>

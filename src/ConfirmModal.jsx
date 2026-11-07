@@ -5,12 +5,14 @@ import Button from './Button'
 // library exercise, a photo) — as opposed to ConfirmDeleteButton's
 // tap-to-arm pattern, still used for low-blast-radius deletes. Shaped like
 // an iOS action sheet: message, destructive action, cancel.
-function ConfirmModal({ open, title, message, confirmLabel = 'Delete', onConfirm, onCancel }) {
+// `confirmVariant` is a Button variant: red for deletes (the default), accent
+// for a positive action that still deserves a pause (sharing, repeating).
+function ConfirmModal({ open, title, message, confirmLabel = 'Delete', confirmVariant = 'destructive', onConfirm, onCancel }) {
   return (
     <Sheet open={open} onClose={onCancel} title={title}>
       <p className="text-[15px] text-chalk-dim">{message}</p>
       <div className="mt-6 flex flex-col gap-2">
-        <Button variant="destructive" onClick={onConfirm}>
+        <Button variant={confirmVariant} onClick={onConfirm}>
           {confirmLabel}
         </Button>
         <Button variant="secondary" onClick={onCancel}>

@@ -14,19 +14,17 @@ function CalorieTracker({ profiles, userId, target, onError }) {
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-4">
-        <div className="flex items-center justify-between">
-          <p className="flex items-center gap-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-            <FlameIcon className="h-4 w-4 text-blue-400" />
-            Calories today
-          </p>
-        </div>
-        <p className="mt-3 font-mono text-5xl font-bold text-blue-400">
+        <h2 className="flex items-center gap-2 text-headline text-chalk">
+          <FlameIcon className="h-5 w-5 text-chalk-dim" aria-hidden="true" />
+          Calories today
+        </h2>
+        <p className="mt-2 text-display tabular-nums text-chalk">
           {todaysEntry ? Math.round(Number(todaysEntry.calories)) : '—'}
-          <span className="ml-2 font-body text-lg font-normal text-chalk-dim">
+          <span className="ml-1.5 text-[17px] font-normal tracking-normal text-chalk-dim">
             {target ? `/ ${target} kcal` : 'kcal'}
           </span>
         </p>
-        <p className="mt-1 text-xs text-chalk-dim">
+        <p className="mt-1 text-caption text-chalk-dim">
           {!entriesLoaded
             ? 'Loading…'
             : todaysEntry

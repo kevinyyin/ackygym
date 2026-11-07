@@ -1,4 +1,4 @@
-const LINK_CLASSES = 'font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400'
+const LINK_CLASSES = 'h-11 shrink-0 rounded-full px-2 text-[15px] font-semibold text-blue-400 active:text-blue-300'
 
 // "Select all / none" and "Select / Cancel" for a list driven by useSelection.
 function SelectControls({ selection, ids }) {

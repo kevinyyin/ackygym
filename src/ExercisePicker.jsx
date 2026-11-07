@@ -70,13 +70,13 @@ function ExercisePicker({
         className={inputClassName}
       />
       {open && exercises.length > 0 && (
-        <div className="absolute top-full left-0 z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-line bg-surface-2 shadow-lg">
+        <div className="absolute top-full left-0 z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-field bg-surface-2 py-1 shadow-[0_10px_30px_var(--shadow-tint)]">
           {groups.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-chalk-dim">No matches</p>
+            <p className="px-4 py-3 text-[15px] text-chalk-dim">No matches</p>
           ) : (
             groups.map((group) => (
               <div key={group.key}>
-                <p className="px-3 pt-2 pb-1 font-mono text-[10px] tracking-[0.15em] text-chalk-dim uppercase">
+                <p className="px-4 pt-3 pb-1 text-caption text-chalk-dim">
                   {group.label}
                 </p>
                 {group.items.map((exercise) => (
@@ -85,11 +85,9 @@ function ExercisePicker({
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selectExercise(exercise)}
-                    className={
-                      exercise.id === selected?.id
-                        ? 'block w-full truncate px-3 py-2 text-left text-sm text-blue-400'
-                        : 'block w-full truncate px-3 py-2 text-left text-sm text-chalk hover:bg-surface'
-                    }
+                    className={`block min-h-11 w-full truncate px-4 text-left text-[15px] hover:bg-surface active:bg-surface ${
+                      exercise.id === selected?.id ? 'font-semibold text-blue-400' : 'text-chalk'
+                    }`}
                   >
                     {exercise.name}
                   </button>

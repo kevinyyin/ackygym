@@ -4,7 +4,7 @@ import Card from './Card'
 import { groupByUser } from './groupByUser'
 import { getTodayDateString, formatDate } from './dateUtils'
 import { isPositiveNumber } from './validation'
-import { CheckIcon, CloseIcon } from './icons'
+import { CheckIcon, CloseIcon, ChevronRightIcon } from './icons'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
@@ -150,13 +150,13 @@ function HistoryLogSection({
   const isFiltering = normalizedDateFilter !== ''
 
   const inputClasses =
-    'w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none'
+    'h-11 w-full min-w-0 rounded-field bg-surface-2 px-4 text-base text-chalk placeholder:text-chalk-dim focus:ring-2 focus:ring-blue-500 focus:outline-none'
 
   return (
     <>
       <Card className="p-4">
         <h2 className="text-headline text-chalk">{logLabel}</h2>
-        <form onSubmit={handleSubmit} className="mt-3 flex gap-3">
+        <form onSubmit={handleSubmit} className="mt-3 flex gap-2">
           <input
             type="number"
             inputMode={inputProps.inputMode}
@@ -165,13 +165,14 @@ function HistoryLogSection({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder={placeholder}
+            aria-label={placeholder}
             required
             className={inputClasses}
           />
           <button
             type="submit"
             disabled={submitting}
-            className="shrink-0 rounded-md bg-blue-500 px-4 py-3 font-body text-base font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
+            className="h-11 shrink-0 rounded-full bg-blue-500 px-5 text-[15px] font-semibold text-onblue active:bg-blue-600 disabled:opacity-40"
           >
             {submitting ? 'Saving…' : accumulate ? 'Add' : 'Log'}
           </button>
@@ -179,15 +180,16 @@ function HistoryLogSection({
       </Card>
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-headline text-chalk">History</h2>
+        <h2 className="px-1 text-headline text-chalk">History</h2>
         {entriesLoaded && entries.length > 0 && (
           <input
             type="text"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
             placeholder="Filter by date (e.g. 2026-03)"
+            aria-label="Filter by date"
             autoComplete="off"
-            className="w-full rounded-md border border-line bg-surface-2 px-4 py-3 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+            className="h-11 w-full min-w-0 rounded-field bg-surface px-4 text-base text-chalk placeholder:text-chalk-dim focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         )}
         {!entriesLoaded ? (
@@ -199,7 +201,7 @@ function HistoryLogSection({
           </div>
         ) : groupedEntries.length === 0 ? (
           <Card className="p-4">
-            <p className="text-sm text-chalk-dim">{emptyLogMessage}</p>
+            <p className="text-[15px] text-chalk-dim">{emptyLogMessage}</p>
           </Card>
         ) : (
           groupedEntries.map((group) => {
@@ -212,23 +214,28 @@ function HistoryLogSection({
                 <button
                   type="button"
                   onClick={() => setChartGroup(group)}
-                  className="w-full border-b border-line px-4 py-2 text-left font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                  aria-haspopup="dialog"
+                  className="flex min-h-12 w-full items-center justify-between gap-2 border-b border-line px-4 text-left active:bg-surface-2"
                 >
-                  {group.name}
+                  <span className="min-w-0 truncate text-[17px] font-semibold text-chalk">{group.name}</span>
+                  <span className="flex shrink-0 items-center gap-0.5 text-[15px] text-blue-400">
+                    Chart
+                    <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
+                  </span>
                 </button>
                 {visibleEntries.length === 0 ? (
-                  <p className="px-4 py-3 text-sm text-chalk-dim">No entries match “{normalizedDateFilter}”.</p>
+                  <p className="px-4 py-3 text-[15px] text-chalk-dim">No entries match “{normalizedDateFilter}”.</p>
                 ) : (
                   <ul className="divide-y divide-line">
                     {visibleEntries.map((entry) => {
                       const isEditing = editingEntryId === entry.id
                       return (
-                        <li key={entry.id} className="flex items-center justify-between gap-2 px-4 py-3">
-                          <span className="font-mono text-sm text-chalk-dim">
+                        <li key={entry.id} className="flex min-h-12 items-center justify-between gap-2 py-0.5 pr-1 pl-4">
+                          <span className="text-[15px] tabular-nums text-chalk-dim">
                             {formatDate(entry.date, { year: true })}
                           </span>
                           {isEditing ? (
-                            <span className="flex items-center gap-2">
+                            <span className="flex items-center">
                               <input
                                 type="number"
                                 inputMode={inputProps.inputMode}
@@ -237,30 +244,31 @@ function HistoryLogSection({
                                 autoFocus
                                 value={draftValue}
                                 onChange={(e) => setDraftValue(e.target.value)}
-                                className="w-20 rounded-md border border-line bg-surface-2 px-2 py-1 text-right font-mono text-sm text-chalk focus:border-blue-500 focus:outline-none"
+                                aria-label={`New value for ${formatDate(entry.date, { year: true })}`}
+                                className="h-11 w-24 rounded-field bg-surface-2 px-3 text-right text-base tabular-nums text-chalk focus:ring-2 focus:ring-blue-500 focus:outline-none"
                               />
-                              <span className="font-mono text-xs text-chalk-dim">{unitSuffix}</span>
+                              <span className="ml-1.5 text-caption text-chalk-dim">{unitSuffix}</span>
                               <button
                                 type="button"
                                 onClick={() => saveEdit(entry.id)}
                                 disabled={!isPositiveNumber(parseInput(draftValue))}
-                                className="shrink-0 text-blue-400 disabled:opacity-40"
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-blue-400 disabled:opacity-40"
                                 aria-label="Save entry"
                               >
-                                <CheckIcon className="h-4 w-4" />
+                                <CheckIcon className="h-5 w-5" />
                               </button>
                               <button
                                 type="button"
                                 onClick={cancelEdit}
-                                className="shrink-0 text-chalk-dim hover:text-danger"
+                                className="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-chalk-dim"
                                 aria-label="Cancel editing entry"
                               >
-                                <CloseIcon className="h-4 w-4" />
+                                <CloseIcon className="h-5 w-5" />
                               </button>
                             </span>
                           ) : (
-                            <span className="flex items-center gap-3">
-                              <span className="font-mono font-medium text-chalk">
+                            <span className="flex min-h-11 items-center">
+                              <span className="pr-3 text-[15px] font-semibold tabular-nums text-chalk">
                                 {formatValue(entry[valueColumn])} {unitSuffix}
                               </span>
                               {entry.user_id === userId && (
@@ -268,15 +276,15 @@ function HistoryLogSection({
                                   <button
                                     type="button"
                                     onClick={() => startEdit(entry)}
-                                    aria-label="Edit entry"
-                                    className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+                                    aria-label={`Edit ${formatDate(entry.date, { year: true })} entry`}
+                                    className="h-11 rounded-full px-2 text-[15px] text-blue-400 active:text-blue-300"
                                   >
                                     Edit
                                   </button>
                                   <ConfirmDeleteButton
                                     onConfirm={() => handleDelete(entry.id)}
                                     label={`${formatDate(entry.date, { year: true })} entry`}
-                                    className="shrink-0"
+                                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
                                   />
                                 </>
                               )}

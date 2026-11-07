@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Card from './Card'
+import SegmentedControl from './SegmentedControl'
 import MuscleBodyMap from './MuscleBodyMap'
 import { sortMuscleGroups } from './muscleGroupOrder'
 import { getDateDaysAgoString } from './dateUtils'
@@ -12,6 +13,7 @@ const RANGE_OPTIONS = [
   { days: 14, pillLabel: '2W', summaryLabel: 'last 2 weeks' },
   { days: 30, pillLabel: '1M', summaryLabel: 'last month' },
 ]
+const RANGE_SEGMENTS = RANGE_OPTIONS.map((o) => ({ key: o.days, label: o.pillLabel }))
 
 function aggregateVolume(sets) {
   const byMuscle = new Map()
@@ -89,28 +91,20 @@ function MuscleVolume({ userId, onError }) {
 
   return (
     <Card className="p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
-          Muscle volume
-        </p>
-        <div className="inline-flex shrink-0 rounded-full border border-line bg-surface-2 p-0.5">
-          {RANGE_OPTIONS.map((option) => (
-            <button
-              key={option.days}
-              type="button"
-              onClick={() => setRangeDays(option.days)}
-              className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
-                rangeDays === option.days ? 'bg-blue-500 text-onblue' : 'text-chalk-dim'
-              }`}
-            >
-              {option.pillLabel}
-            </button>
-          ))}
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-headline text-chalk">Muscle volume</h2>
+        <div className="w-40 shrink-0">
+          <SegmentedControl
+            segments={RANGE_SEGMENTS}
+            value={rangeDays}
+            onChange={setRangeDays}
+            layoutId="seg-volume-range"
+          />
         </div>
       </div>
 
-      <p className="mt-3 font-mono text-sm text-chalk-dim">
-        <span className="font-bold text-blue-400">{workoutCount}</span>{' '}
+      <p className="mt-1 text-[15px] text-chalk-dim">
+        <span className="font-semibold tabular-nums text-chalk">{workoutCount}</span>{' '}
         {workoutCount === 1 ? 'workout' : 'workouts'} · {summaryLabel}
       </p>
 
@@ -121,13 +115,14 @@ function MuscleVolume({ userId, onError }) {
           <Skeleton tone="surface-2" className="h-11 rounded-field" />
         </div>
       ) : volume.length === 0 ? (
-        <p className="mt-3 text-sm text-chalk-dim">No sets logged in this period.</p>
+        <p className="mt-4 text-[15px] text-chalk-dim">No sets logged in this period.</p>
       ) : (
         <>
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="mt-3 w-full rounded-md border border-line bg-surface-2 py-2 font-mono text-[11px] tracking-wide text-chalk-dim uppercase active:border-blue-500 active:text-blue-400"
+            aria-expanded={expanded}
+            className="mt-4 h-11 w-full rounded-full bg-surface-2 text-[15px] font-semibold text-chalk-dim active:text-chalk"
           >
             {expanded ? 'Hide breakdown' : 'Show breakdown'}
           </button>
@@ -138,13 +133,13 @@ function MuscleVolume({ userId, onError }) {
                 <MuscleBodyMap muscles={bodyMapMuscles} />
               </div>
 
-              <ul className="mt-4 flex flex-col gap-1.5">
+              <ul className="mt-4 flex flex-col divide-y divide-line">
                 {volumeByCount.map((v) => {
                   const total = v.primarySets + v.secondarySets
                   return (
-                    <li key={v.name} className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-chalk">{v.label}</span>
-                      <span className="font-mono text-sm text-chalk-dim">
+                    <li key={v.name} className="flex items-center justify-between gap-2 py-2.5">
+                      <span className="text-[15px] text-chalk">{v.label}</span>
+                      <span className="text-[15px] tabular-nums text-chalk-dim">
                         {total} {total === 1 ? 'set' : 'sets'}
                       </span>
                     </li>

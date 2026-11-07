@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from './supabaseClient'
 import Card from './Card'
+import Button from './Button'
 import { displayName } from './displayName'
 import { getTodayDateString, formatDate } from './dateUtils'
-import { CameraIcon, CloseIcon } from './icons'
+import { CameraIcon, CheckIcon, CloseIcon, LockIcon, PeopleIcon, PlusIcon } from './icons'
 import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
@@ -12,6 +13,7 @@ import { smooth } from './motionPresets'
 import Skeleton from './Skeleton'
 import { useCachedState } from './pageCache'
 import { useSelection } from './useSelection'
+import { useModalFocusTrap } from './useModalFocusTrap'
 import SelectControls from './SelectControls'
 
 const BUCKET = 'progress-photos'
@@ -36,9 +38,17 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   const selection = useSelection()
   const { selectMode, selectedIds: selectedPhotoIds } = selection
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
+  // Ids waiting on the share confirmation; sharing a body photo is never one tap.
+  const [photoIdsToShare, setPhotoIdsToShare] = useState(null)
   const { isPending, message, stageDelete, undo } = useDeferredDelete('progress-photos')
+  const lightboxRef = useModalFocusTrap(viewingPhoto !== null)
 
   const profileByUserId = Object.fromEntries(profiles.map((p) => [p.id, p]))
+  const otherNames = profiles.filter((p) => p.id !== userId).map(displayName)
+  const audience =
+    otherNames.length > 0
+      ? new Intl.ListFormat(undefined, { type: 'conjunction' }).format(otherNames)
+      : 'everyone else who joins Ackygym'
   const visiblePhotos = photos.filter((p) => !isPending(p.id))
   const ownPhotoIds = visiblePhotos.filter((p) => p.user_id === userId).map((p) => p.id)
 
@@ -144,20 +154,40 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     setRefreshKey((k) => k + 1)
   }
 
-  async function handleToggleShare(photo) {
+  async function setShared(ids, shared) {
     onError('')
-
     const { error } = await supabase
       .from('progress_photos')
-      .update({ shared: !photo.shared })
-      .eq('id', photo.id)
+      .update({ shared })
+      .in('id', ids)
+      .eq('user_id', userId)
 
     if (error) {
       onError(error.message)
-      return
+      return false
     }
-
     setRefreshKey((k) => k + 1)
+    return true
+  }
+
+  async function handleConfirmShare() {
+    const ids = photoIdsToShare
+    setPhotoIdsToShare(null)
+    if ((await setShared(ids, true)) && selectMode) selection.exit()
+  }
+
+  // Unsharing narrows who can see it, so it needs no confirmation.
+  async function handleStopSharing(photo) {
+    if (await setShared([photo.id], false)) {
+      setViewingPhoto((current) => (current?.id === photo.id ? { ...current, shared: false } : current))
+    }
+  }
+
+  // The confirm sheets sit below the lightbox, so it closes first.
+  function openFromLightbox(action) {
+    const photo = viewingPhoto
+    setViewingPhoto(null)
+    action(photo)
   }
 
   // Single and bulk deletes share one path: the files first, then the rows.
@@ -195,22 +225,6 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
     stagePhotoDelete([photo.id], [photo.path], 'Photo deleted')
   }
 
-  async function handleBulkShare() {
-    onError('')
-    const { error } = await supabase
-      .from('progress_photos')
-      .update({ shared: true })
-      .in('id', [...selectedPhotoIds])
-      .eq('user_id', userId)
-
-    if (error) {
-      onError(error.message)
-      return
-    }
-
-    selection.exit()
-    setRefreshKey((k) => k + 1)
-  }
 
   function handleBulkDelete() {
     const ids = [...selectedPhotoIds]
@@ -223,94 +237,100 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
   return (
     <>
     <div className="flex flex-col gap-4">
-      <Card className="p-4">
-        <div className="flex items-center justify-between gap-3">
+      <Card className="flex flex-col gap-3 p-4">
+        <div className="-my-1.5 flex items-center justify-between gap-2">
           <h2 className="text-headline text-chalk">Progress photos</h2>
-          <div className="flex shrink-0 items-center gap-3">
-            {ownPhotoIds.length > 0 && <SelectControls selection={selection} ids={ownPhotoIds} />}
-            <label className="cursor-pointer rounded-md bg-blue-500 px-4 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600">
-              {uploading ? 'Uploading…' : 'Add photo'}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleUpload}
-                disabled={uploading}
-                className="hidden"
-              />
-            </label>
-          </div>
+          {ownPhotoIds.length > 0 && (
+            <div className="-mr-2 flex shrink-0 items-center">
+              <SelectControls selection={selection} ids={ownPhotoIds} />
+            </div>
+          )}
         </div>
-        <p className="mt-2 text-xs text-chalk-dim">
-          Private by default — share individual photos to let others see them.
+        <p className="text-caption text-chalk-dim">
+          Private by default. Open a photo to share it with {audience}.
         </p>
+        {/* A label, not a button, so the tap opens the picker natively; the
+            input stays focusable (sr-only, not display:none) for keyboards. */}
+        <label
+          aria-disabled={uploading || undefined}
+          className={`flex h-11 items-center justify-center gap-1.5 rounded-full bg-blue-500 text-[15px] font-semibold text-onblue focus-within:ring-2 focus-within:ring-blue-300 focus-within:ring-offset-2 focus-within:ring-offset-surface active:bg-blue-600 ${
+            uploading ? 'opacity-40' : 'cursor-pointer'
+          }`}
+        >
+          <PlusIcon className="h-4 w-4" aria-hidden="true" />
+          {uploading ? 'Uploading…' : 'Add photo'}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleUpload}
+            disabled={uploading}
+            className="sr-only"
+          />
+        </label>
       </Card>
 
       {!photosLoaded ? (
-        <div aria-busy="true" className="flex flex-col gap-3">
+        <div aria-busy="true" className="grid grid-cols-2 gap-3">
           <span className="sr-only">Loading</span>
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
-          <Skeleton className="h-16" />
+          <Skeleton className="aspect-[4/5]" />
+          <Skeleton className="aspect-[4/5]" />
         </div>
       ) : visiblePhotos.length === 0 ? (
         <Card className="p-4">
-          <p className="text-sm text-chalk-dim">No progress photos yet.</p>
+          <p className="text-[15px] text-chalk-dim">No progress photos yet. Add one to start comparing.</p>
         </Card>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {visiblePhotos.map((photo) => {
             const isOwn = photo.user_id === userId
+            const dateLabel = formatDate(photo.date, { year: true })
+            const selected = selectedPhotoIds.has(photo.id)
+            const selecting = isOwn && selectMode
             return (
               <Card key={photo.id} className="overflow-hidden">
                 <div className="relative aspect-square bg-surface-2">
-                  {signedUrlByPath[photo.path] ? (
-                    <img
-                      src={signedUrlByPath[photo.path]}
-                      alt={`Progress photo from ${formatDate(photo.date, { year: true })}`}
-                      onClick={() =>
-                        isOwn && selectMode ? selection.toggle(photo.id) : setViewingPhoto(photo)
-                      }
-                      className={`h-full w-full cursor-pointer object-cover ${
-                        selectMode && selectedPhotoIds.has(photo.id) ? 'opacity-50' : ''
-                      }`}
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-chalk-dim">
+                  {/* The photo itself is the open (or select) target, so it's a real button. */}
+                  <button
+                    type="button"
+                    onClick={() => (selecting ? selection.toggle(photo.id) : setViewingPhoto(photo))}
+                    aria-label={`${selecting ? 'Select' : 'View'} photo from ${dateLabel}${isOwn ? (photo.shared ? ', shared' : ', private') : ''}`}
+                    aria-pressed={selecting ? selected : undefined}
+                    className="absolute inset-0 flex items-center justify-center text-chalk-dim focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none focus-visible:ring-inset"
+                  >
+                    {signedUrlByPath[photo.path] ? (
+                      <img
+                        src={signedUrlByPath[photo.path]}
+                        alt=""
+                        className={`h-full w-full object-cover transition-opacity ${selecting && selected ? 'opacity-50' : ''}`}
+                      />
+                    ) : (
                       <CameraIcon className="h-6 w-6" />
-                    </div>
-                  )}
-                  {isOwn && !selectMode && (
-                    <button
-                      onClick={() => handleToggleShare(photo)}
-                      aria-label={photo.shared ? 'Stop sharing photo' : 'Share photo'}
-                      className={`absolute top-2 left-2 rounded-full px-2 py-1 font-mono text-[10px] font-semibold tracking-wide uppercase backdrop-blur ${
-                        photo.shared ? 'bg-blue-500 text-onblue' : 'bg-ink/70 text-chalk-dim'
+                    )}
+                  </button>
+                  {/* State only: sharing and deleting live in the viewer, away from
+                      the thumb that's reaching to open the photo. */}
+                  {isOwn && (
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute bottom-2 left-2 flex h-7 w-7 items-center justify-center rounded-full backdrop-blur ${
+                        photo.shared ? 'bg-blue-500 text-onblue' : 'bg-ink/70 text-chalk'
                       }`}
                     >
-                      {photo.shared ? 'Shared' : 'Share'}
-                    </button>
+                      {photo.shared ? <PeopleIcon className="h-4 w-4" /> : <LockIcon className="h-3.5 w-3.5" />}
+                    </span>
                   )}
-                  {isOwn && !selectMode && (
-                    <button
-                      type="button"
-                      onClick={() => setPhotoToDelete(photo)}
-                      aria-label={`Delete photo from ${formatDate(photo.date, { year: true })}`}
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur hover:text-danger"
+                  {selecting && (
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+                        selected ? 'border-blue-500 bg-blue-500 text-onblue' : 'border-white/80 bg-ink/40'
+                      }`}
                     >
-                      <CloseIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                  {isOwn && selectMode && (
-                    <input
-                      type="checkbox"
-                      checked={selectedPhotoIds.has(photo.id)}
-                      onChange={() => selection.toggle(photo.id)}
-                      aria-label={`Select photo from ${formatDate(photo.date, { year: true })}`}
-                      className="absolute top-2 right-2 h-5 w-5 accent-blue-500"
-                    />
+                      {selected && <CheckIcon className="h-4 w-4" />}
+                    </span>
                   )}
                 </div>
-                <p className="px-3 py-2 text-center font-mono text-xs text-chalk-dim">
+                <p className="truncate px-3 py-2 text-center text-caption text-chalk-dim">
                   {captionFor(photo, userId, profileByUserId)}
                 </p>
               </Card>
@@ -321,20 +341,12 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
 
       {selectMode && selectedPhotoIds.size > 0 && (
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleBulkShare}
-            className="flex-1 rounded-md border border-line px-4 py-2 font-body text-sm font-semibold text-chalk-dim active:border-blue-500 active:text-blue-400"
-          >
-            Share {selectedPhotoIds.size} selected
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmBulkDelete(true)}
-            className="flex-1 rounded-md border border-danger px-4 py-2 font-body text-sm font-bold text-danger active:bg-danger/10"
-          >
-            Delete {selectedPhotoIds.size} selected
-          </button>
+          <Button variant="secondary" className="flex-1 px-4 text-[15px]" onClick={() => setPhotoIdsToShare([...selectedPhotoIds])}>
+            Share {selectedPhotoIds.size}
+          </Button>
+          <Button variant="destructive" className="flex-1 px-4 text-[15px]" onClick={() => setConfirmBulkDelete(true)}>
+            Delete {selectedPhotoIds.size}
+          </Button>
         </div>
       )}
 
@@ -342,17 +354,23 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
         {viewingPhoto && (
           <motion.div
             key="lightbox"
+            ref={lightboxRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Photo from ${formatDate(viewingPhoto.date, { year: true })}`}
+            tabIndex={-1}
             onClick={() => setViewingPhoto(null)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={smooth}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/95 p-4"
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/95 px-4 pt-[max(4rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] focus:outline-none"
           >
             <button
               onClick={() => setViewingPhoto(null)}
+              type="button"
               aria-label="Close"
-              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-ink/70 text-chalk backdrop-blur active:text-danger"
+              className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white"
             >
               <CloseIcon className="h-5 w-5" />
             </button>
@@ -361,12 +379,49 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
                 src={signedUrlByPath[viewingPhoto.path]}
                 alt={`Progress photo from ${formatDate(viewingPhoto.date, { year: true })}`}
                 onClick={(e) => e.stopPropagation()}
-                className="max-h-[85vh] max-w-[95vw] object-contain"
+                className="min-h-0 max-w-full flex-1 object-contain"
               />
             )}
-            <p className="font-mono text-xs text-chalk-dim">
+            <p className="text-caption text-white/70">
               {captionFor(viewingPhoto, userId, profileByUserId)}
             </p>
+            {viewingPhoto.user_id === userId && (
+              <div onClick={(e) => e.stopPropagation()} className="flex w-full max-w-sm flex-col items-center gap-3">
+                <p className="flex items-center gap-1.5 text-caption text-white/70">
+                  {viewingPhoto.shared ? (
+                    <>
+                      <PeopleIcon className="h-4 w-4" aria-hidden="true" />
+                      Shared with {audience}
+                    </>
+                  ) : (
+                    <>
+                      <LockIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                      Private. Only you can see it.
+                    </>
+                  )}
+                </p>
+                <div className="flex w-full gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      viewingPhoto.shared
+                        ? handleStopSharing(viewingPhoto)
+                        : openFromLightbox((photo) => setPhotoIdsToShare([photo.id]))
+                    }
+                    className="h-11 flex-1 rounded-full bg-white/15 text-[15px] font-semibold text-white active:bg-white/25"
+                  >
+                    {viewingPhoto.shared ? 'Stop sharing' : 'Share…'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openFromLightbox(setPhotoToDelete)}
+                    className="h-11 flex-1 rounded-full bg-white/15 text-[15px] font-semibold text-white active:bg-white/25"
+                  >
+                    Delete…
+                  </button>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -378,6 +433,16 @@ function ProgressPhotosPage({ profiles, userId, onError }) {
       message={`This photo from ${photoToDelete ? formatDate(photoToDelete.date, { year: true }) : ''} will be permanently removed.`}
       onConfirm={() => handleDelete(photoToDelete)}
       onCancel={() => setPhotoToDelete(null)}
+    />
+
+    <ConfirmModal
+      open={photoIdsToShare !== null}
+      title={photoIdsToShare?.length > 1 ? `Share ${photoIdsToShare.length} photos?` : 'Share this photo?'}
+      message={`${audience[0].toUpperCase()}${audience.slice(1)} will be able to see ${photoIdsToShare?.length > 1 ? 'them' : 'it'} on their Photos page. You can stop sharing at any time.`}
+      confirmLabel="Share"
+      confirmVariant="accent"
+      onConfirm={handleConfirmShare}
+      onCancel={() => setPhotoIdsToShare(null)}
     />
 
     <ConfirmModal

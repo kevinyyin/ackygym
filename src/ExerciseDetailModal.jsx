@@ -25,7 +25,7 @@ function ExerciseHeader({ exercise, onRename }) {
         <button
           type="button"
           onClick={() => setDraft(exercise.name)}
-          className="ml-auto shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+          className="-my-2 ml-auto h-11 shrink-0 rounded-full px-3 text-[15px] font-semibold text-blue-400 active:text-blue-300"
         >
           Rename
         </button>
@@ -41,19 +41,19 @@ function ExerciseHeader({ exercise, onRename }) {
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         aria-label="Exercise name"
-        className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-body text-sm text-chalk focus:border-blue-500 focus:outline-none"
+        className="h-11 w-full min-w-0 rounded-field bg-surface-2 px-4 text-base text-chalk focus:ring-2 focus:ring-blue-500 focus:outline-none"
       />
       <button
         type="submit"
         disabled={saving || !draft.trim()}
-        className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
+        className="h-11 shrink-0 rounded-full bg-blue-500 px-5 text-[15px] font-semibold text-onblue active:bg-blue-600 disabled:opacity-40"
       >
         {saving ? 'Saving…' : 'Save'}
       </button>
       <button
         type="button"
         onClick={() => setDraft(null)}
-        className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+        className="h-11 shrink-0 rounded-full px-3 text-[15px] font-semibold text-chalk-dim active:text-chalk"
       >
         Cancel
       </button>
@@ -68,11 +68,7 @@ function ExerciseDetailModal({ exercise, userId, weightUnit, onClose, onError, o
         <>
           <ExerciseHeader key={exercise.id} exercise={exercise} onRename={onRename} />
 
-          <div className="mt-4">
-            <MuscleBodyMap muscles={exercise.exercise_muscles} />
-          </div>
-
-          <div className="mt-8">
+          <section className="mt-6">
             <h3 className="text-headline">Progression</h3>
             <ExerciseProgression
               exerciseId={exercise.id}
@@ -81,7 +77,14 @@ function ExerciseDetailModal({ exercise, userId, weightUnit, onClose, onError, o
               onError={onError}
               onChanged={onChanged}
             />
-          </div>
+          </section>
+
+          <section className="mt-8">
+            <h3 className="text-headline">Muscles worked</h3>
+            <div className="mt-3">
+              <MuscleBodyMap muscles={exercise.exercise_muscles} />
+            </div>
+          </section>
 
           <Button variant="destructive" className="mt-8" onClick={() => onDelete(exercise)}>
             Delete exercise

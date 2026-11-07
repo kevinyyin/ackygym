@@ -189,3 +189,22 @@ export function RepeatIcon(props) {
     </BaseIcon>
   )
 }
+
+export function LockIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <rect x="5" y="11" width="14" height="9.5" rx="2" />
+      <path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3" />
+    </BaseIcon>
+  )
+}
+
+export function PeopleIcon(props) {
+  return (
+    <BaseIcon {...props}>
+      <circle cx="9" cy="8.5" r="3.25" />
+      <path d="M3.5 19.5c.6-3 2.9-4.75 5.5-4.75s4.9 1.75 5.5 4.75" />
+      <path d="M15.5 5.6a3.25 3.25 0 0 1 0 5.8M17.5 14.9c1.6.6 2.7 2.2 3 4.6" />
+    </BaseIcon>
+  )
+}

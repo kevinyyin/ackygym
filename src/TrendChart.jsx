@@ -16,10 +16,11 @@ function TrendChart({ data, formatTooltip, yDomain, referenceValue, className })
           <Tooltip
             contentStyle={{
               backgroundColor: 'var(--color-surface-2)',
-              border: '1px solid var(--color-line)',
-              borderRadius: 6,
+              border: 'none',
+              borderRadius: 12,
+              boxShadow: '0 10px 30px var(--shadow-tint)',
               color: 'var(--color-chalk)',
-              fontSize: 12,
+              fontSize: 13,
             }}
             labelStyle={{ color: 'var(--color-chalk-dim)' }}
             formatter={formatTooltip}

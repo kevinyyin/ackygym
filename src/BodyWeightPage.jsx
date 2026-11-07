@@ -46,12 +46,12 @@ function BodyWeightPage({ profiles, userId, onError, showCalorieTracker, showCal
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-4">
-        <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">Body weight</p>
-        <p className="mt-3 font-mono text-5xl font-bold text-blue-400">
+        <h2 className="text-headline text-chalk">Body weight</h2>
+        <p className="mt-2 text-display tabular-nums text-chalk">
           {latestOwnEntry ? `${toDisplayWeight(latestOwnEntry.weight_kg, unit)}` : '—'}
-          <span className="ml-2 font-body text-lg font-normal text-chalk-dim">{unit}</span>
+          <span className="ml-1.5 text-[17px] font-normal tracking-normal text-chalk-dim">{unit}</span>
         </p>
-        <p className="mt-1 text-xs text-chalk-dim">
+        <p className="mt-1 text-caption text-chalk-dim">
           {!entriesLoaded
             ? 'Loading…'
             : latestOwnEntry
