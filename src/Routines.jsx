@@ -552,11 +552,15 @@ function Routines({
     setOwnOrder(next.map((r) => r.id))
     onError('')
     const seq = ++reorderSeqRef.current
-    // The whole order in one request, so a failure can't leave half of it saved.
-    const rows = next.map((r, position) => ({ id: r.id, user_id: r.user_id, name: r.name, position }))
-    const save = reorderSaveRef.current.then(() => supabase.from('routines').upsert(rows))
+    // Per-row updates, not one upsert: routines.id is GENERATED ALWAYS, so an
+    // upsert carrying ids is rejected. A partial failure refetches the real order.
+    const save = reorderSaveRef.current.then(() =>
+      Promise.all(next.map((r, position) =>
+        supabase.from('routines').update({ position }).eq('id', r.id)
+      ))
+    )
     reorderSaveRef.current = save.catch(() => {})
-    const { error } = await save
+    const error = (await save).find((result) => result.error)?.error
     if (error) onError(error.message)
     if (error || seq === reorderSeqRef.current) onRoutinesChanged()
   }
