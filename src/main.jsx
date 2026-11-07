@@ -5,6 +5,8 @@ import { MotionConfig } from 'motion/react'
 import './index.css'
 import App from './App.jsx'
 
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js')
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <MotionConfig reducedMotion="user">

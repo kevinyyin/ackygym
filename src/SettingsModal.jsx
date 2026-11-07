@@ -1,6 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Sheet from './Sheet'
 import { supabase } from './supabaseClient'
+import {
+  pushSupported,
+  getPushSubscription,
+  enablePushReminders,
+  disablePushReminders,
+} from './pushReminders'
 import { TOGGLEABLE_CARDS } from './cardVisibility'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import SegmentedControl from './SegmentedControl'
@@ -145,6 +151,11 @@ function SettingsModal({
       </div>
 
       <p className="mt-5 text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
+        Notifications
+      </p>
+      <CreatineReminderToggle userId={userId} onError={onError} />
+
+      <p className="mt-5 text-[11px] font-[550] tracking-[0.2em] text-chalk-dim uppercase">
         Weight unit
       </p>
       <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
@@ -262,6 +273,57 @@ function SettingsModal({
         armedClassName="border-blue-500"
       />
     </Sheet>
+  )
+}
+
+// Per-device: each phone subscribes separately, so the checkbox reflects this browser.
+function CreatineReminderToggle({ userId, onError }) {
+  const [enabled, setEnabled] = useState(false)
+  const [busy, setBusy] = useState(true)
+
+  useEffect(() => {
+    getPushSubscription()
+      .then((subscription) => setEnabled(Boolean(subscription)))
+      .finally(() => setBusy(false))
+  }, [])
+
+  async function handleChange() {
+    onError('')
+    setBusy(true)
+    try {
+      if (enabled) await disablePushReminders()
+      else await enablePushReminders(userId)
+      setEnabled(!enabled)
+    } catch (error) {
+      onError(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!pushSupported) {
+    return (
+      <p className="mt-2 rounded-md border border-line bg-surface-2 px-4 py-3 text-sm text-chalk-dim">
+        To get creatine reminders on iPhone, open Ackygym from your Home Screen (Share → Add to Home
+        Screen).
+      </p>
+    )
+  }
+
+  return (
+    <label className="mt-2 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-4 py-3">
+      <span>
+        <span className="block text-sm text-chalk">Creatine reminders</span>
+        <span className="block text-xs text-chalk-dim">10am, then hourly until checked</span>
+      </span>
+      <input
+        type="checkbox"
+        checked={enabled}
+        disabled={busy}
+        onChange={handleChange}
+        className="h-5 w-5 accent-blue-500"
+      />
+    </label>
   )
 }
 
