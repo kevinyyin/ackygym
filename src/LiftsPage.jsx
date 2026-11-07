@@ -94,9 +94,15 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
     }
 
     onError('')
-    const { error } = await supabase.from('exercises').update({ name: trimmed }).eq('id', exercise.id)
-    if (error) {
-      onError(error.message)
+    // .select so a rename that matched no row (e.g. blocked by a policy) is
+    // reported instead of silently reverting on the next refetch.
+    const { data, error } = await supabase
+      .from('exercises')
+      .update({ name: trimmed })
+      .eq('id', exercise.id)
+      .select('id')
+    if (error || data.length === 0) {
+      onError(error?.message ?? 'Couldn’t rename that exercise — nothing was saved.')
       return false
     }
     // Functional, so a sheet closed mid-save stays closed.
@@ -105,8 +111,33 @@ function LiftsPage({ profiles, userId, weightUnit, onError }) {
     return true
   }
 
-  function handleDeleteExercise(exercise) {
+  async function handleDeleteExercise(exercise) {
     setExerciseToDelete(null)
+    onError('')
+    // Checked before the Undo toast, so "deleted" never shows for a delete the
+    // database will refuse (routine_exercises restricts it) — and the message
+    // can say where it's used.
+    const { data: uses, error: usesError } = await supabase
+      .from('routine_exercises')
+      .select('routines(name, user_id)')
+      .eq('exercise_id', exercise.id)
+    if (usesError) {
+      onError(usesError.message)
+      return
+    }
+    if (uses.length > 0) {
+      const profileById = Object.fromEntries(profiles.map((p) => [p.id, p]))
+      const names = [
+        ...new Set(
+          uses.map(({ routines: r }) =>
+            r.user_id === userId || !profileById[r.user_id] ? r.name : `${displayName(profileById[r.user_id])}’s ${r.name}`
+          )
+        ),
+      ]
+      onError(`"${exercise.name}" is in ${names.join(', ')}. Remove it from ${names.length === 1 ? 'that routine' : 'those routines'} first.`)
+      return
+    }
+
     setSelectedExercise(null)
     stageDelete({
       ids: [exercise.id],
