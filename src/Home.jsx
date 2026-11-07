@@ -343,6 +343,26 @@ function Home({
         </Card>
       )}
 
+      {/* Side by side, above the sets list: the daily checks are quick taps, and
+          creatine is what the hourly reminder sends you here to do. */}
+      {(showWaterTracker || showCreatineTracker) && (
+        <div className={`grid gap-3 ${showWaterTracker && showCreatineTracker ? 'grid-cols-2' : ''}`}>
+          {showWaterTracker && (
+            <WaterTracker
+              session={session}
+              profiles={profiles}
+              onError={onError}
+              waterMode={waterSettings.mode}
+              bottleSizeMl={waterSettings.bottleSizeMl}
+              goalMl={waterSettings.goalMl}
+            />
+          )}
+          {showCreatineTracker && (
+            <CreatineTracker session={session} profiles={profiles} onError={onError} />
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-headline text-chalk">Today&apos;s sets</h2>
@@ -505,21 +525,6 @@ function Home({
         )}
       </div>
 
-
-      {showWaterTracker && (
-        <WaterTracker
-          session={session}
-          profiles={profiles}
-          onError={onError}
-          waterMode={waterSettings.mode}
-          bottleSizeMl={waterSettings.bottleSizeMl}
-          goalMl={waterSettings.goalMl}
-        />
-      )}
-
-      {showCreatineTracker && (
-        <CreatineTracker session={session} profiles={profiles} onError={onError} />
-      )}
 
       <ConfirmModal
         open={confirmBulkDelete}

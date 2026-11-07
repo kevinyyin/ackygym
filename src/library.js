@@ -14,8 +14,10 @@ export async function fetchRoutines() {
   const { data, error } = await supabase
     .from('routines')
     .select(
-      'id, user_id, name, routine_exercises(id, position, exercise_id, rep_min, rep_max, exercises(name, exercise_muscles(muscle, role, muscle_groups(label))))'
+      'id, user_id, name, position, routine_exercises(id, position, exercise_id, rep_min, rep_max, exercises(name, exercise_muscles(muscle, role, muscle_groups(label))))'
     )
+    // Each owner's chosen order (Train › Reorder); unpositioned ones last, by name.
+    .order('position', { ascending: true, nullsFirst: false })
     .order('name')
   if (error) return { data: null, error }
 

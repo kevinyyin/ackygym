@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
-import Card from './Card'
 import { displayName } from './displayName'
 import { getTodayDateString } from './dateUtils'
 import { CheckIcon } from './icons'
@@ -60,41 +59,38 @@ function CreatineTracker({ session, profiles, onError }) {
 
   const others = profiles
     .filter((p) => p.id !== session.user.id)
-    .map((p) => ({ id: p.id, name: displayName(p), taken: takenUserIds.has(p.id) }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((p) => ({ name: displayName(p), taken: takenUserIds.has(p.id) }))
+  // One line under the label: the household's status, or yours when you're alone.
+  const othersLine =
+    others.length === 0
+      ? taken
+        ? 'Taken today'
+        : 'Not yet today'
+      : others.length === 1
+        ? `${others[0].name}: ${others[0].taken ? 'taken' : 'not yet'}`
+        : `${others.filter((o) => o.taken).length} of ${others.length} others taken`
 
+  // A compact tile beside Water on Today: the whole tile is the checkbox.
   return (
-    <Card className="p-4">
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={taken}
-        onClick={handleToggle}
-        className="flex w-full items-center justify-between gap-2 text-left"
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={taken}
+      onClick={handleToggle}
+      className="flex min-h-16 items-center justify-between gap-3 rounded-field bg-surface px-4 py-3 text-left active:bg-surface-2"
+    >
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-[15px] font-medium text-chalk">Creatine</span>
+        <span className="truncate text-caption text-chalk-dim">{othersLine}</span>
+      </span>
+      <span
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+          taken ? 'border-blue-500 bg-blue-500 text-onblue' : 'border-line text-transparent'
+        }`}
       >
-        <h2 className="text-headline text-chalk">Creatine</h2>
-        <span
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 ${
-            taken ? 'border-blue-500 bg-blue-500 text-onblue' : 'border-line text-transparent'
-          }`}
-        >
-          <CheckIcon className="h-4 w-4" />
-        </span>
-      </button>
-
-      {others.length > 0 && (
-        <ul className="mt-3 flex flex-col gap-2 border-t border-line pt-3">
-          {others.map((entry) => (
-            <li key={entry.id} className="flex items-center justify-between gap-2">
-              <span className="text-sm text-chalk-dim">{entry.name}</span>
-              <span className={`text-sm ${entry.taken ? 'text-blue-400' : 'text-chalk-dim'}`}>
-                {entry.taken ? 'Taken' : 'Not yet'}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
+        <CheckIcon className="h-4 w-4" />
+      </span>
+    </button>
   )
 }
 

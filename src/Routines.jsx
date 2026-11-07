@@ -14,6 +14,7 @@ import { snappy } from './motionPresets'
 import { toggled } from './useSelection'
 import { groupBy } from './groupByUser'
 import { displayName } from './displayName'
+import Button from './Button'
 
 function GroupHeader({ children }) {
   return (
@@ -398,6 +399,43 @@ function DayToggles({ routine, schedule, userId, onPlan, onChanged, onError }) {
   )
 }
 
+// Up/down buttons rather than drag: one-handed, keyboard- and VoiceOver-usable,
+// and a short list of routines never needs more than a few taps.
+function ReorderRoutinesList({ routines, onMove, onDone }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <ol className="flex flex-col divide-y divide-line rounded-field bg-surface-2">
+        {routines.map((routine, index) => (
+          <motion.li key={routine.id} layout transition={snappy} className="flex min-h-14 items-center gap-1 pr-1.5 pl-4">
+            <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-chalk">{routine.name}</span>
+            <button
+              type="button"
+              onClick={() => onMove(routines, index, -1)}
+              disabled={index === 0}
+              aria-label={`Move ${routine.name} up`}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-chalk-dim active:bg-surface disabled:opacity-30"
+            >
+              <ChevronRightIcon className="h-5 w-5 -rotate-90" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onMove(routines, index, 1)}
+              disabled={index === routines.length - 1}
+              aria-label={`Move ${routine.name} down`}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-chalk-dim active:bg-surface disabled:opacity-30"
+            >
+              <ChevronRightIcon className="h-5 w-5 rotate-90" />
+            </button>
+          </motion.li>
+        ))}
+      </ol>
+      <Button variant="secondary" onClick={onDone}>
+        Done
+      </Button>
+    </div>
+  )
+}
+
 function Routines({
   routines,
   loaded = true,
@@ -440,6 +478,38 @@ function Routines({
     })),
   ]
 
+  // Train › Reorder: ownOrder (routine ids) is shown over the fetched order at
+  // once and saved in the background, then dropped when the refetch lands.
+  const [reordering, setReordering] = useState(false)
+  const [ownOrder, setOwnOrder] = useState(null)
+  const [ownOrderFor, setOwnOrderFor] = useState(routines)
+  if (ownOrderFor !== routines) {
+    setOwnOrderFor(routines)
+    setOwnOrder(null)
+  }
+  // Only the last of several quick moves refetches, so an earlier refetch
+  // can't briefly put back an order the user has already changed again.
+  const reorderSeqRef = useRef(0)
+  // Saves run one at a time in tap order: per-row updates sent in parallel
+  // could land out of order and leave two routines on one position.
+  const reorderSaveRef = useRef(Promise.resolve())
+
+  async function moveRoutine(ordered, index, direction) {
+    const next = [...ordered]
+    const [moved] = next.splice(index, 1)
+    next.splice(index + direction, 0, moved)
+    setOwnOrder(next.map((r) => r.id))
+    onError('')
+    const seq = ++reorderSeqRef.current
+    // The whole order in one request, so a failure can't leave half of it saved.
+    const rows = next.map((r, position) => ({ id: r.id, user_id: r.user_id, name: r.name, position }))
+    const save = reorderSaveRef.current.then(() => supabase.from('routines').upsert(rows))
+    reorderSaveRef.current = save.catch(() => {})
+    const { error } = await save
+    if (error) onError(error.message)
+    if (error || seq === reorderSeqRef.current) onRoutinesChanged()
+  }
+
   function planDay(day, routineId) {
     setPlanned((current) => {
       const next = { ...current }
@@ -475,7 +545,7 @@ function Routines({
     creatingRef.current = true
     onError('')
     setCreating(true)
-    const { error } = await supabase.from('routines').insert({ name: trimmed })
+    const { error } = await supabase.from('routines').insert({ name: trimmed, position: nextOwnPosition })
     creatingRef.current = false
     setCreating(false)
 
@@ -514,7 +584,7 @@ function Routines({
 
     const { data: newRoutine, error: insertError } = await supabase
       .from('routines')
-      .insert({ name: `${routine.name} (copy)` })
+      .insert({ name: `${routine.name} (copy)`, position: nextOwnPosition })
       .select('id')
       .single()
 
@@ -554,12 +624,15 @@ function Routines({
     onRoutinesChanged()
   }
 
-  // Your own routines first; name order (from the query) kept within each group.
-  const visibleRoutines = routines
-    .filter((r) => !isPending(r.id))
-    .sort((a, b) => Number(b.user_id === userId) - Number(a.user_id === userId))
+  // Your own routines first, in your order (Reorder); others' after, in theirs.
+  const ownRoutines = ownOrder
+    ? ownOrder.map((id) => routines.find((r) => r.id === id)).filter(Boolean)
+    : routines.filter((r) => r.user_id === userId)
+  const visibleRoutines = [...ownRoutines, ...routines.filter((r) => r.user_id !== userId)].filter(
+    (r) => !isPending(r.id)
+  )
+  const nextOwnPosition = Math.max(-1, ...ownRoutines.map((r) => r.position ?? -1)) + 1
   const profileById = Object.fromEntries(profiles.map((p) => [p.id, p]))
-  const ownRoutines = routines.filter((r) => r.user_id === userId)
   const ownRoutineIds = ownRoutines.map((r) => r.id)
   // The user's current range for an exercise, from any of their routines that
   // sets one; {} when none does.
@@ -572,6 +645,18 @@ function Routines({
 
   return (
     <>
+    <div className="-my-1.5 flex min-h-11 items-center justify-between gap-2">
+      <h2 className="text-headline text-chalk">{reordering ? 'Reorder routines' : 'Routines'}</h2>
+      {loaded && !reordering && ownRoutines.length > 1 && (
+        <button
+          type="button"
+          onClick={() => setReordering(true)}
+          className="-mr-2 h-11 px-2 text-[15px] font-semibold text-blue-400"
+        >
+          Reorder
+        </button>
+      )}
+    </div>
     <div className="mt-3 flex flex-col gap-3">
       {!loaded ? (
         <div aria-busy="true" className="flex flex-col gap-2">
@@ -581,6 +666,12 @@ function Routines({
         </div>
       ) : visibleRoutines.length === 0 ? (
         <p className="text-sm text-chalk-dim">No routines yet.</p>
+      ) : reordering ? (
+        <ReorderRoutinesList
+          routines={ownRoutines.filter((r) => !isPending(r.id))}
+          onMove={moveRoutine}
+          onDone={() => setReordering(false)}
+        />
       ) : (
         visibleRoutines.map((routine) => {
           const isOwn = routine.user_id === userId
@@ -723,22 +814,24 @@ function Routines({
         })
       )}
 
-      <form onSubmit={handleCreate} className="flex gap-2">
-        <input
-          type="text"
-          value={newRoutineName}
-          onChange={(e) => setNewRoutineName(e.target.value)}
-          placeholder="New routine"
-          className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={creating}
-          className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
-        >
-          {creating ? 'Creating…' : 'Create'}
-        </button>
-      </form>
+      {!reordering && (
+        <form onSubmit={handleCreate} className="flex gap-2">
+          <input
+            type="text"
+            value={newRoutineName}
+            onChange={(e) => setNewRoutineName(e.target.value)}
+            placeholder="New routine"
+            className="w-full min-w-0 rounded-md border border-line bg-surface-2 px-3 py-2 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={creating}
+            className="shrink-0 rounded-md bg-blue-500 px-3 py-2 font-body text-sm font-bold text-onblue active:bg-blue-600 disabled:opacity-40"
+          >
+            {creating ? 'Creating…' : 'Create'}
+          </button>
+        </form>
+      )}
     </div>
 
     <ConfirmModal

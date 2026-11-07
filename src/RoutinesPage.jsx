@@ -29,8 +29,13 @@ function RoutinesPage({ session, profiles, schedule, onScheduleSaved, onError, o
   }, [onError, setExercises])
 
   useEffect(() => {
+    // Edits refetch in quick succession; a superseded response must not land
+    // after a newer one and put back an older name or order.
+    let cancelled = false
+
     async function loadRoutines() {
       const { data, error } = await fetchRoutines()
+      if (cancelled) return
       if (error) {
         onError(error.message)
         return
@@ -40,6 +45,9 @@ function RoutinesPage({ session, profiles, schedule, onScheduleSaved, onError, o
     }
 
     loadRoutines()
+    return () => {
+      cancelled = true
+    }
   }, [routinesVersion, onError, setRoutines, setRoutinesLoaded])
 
   function handleStart(routine) {
@@ -49,7 +57,6 @@ function RoutinesPage({ session, profiles, schedule, onScheduleSaved, onError, o
 
   return (
     <Card className="p-4">
-      <h2 className="text-headline text-chalk">Routines</h2>
       <Routines
         routines={routines}
         loaded={routinesLoaded}

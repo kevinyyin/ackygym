@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
-import Card from './Card'
+import Sheet from './Sheet'
 import { displayName } from './displayName'
 import { getTodayDateString } from './dateUtils'
 import { DropletIcon } from './icons'
 import WaterBottle from './WaterBottle'
 import ConfirmDeleteButton from './ConfirmDeleteButton'
 import { formatBottles } from './waterUnits'
-import { usePersistedState } from './usePersistedState'
 import { useCachedState } from './pageCache'
 
 const QUICK_ADD_ML = [250, 500, 750]
@@ -29,7 +28,7 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
   // mount can't be swapped for its real row any more, so a refetch drops it.
   const savingIdsRef = useRef(new Set())
   const [customValue, setCustomValue] = useState('')
-  const [expanded, setExpanded] = usePersistedState('gym-tracker:home-show-water', false)
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     async function fetchLogs() {
@@ -129,25 +128,34 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
     ? QUICK_ADD_BOTTLE_FRACTIONS.map(({ fraction, label }) => ({ key: fraction, ml: Math.round(bottleSizeMl * fraction), label }))
     : QUICK_ADD_ML.map((ml) => ({ key: ml, ml, label: `+${ml} ml` }))
 
-  return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-headline text-chalk">Water</h2>
-        <div className="flex shrink-0 items-center gap-3">
-          <DropletIcon className="h-4 w-4 text-blue-400" />
-          <button
-            type="button"
-            onClick={() => setExpanded(!expanded)}
-            className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-          >
-            {expanded ? 'Hide' : 'Show'}
-          </button>
-        </div>
-      </div>
+  const totalLabel = isBottles
+    ? `${formatBottles(ownTotalMl, bottleSizeMl)} / ${formatBottles(goalMl, bottleSizeMl)} bottles`
+    : `${ownTotalMl} / ${goalMl} ml`
 
-      {expanded && (
-        <>
-          <div className="mt-3 flex items-center gap-4">
+  // A compact tile beside Creatine on Today; the full controls open in a sheet.
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        className="relative flex min-h-16 flex-col items-start justify-center gap-0.5 overflow-hidden rounded-field bg-surface px-4 py-3 text-left active:bg-surface-2"
+      >
+        <span className="flex items-center gap-1.5 text-[15px] font-medium text-chalk">
+          <DropletIcon className="h-3.5 w-3.5 text-blue-400" aria-hidden="true" />
+          Water
+        </span>
+        <span className="text-caption text-chalk-dim tabular-nums">
+          {ownProgress >= 1 ? 'Goal reached' : totalLabel}
+        </span>
+        <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1 bg-surface-2">
+          <span className="block h-full bg-blue-400 transition-[width]" style={{ width: `${ownProgress * 100}%` }} />
+        </span>
+      </button>
+
+      <Sheet open={open} onClose={() => setOpen(false)} title="Water">
+        <div>
+          <div className="flex items-center gap-4">
             <WaterBottle progress={ownProgress} className="h-32 w-20 shrink-0" />
             <div className="min-w-0">
               <p className="font-mono text-4xl font-bold text-blue-400">
@@ -231,9 +239,9 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
               ))}
             </ul>
           )}
-        </>
-      )}
-    </Card>
+        </div>
+      </Sheet>
+    </>
   )
 }
 
