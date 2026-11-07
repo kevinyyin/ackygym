@@ -12,6 +12,7 @@ import { LEGACY_REDIRECTS } from './legacyRoutes'
 import { displayName } from './displayName'
 import { DEFAULT_CARD_VISIBILITY } from './cardVisibility'
 import { usePersistedState } from './usePersistedState'
+import { getTodayDateString } from './dateUtils'
 import { useRestTimer } from './useRestTimer'
 import Sheet from './Sheet'
 import TimerPanel from './TimerPanel'
@@ -95,7 +96,17 @@ function App() {
   // Lifted out of Home so a started routine survives switching tabs — Home
   // unmounts on route change, which would otherwise wipe this like any other
   // component-local state.
-  const [activeRoutine, setActiveRoutine] = useState(null)
+  // Persisted because iOS kills the home-screen app between sets; dated so a
+  // routine never ended yesterday doesn't greet you today.
+  const [activeSession, setActiveSession] = usePersistedState('gym-tracker:active-routine', {
+    date: '',
+    routine: null,
+  })
+  const activeRoutine = activeSession.date === getTodayDateString() ? activeSession.routine : null
+  const setActiveRoutine = useCallback(
+    (routine) => setActiveSession({ date: getTodayDateString(), routine }),
+    [setActiveSession]
+  )
   const location = useLocation()
   // Kept mounted here (not inside the timer sheet) so a running rest timer
   // survives tab switches.
@@ -160,7 +171,7 @@ function App() {
           // effect subscribes once, so it would only hold the first render's
           // restTimer — the sheet closing is what matters.
           setTimerOpen(false)
-          setActiveRoutine(null)
+          setActiveSession({ date: '', routine: null })
         }
         setSession(session)
         setSessionChecked(true)
@@ -168,7 +179,8 @@ function App() {
     )
 
     return () => subscription.unsubscribe()
-  }, [])
+    // setActiveSession is a stable useState setter (via usePersistedState), so this still subscribes once.
+  }, [setActiveSession])
 
   useEffect(() => {
     if (!session) return

@@ -3,6 +3,8 @@ import { snappy } from './motionPresets'
 
 const VARIANTS = {
   primary: 'bg-chalk text-ink',
+  // The blue action fill, for a primary action that should read as "do it now" (Log set).
+  accent: 'bg-blue-500 text-onblue',
   secondary: 'bg-surface-2 text-chalk',
   destructive: 'bg-surface-2 text-danger',
 }

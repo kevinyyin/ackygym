@@ -11,7 +11,7 @@ import { WEEKDAY_NAME } from './weekdays'
 import { getTodayDateString } from './dateUtils'
 import { logSet, setsSettled } from './logSet'
 import { toDisplayWeight } from './weightUnits'
-import { NoteIcon, TrophyIcon, RepeatIcon, CloseIcon } from './icons'
+import { NoteIcon, TrophyIcon, RepeatIcon, CloseIcon, PlusIcon } from './icons'
 import ConfirmModal from './ConfirmModal'
 import UndoToast from './UndoToast'
 import { useDeferredDelete } from './useDeferredDelete'
@@ -56,6 +56,8 @@ function Home({
   // open the app to do, so a first-timer shouldn't need a "Show" tap first.
   const [showLogSet, setShowLogSet] = usePersistedState('gym-tracker:home-show-log-set', true)
   const [showTodaysSets, setShowTodaysSets] = usePersistedState('gym-tracker:home-show-todays-sets', true)
+  // Mid-routine, the general form stays folded until asked for.
+  const [showOtherLog, setShowOtherLog] = useState(false)
   const [routines, setRoutines] = useCachedState('home:routines', [])
   const [routinesLoaded, setRoutinesLoaded] = useCachedState('home:routinesLoaded', false)
   const [expandedTodaysUserIds, setExpandedTodaysUserIds] = useState(() => new Set())
@@ -121,6 +123,7 @@ function Home({
 
   const visibleTodaysSets = todaysSets.filter((s) => !isPending(s.id))
   const groupedSets = groupByUser(visibleTodaysSets, profiles, session.user.id, 'sets')
+  const ownTodaysSets = visibleTodaysSets.filter((s) => s.user_id === session.user.id)
   const ownSetIds = visibleTodaysSets
     .filter((s) => s.user_id === session.user.id && !isSaving(s))
     .map((s) => s.id)
@@ -244,35 +247,49 @@ function Home({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="flex flex-col justify-between p-4">
-          <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-            {WEEKDAY_NAME[todayDayOfWeek]}
-          </p>
-          <div className="mt-3 flex flex-col items-start gap-3">
-            <p className="font-display text-2xl leading-[0.95] tracking-tight text-chalk uppercase">
-              {suggestedRoutine?.name || (hasSchedule ? 'Rest day' : 'Nothing scheduled')}
+      {/* Mid-routine the routine card is the page; the day summary steps aside. */}
+      {!activeRoutine && (
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="flex flex-col justify-between p-4">
+            <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+              {WEEKDAY_NAME[todayDayOfWeek]}
             </p>
-            {suggestedRoutine && !activeRoutine && (
-              <button
-                type="button"
-                onClick={() => onActiveRoutineChange(suggestedRoutine)}
-                className="rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600"
-              >
-                Start
-              </button>
-            )}
-          </div>
-        </Card>
-        <Card className="flex flex-col justify-between p-4">
-          <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
-            Your sets today
-          </p>
-          <p className="mt-3 font-mono text-4xl font-bold text-blue-400">
-            {visibleTodaysSets.filter((s) => s.user_id === session.user.id).length}
-          </p>
-        </Card>
-      </div>
+            <div className="mt-3 flex flex-col items-start gap-3">
+              <p className="font-display text-2xl leading-[0.95] tracking-tight text-chalk uppercase">
+                {suggestedRoutine?.name || (hasSchedule ? 'Rest day' : 'Nothing scheduled')}
+              </p>
+              {suggestedRoutine && !activeRoutine && (
+                <button
+                  type="button"
+                  onClick={() => onActiveRoutineChange(suggestedRoutine)}
+                  className="rounded-md bg-blue-500 px-3 py-1.5 font-body text-sm font-bold text-onblue active:bg-blue-600"
+                >
+                  Start
+                </button>
+              )}
+            </div>
+          </Card>
+          <Card className="flex flex-col justify-between p-4">
+            <p className="font-mono text-[11px] tracking-wide text-chalk-dim uppercase">
+              Your sets today
+            </p>
+            <p className="mt-3 font-mono text-4xl font-bold text-blue-400">
+              {ownTodaysSets.length}
+            </p>
+          </Card>
+        </div>
+      )}
+
+      {activeRoutine && (
+        <ActiveRoutine
+          routine={activeRoutine}
+          userId={session.user.id}
+          weightUnit={weightUnit}
+          todaysOwnSets={ownTodaysSets}
+          onExit={() => onActiveRoutineChange(null)}
+          onLogSet={handleLogSet}
+        />
+      )}
 
       {/* Only until the first routine exists: the tab bar covers navigation,
           but nothing else tells a new user the card above comes from Train. */}
@@ -288,39 +305,42 @@ function Home({
         </Link>
       )}
 
-      <Card className="p-4">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-headline text-chalk">Log a set</h2>
-          <button
-            type="button"
-            onClick={() => setShowLogSet(!showLogSet)}
-            className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
-          >
-            {showLogSet ? 'Hide' : 'Show'}
-          </button>
-        </div>
-        {showLogSet && (
-          <div className="mt-3">
-            <WorkoutForm
+      {activeRoutine && !showOtherLog ? (
+        // The routine is the task; a set outside it is one tap away, not a second form competing with it.
+        <button
+          type="button"
+          onClick={() => setShowOtherLog(true)}
+          className="flex h-[52px] items-center gap-2.5 rounded-field bg-surface px-4 text-[15px] font-medium text-chalk active:bg-surface-2"
+        >
+          <PlusIcon className="h-[18px] w-[18px] text-blue-400" aria-hidden="true" />
+          Log something else
+        </button>
+      ) : (
+        <Card className="p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-headline text-chalk">{activeRoutine ? 'Log something else' : 'Log a set'}</h2>
+            <button
+              type="button"
+              onClick={() => (activeRoutine ? setShowOtherLog(false) : setShowLogSet(!showLogSet))}
+              className="shrink-0 font-mono text-[11px] tracking-wide text-chalk-dim uppercase hover:text-blue-400"
+            >
+              {activeRoutine || showLogSet ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {(activeRoutine || showLogSet) && (
+            <div className="mt-3">
+              <WorkoutForm
               exercises={exercises}
               routines={routines}
               userId={session.user.id}
               weightUnit={weightUnit}
+              lastExerciseId={ownTodaysSets.at(-1)?.exercise_id}
               onLogSet={handleLogSet}
               onError={onError}
             />
-          </div>
-        )}
-      </Card>
-
-      {activeRoutine && (
-        <ActiveRoutine
-          routine={activeRoutine}
-          userId={session.user.id}
-          weightUnit={weightUnit}
-          onExit={() => onActiveRoutineChange(null)}
-          onLogSet={handleLogSet}
-        />
+            </div>
+          )}
+        </Card>
       )}
 
       <div className="flex flex-col gap-3">
@@ -447,7 +467,7 @@ function Home({
                                     if (e.key === 'Escape') setEditingNoteId(null)
                                   }}
                                   placeholder="Add a note…"
-                                  className="w-full rounded-md border border-line bg-surface-2 px-2 py-1 font-body text-xs text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+                                  className="w-full rounded-md border border-line bg-surface-2 px-2 py-1 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
                                 />
                               ) : (
                                 set.note && (

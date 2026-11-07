@@ -207,7 +207,7 @@ function WaterTracker({ session, profiles, onError, waterMode, bottleSizeMl, goa
               value={customValue}
               onChange={(e) => setCustomValue(e.target.value)}
               placeholder={isBottles ? 'Custom amount (bottles)' : 'Custom amount (ml)'}
-              className="w-full rounded-md border border-line bg-surface-2 px-4 py-2.5 font-body text-sm text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-md border border-line bg-surface-2 px-4 py-2.5 font-body text-base text-chalk placeholder:text-chalk-dim focus:border-blue-500 focus:outline-none"
             />
             <button
               type="submit"

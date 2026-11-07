@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useCachedState } from './pageCache'
 import { fetchLastSet } from './lastSet'
 import { groupByMuscle } from './exerciseGrouping'
 import { BarbellIcon } from './icons'
@@ -7,9 +8,10 @@ import ExercisePicker from './ExercisePicker'
 import { isValidSet } from './validation'
 import { toDisplayWeight, toStorageWeightKg, convertWeightInput } from './weightUnits'
 
-function WorkoutForm({ exercises, routines, userId, weightUnit, onLogSet, onError }) {
-  const [routineId, setRoutineId] = useState('')
-  const [exerciseId, setExerciseId] = useState('')
+function WorkoutForm({ exercises, routines, userId, weightUnit, lastExerciseId, onLogSet, onError }) {
+  // Cached so a tab switch mid-workout doesn't reset the picked routine and exercise.
+  const [routineId, setRoutineId] = useCachedState('workoutForm:routineId', '')
+  const [exerciseId, setExerciseId] = useCachedState('workoutForm:exerciseId', '')
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [showCalculator, setShowCalculator] = useState(false)
@@ -34,7 +36,15 @@ function WorkoutForm({ exercises, routines, userId, weightUnit, onLogSet, onErro
         .filter(Boolean)
     : exercises
 
-  const selectedExerciseId = exerciseId || availableExercises[0]?.id || ''
+  // Unpicked, the form follows the exercise logged most recently today rather
+  // than the list's first entry, so a returning user doesn't log to the wrong
+  // lift. A cached pick no longer in the list (deleted, filtered) is ignored.
+  const isAvailable = (id) => availableExercises.some((ex) => ex.id === Number(id))
+  const selectedExerciseId =
+    (isAvailable(exerciseId) && exerciseId) ||
+    (isAvailable(lastExerciseId) && lastExerciseId) ||
+    availableExercises[0]?.id ||
+    ''
 
   function handleRoutineChange(value) {
     setRoutineId(value)
